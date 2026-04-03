@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0A0A0A;
+  --bg-surface: #141414;
+  --bg-surface-2: #1C1C1C;
+  --bg-surface-3: #242424;
+  --accent: #C8F135;
+  --accent-dim: #9AB82A;
+  --text-primary: #F5F5F5;
+  --text-secondary: #A0A0A0;
+  --text-faint: #505050;
+  --border: rgba(255, 255, 255, 0.08);
+  --error: #FF4D4D;
+  --success: #4CAF50;
+  --warning: #FFA726;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Satoshi', 'Inter', sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--bg-surface-3); border-radius: 4px; }
+
+/* Touch feedback */
+button, a, [role="button"] {
+  cursor: pointer;
+  transition: transform var(--transition), opacity var(--transition);
+}
+button:active, a:active, [role="button"]:active {
+  transform: scale(0.96);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Font import */
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=clash-display@500,600,700&display=swap');
