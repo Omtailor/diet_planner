@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend</title>
+
+    <!-- Preload critical bg image -->
+    <link rel="preload" as="image" href="/src/assets/images/bg-1.webp" fetchpriority="high">
+
+    <!-- Preload video poster -->
+    <link rel="preload" as="image" href="/src/assets/images/bg-1.webp">
+
+    <!-- Font preconnect -->
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
   </head>
   <body>
     <div id="root"></div>

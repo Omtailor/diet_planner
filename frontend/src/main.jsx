@@ -5,6 +5,9 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
 import App from './App.jsx'
 import './index.css'
+import './styles/theme.css'      // ← ADD
+import './styles/glass.css'      // ← ADD
+import './styles/animations.css' // ← ADD
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
