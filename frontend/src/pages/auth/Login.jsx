@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'  // add useRef, useEffect
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -7,12 +7,6 @@ import { authService } from '../../services/authService'
 
 import bgVideo  from '../../assets/videos/bg-video.mp4'
 import bg1 from '../../assets/images/bg-1.webp'
-import bg2 from '../../assets/images/bg-2.webp'
-import bg3 from '../../assets/images/bg-3.webp'
-import bg4 from '../../assets/images/bg-4.webp'
-import bg5 from '../../assets/images/bg-5.webp'
-
-const BG_IMAGES = [bg1, bg2, bg3, bg4, bg5]
 
 function Login() {
   const navigate = useNavigate()
@@ -20,31 +14,6 @@ function Login() {
   const [form, setForm]       = useState({ username: '', password: '' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading]   = useState(false)
-  const [videoEnded, setVideoEnded] = useState(false)
-  const [activeImg, setActiveImg]   = useState(0)
-  const [nextImg, setNextImg]       = useState(null)
-  const intervalRef = useRef(null)
-
-  useEffect(() => {
-    if (!videoEnded) return
-
-    intervalRef.current = setInterval(() => {
-      const next = (activeImg + 1) % BG_IMAGES.length
-
-      // Step 1: Mount next image at opacity 0
-      setNextImg(next)
-
-      // Step 2: After 1 frame, it fades in over 800ms
-      // Step 3: After fade completes, swap active and unmount next
-      setTimeout(() => {
-        setActiveImg(next)
-        setNextImg(null)
-      }, 900) // slightly longer than CSS transition
-
-    }, 5000)
-
-    return () => clearInterval(intervalRef.current)
-  }, [videoEnded, activeImg])
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -73,48 +42,15 @@ function Login() {
   return (
     <div style={s.wrapper}>
 
-      {/* ── Video (plays once) ── */}
-      {!videoEnded && (
-        <video
-          autoPlay muted playsInline
-          poster={bg1}
-          style={s.bgVideo}
-          preload="auto"
-          onEnded={() => setVideoEnded(true)}
-        >
-          <source src={bgVideo} type="video/mp4" />
-        </video>
-      )}
-
-      {/* ── Image Slideshow ── */}
-      {videoEnded && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-
-          {/* Current active image — always visible */}
-          <img
-            src={BG_IMAGES[activeImg]}
-            alt=""
-            style={{
-              ...s.bgVideo,
-              opacity: 1,
-              transition: 'none',
-            }}
-          />
-
-          {/* Next image — fades IN on top */}
-          {nextImg !== null && (
-            <img
-              src={BG_IMAGES[nextImg]}
-              alt=""
-              style={{
-                ...s.bgVideo,
-                opacity: 0,
-                animation: 'fadeInBg 0.9s ease forwards',
-              }}
-            />
-          )}
-        </div>
-      )}
+      {/* ── Video (loops continuously) ── */}
+      <video
+        autoPlay muted playsInline loop
+        poster={bg1}
+        style={s.bgVideo}
+        preload="auto"
+      >
+        <source src={bgVideo} type="video/mp4" />
+      </video>
 
       {/* ── Tint overlay ── */}
       <div style={s.overlay} />
@@ -209,11 +145,6 @@ function Login() {
 
       {/* ── Scoped styles ── */}
       <style>{`
-        @keyframes fadeInBg {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-
         .glass-input:focus {
           outline: none;
           border-color: var(--color-accent) !important;
