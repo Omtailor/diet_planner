@@ -21,18 +21,20 @@ function TopBar() {
       width: '100%',
       maxWidth: '480px',
       height: '60px',
-      background: 'var(--bg-primary)',
-      borderBottom: '1px solid var(--border)',
+      background: 'rgba(255,255,255,0.75)',
+      backdropFilter: 'blur(20px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      borderBottom: '1px solid rgba(255,255,255,0.60)',
       display: 'flex',
       alignItems: 'center',
       paddingInline: '20px',
       zIndex: 100,
     }}>
       <h1 style={{
-        fontFamily: 'Clash Display, sans-serif',
+        fontFamily: "'General Sans', sans-serif",
         fontSize: '1.25rem',
         fontWeight: 600,
-        color: 'var(--text-primary)',
+        color: 'var(--color-text)',
         letterSpacing: '-0.3px',
       }}>
         {title}

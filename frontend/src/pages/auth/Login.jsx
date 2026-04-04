@@ -5,15 +5,15 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import { authService } from '../../services/authService'
 
-import bgVideo  from '../../assets/videos/bg-video.mp4'
+import bgVideo from '../../assets/videos/bg-video.mp4'
 import bg1 from '../../assets/images/bg-1.webp'
 
 function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const [form, setForm]       = useState({ username: '', password: '' })
+  const [form, setForm] = useState({ username: '', password: '' })
   const [showPass, setShowPass] = useState(false)
-  const [loading, setLoading]   = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -56,10 +56,14 @@ function Login() {
       <div style={s.overlay} />
 
       {/* ── Decorative blobs ── */}
-      <div style={{ ...s.blob, top: '-10%', right: '-5%',
-        background: 'radial-gradient(circle, rgba(58,158,95,0.20) 0%, transparent 70%)' }} />
-      <div style={{ ...s.blob, bottom: '-10%', left: '-5%', width: '350px', height: '350px',
-        background: 'radial-gradient(circle, rgba(100,200,130,0.15) 0%, transparent 70%)' }} />
+      <div style={{
+        ...s.blob, top: '-10%', right: '-5%',
+        background: 'radial-gradient(circle, rgba(58,158,95,0.20) 0%, transparent 70%)'
+      }} />
+      <div style={{
+        ...s.blob, bottom: '-10%', left: '-5%', width: '350px', height: '350px',
+        background: 'radial-gradient(circle, rgba(100,200,130,0.15) 0%, transparent 70%)'
+      }} />
 
       {/* ── Main content ── */}
       <div style={s.container} className="animate-fadeUp">
@@ -109,7 +113,7 @@ function Login() {
                 <button type="button" onClick={() => setShowPass(!showPass)} style={s.eyeBtn}>
                   {showPass
                     ? <EyeOff size={18} color="var(--color-text-faint)" />
-                    : <Eye    size={18} color="var(--color-text-faint)" />}
+                    : <Eye size={18} color="var(--color-text-faint)" />}
                 </button>
               </div>
             </div>

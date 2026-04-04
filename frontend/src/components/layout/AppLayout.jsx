@@ -8,7 +8,7 @@ function AppLayout() {
       maxWidth: '480px',
       margin: '0 auto',
       minHeight: '100dvh',
-      background: 'var(--bg-primary)',
+      background: 'transparent',
       display: 'flex',
       flexDirection: 'column',
       position: 'relative',

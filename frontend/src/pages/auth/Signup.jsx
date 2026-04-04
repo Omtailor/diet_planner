@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { authService } from '../../services/authService'
 
 import bgVideo from '../../assets/videos/bg-video.mp4'
-import bg1     from '../../assets/images/bg-1.webp'
+import bg1 from '../../assets/images/bg-1.webp'
 
 function Signup() {
   const navigate = useNavigate()
@@ -14,8 +14,8 @@ function Signup() {
   const [form, setForm] = useState({
     username: '', email: '', password: '', confirmPassword: ''
   })
-  const [showPass, setShowPass]   = useState(false)
-  const [loading, setLoading]     = useState(false)
+  const [showPass, setShowPass] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -45,8 +45,8 @@ function Signup() {
       navigate('/onboarding')
     } catch (err) {
       const data = err.response?.data
-      if (data?.username)      toast.error(`Username: ${data.username[0]}`)
-      else if (data?.email)    toast.error(`Email: ${data.email[0]}`)
+      if (data?.username) toast.error(`Username: ${data.username[0]}`)
+      else if (data?.email) toast.error(`Email: ${data.email[0]}`)
       else if (data?.password) toast.error(`Password: ${data.password[0]}`)
       else toast.error('Registration failed. Try again.')
     } finally {
@@ -56,10 +56,10 @@ function Signup() {
 
   const getStrength = () => {
     const p = form.password
-    if (!p)          return { width: '0%',   color: 'transparent',            label: '' }
-    if (p.length < 6) return { width: '33%',  color: '#e05252',                label: 'Weak' }
-    if (p.length < 10) return { width: '66%', color: '#e09a2e',                label: 'Medium' }
-    return               { width: '100%', color: 'var(--color-accent)',     label: 'Strong' }
+    if (!p) return { width: '0%', color: 'transparent', label: '' }
+    if (p.length < 6) return { width: '33%', color: '#e05252', label: 'Weak' }
+    if (p.length < 10) return { width: '66%', color: '#e09a2e', label: 'Medium' }
+    return { width: '100%', color: 'var(--color-accent)', label: 'Strong' }
   }
   const strength = getStrength()
 
@@ -80,11 +80,13 @@ function Signup() {
       <div style={s.overlay} />
 
       {/* ── Decorative blobs ── */}
-      <div style={{ ...s.blob,
+      <div style={{
+        ...s.blob,
         bottom: '-10%', left: '-5%',
         background: 'radial-gradient(circle, rgba(58,158,95,0.20) 0%, transparent 70%)'
       }} />
-      <div style={{ ...s.blob,
+      <div style={{
+        ...s.blob,
         top: '-8%', right: '-5%', width: '300px', height: '300px',
         background: 'radial-gradient(circle, rgba(100,200,130,0.15) 0%, transparent 70%)'
       }} />
@@ -153,7 +155,7 @@ function Signup() {
                 >
                   {showPass
                     ? <EyeOff size={18} color="var(--color-text-faint)" />
-                    : <Eye    size={18} color="var(--color-text-faint)" />}
+                    : <Eye size={18} color="var(--color-text-faint)" />}
                 </button>
               </div>
 

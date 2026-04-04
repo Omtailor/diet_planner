@@ -35,11 +35,18 @@ html {
 }
 
 body {
-  background-color: var(--bg-primary);
+  background: #f0f7f2 !important;
   color: var(--text-primary);
   font-family: 'Satoshi', 'Inter', sans-serif;
   min-height: 100dvh;
   overflow-x: hidden;
+}
+
+/* Light theme background for root elements */
+.app-root,
+#root {
+  background: #f0f7f2;
+  min-height: 100dvh;
 }
 
 /* Scrollbar */

@@ -25,8 +25,10 @@ function CheatMealHistorySection({ onLogNew }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', marginBottom: '14px' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', marginBottom: '14px'
+      }}>
         <h3 style={modalTitle}>Cheat Meal History</h3>
         <button onClick={onLogNew} style={{
           background: 'var(--error)', border: 'none',
@@ -50,37 +52,49 @@ function CheatMealHistorySection({ onLogNew }) {
       )}
 
       {!loading && meals.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column',
-          gap: '10px', maxHeight: '340px', overflowY: 'auto' }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          gap: '10px', maxHeight: '340px', overflowY: 'auto'
+        }}>
           {meals.map(m => (
             <div key={m.id} style={{
               background: 'var(--bg-surface-2)',
               border: '1px solid var(--border)',
               borderRadius: '14px', padding: '14px 16px',
             }}>
-              <div style={{ display: 'flex',
-                justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between', alignItems: 'flex-start'
+              }}>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 700,
-                    color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                  <p style={{
+                    fontFamily: 'Satoshi, sans-serif', fontWeight: 700,
+                    color: 'var(--text-primary)', fontSize: '0.95rem'
+                  }}>
                     {m.food_name || 'Unknown food'}
                   </p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-faint)',
-                    fontFamily: 'Satoshi, sans-serif', marginTop: '3px' }}>
+                  <p style={{
+                    fontSize: '0.75rem', color: 'var(--text-faint)',
+                    fontFamily: 'Satoshi, sans-serif', marginTop: '3px'
+                  }}>
                     {fmt(m.logged_at)} • {m.entry_method === 'image' ? '📸 Photo' : '✍️ Manual'}
                   </p>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontFamily: 'Clash Display, sans-serif',
+                  <p style={{
+                    fontFamily: 'Clash Display, sans-serif',
                     fontSize: '1.1rem', fontWeight: 700,
-                    color: 'var(--error)' }}>
+                    color: 'var(--error)'
+                  }}>
                     {m.user_edited_calories || m.ai_estimated_calories
                       ? `${Math.round(m.user_edited_calories || m.ai_estimated_calories)} kcal`
                       : '— kcal'}
                   </p>
                   {m.ai_confidence && (
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)',
-                      fontFamily: 'Satoshi, sans-serif' }}>
+                    <p style={{
+                      fontSize: '0.7rem', color: 'var(--text-faint)',
+                      fontFamily: 'Satoshi, sans-serif'
+                    }}>
                       {m.ai_confidence > 0.7 ? '🎯 High'
                         : m.ai_confidence > 0.4 ? '📊 Medium' : '⚠️ Low'} confidence
                     </p>
@@ -88,9 +102,11 @@ function CheatMealHistorySection({ onLogNew }) {
                 </div>
               </div>
               {m.notes && (
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)',
+                <p style={{
+                  fontSize: '0.78rem', color: 'var(--text-secondary)',
                   fontFamily: 'Satoshi, sans-serif',
-                  marginTop: '8px', fontStyle: 'italic' }}>
+                  marginTop: '8px', fontStyle: 'italic'
+                }}>
                   "{m.notes}"
                 </p>
               )}
@@ -114,12 +130,12 @@ function Account() {
   const [groceryRefreshing, setGroceryRefreshing] = useState(false)
 
   const menuItems = [
-    { icon: '👤', label: 'Personal Info',      sub: 'Name, age, city',          key: 'personal'  },
-    { icon: '📊', label: 'Body Stats',        sub: 'Weight, height, BMI',      key: 'body'      },
-    { icon: '🎯', label: 'Goals & Diet',      sub: 'Goal, diet preference',    key: 'goals'     },
-    { icon: '🏋️', label: 'Gym & Activity',   sub: 'Gym, health time',         key: 'gym'       },
-    { icon: '🍔', label: 'Cheat Meal History', sub: 'Past cheat meals',       key: 'cheat'     },
-    { icon: '🛒', label: 'Grocery List',      sub: 'Weekly ingredients',       key: 'grocery'   },
+    { icon: '👤', label: 'Personal Info', sub: 'Name, age, city', key: 'personal' },
+    { icon: '📊', label: 'Body Stats', sub: 'Weight, height, BMI', key: 'body' },
+    { icon: '🎯', label: 'Goals & Diet', sub: 'Goal, diet preference', key: 'goals' },
+    { icon: '🏋️', label: 'Gym & Activity', sub: 'Gym, health time', key: 'gym' },
+    { icon: '🍔', label: 'Cheat Meal History', sub: 'Past cheat meals', key: 'cheat' },
+    { icon: '🛒', label: 'Grocery List', sub: 'Weekly ingredients', key: 'grocery' },
   ]
 
   const goalOptions = [
@@ -227,9 +243,9 @@ function Account() {
       {/* Stats Row */}
       <div style={statsRow}>
         {[
-          { label: 'Weight',  value: profile?.weight_kg    ? `${profile.weight_kg}kg`    : '—' },
-          { label: 'Target',  value: profile?.target_weight_kg ? `${profile.target_weight_kg}kg` : '—' },
-          { label: 'BMI',     value: profile?.bmi          ? parseFloat(profile.bmi).toFixed(1) : '—' },
+          { label: 'Weight', value: profile?.weight_kg ? `${profile.weight_kg}kg` : '—' },
+          { label: 'Target', value: profile?.target_weight_kg ? `${profile.target_weight_kg}kg` : '—' },
+          { label: 'BMI', value: profile?.bmi ? parseFloat(profile.bmi).toFixed(1) : '—' },
         ].map(({ label, value }) => (
           <div key={label} style={statBox}>
             <span style={statVal}>{value}</span>
@@ -627,8 +643,10 @@ function Account() {
       {/* Logout */}
       <button onClick={handleLogout} style={logoutBtn}>
         <LogOut size={18} color="var(--error)" />
-        <span style={{ fontSize: '0.9375rem', fontWeight: 600,
-          color: 'var(--error)', fontFamily: 'Satoshi, sans-serif' }}>
+        <span style={{
+          fontSize: '0.9375rem', fontWeight: 600,
+          color: 'var(--error)', fontFamily: 'Satoshi, sans-serif'
+        }}>
           Log Out
         </span>
       </button>

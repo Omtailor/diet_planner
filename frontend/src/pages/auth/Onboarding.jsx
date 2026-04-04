@@ -5,10 +5,10 @@ import toast from 'react-hot-toast'
 import { authService } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
 
-import bg6  from '../../assets/images/bg-6.webp'
-import bg7  from '../../assets/images/bg-7.webp'
-import bg8  from '../../assets/images/bg-8.webp'
-import bg9  from '../../assets/images/bg-9.webp'
+import bg6 from '../../assets/images/bg-6.webp'
+import bg7 from '../../assets/images/bg-7.webp'
+import bg8 from '../../assets/images/bg-8.webp'
+import bg9 from '../../assets/images/bg-9.webp'
 import bg10 from '../../assets/images/bg-10.webp'
 import bg11 from '../../assets/images/bg-11.webp'
 
@@ -16,22 +16,27 @@ const STEP_IMAGES = [bg6, bg7, bg8, bg9, bg10, bg11]
 const TOTAL_STEPS = 6
 
 const LOADING_SENTENCES = [
-  'Analyzing your body stats...',
-  'Calculating your daily calorie target...',
-  'Selecting Indian meals for your goal...',
-  'Balancing macros for your diet type...',
-  'Scheduling your training days...',
-  'Factoring in your beverage habits...',
-  'Optimizing for your fasting schedule...',
-  'Personalizing your 7-day meal plan...',
-  'Choosing the right exercises for you...',
-  'Calibrating protein intake targets...',
-  'Preparing your grocery list...',
-  'Finalizing your rest day meals...',
-  'Adding variety to your weekly plan...',
-  'Almost there — polishing your plan...',
-  'Your plan is ready! 🚀',
-]
+  "Initializing your Neural Health Profile...",
+  "Mapping your unique metabolic fingerprint...",
+  "Sculpting your 7-day nutrient architecture...",
+  "Harmonizing Indian flavors with macro-precision...",
+  "Optimizing fiber ratios for digestive efficiency...",
+  "Calibrating your glycemic response window...",
+  "Engineering a hypertrophy-focused training split...",
+  "Syncing hydration cycles with your daily rhythm...",
+  "Balancing micronutrients: Zinc, Iron, and Vitamin D...",
+  "Simulating your 16:8 fasting metabolic curve...",
+  "Drafting your bespoke, zero-waste grocery map...",
+  "Finalizing your recovery and rest-day protocols...",
+  "Stress-testing your plan for 100% adherence...",
+  "Encoding your culinary preferences into the engine...",
+  "Synthesizing your activity levels with caloric load...",
+  "Cross-referencing allergies and dietary restrictions...",
+  "Allocating micronutrient density for cellular repair...",
+  "Constructing your high-performance training schedule...",
+  "Plan finalized. Preparing your digital reveal...",
+  "Welcome to the new you. Launching now... 🚀"
+];
 
 // ─── Step Components ───────────────────────────────────────────
 
@@ -103,13 +108,13 @@ function Step2({ data, update }) {
 function Step3({ data, update }) {
   const goals = [
     { key: 'muscle_building', label: '💪 Muscle Building', desc: 'Gain lean muscle mass' },
-    { key: 'fat_loss',        label: '🔥 Fat Loss',        desc: 'Burn fat, stay energized' },
-    { key: 'weight_loss',     label: '⚖️ Weight Loss',     desc: 'Reduce overall weight' },
-    { key: 'maintenance',     label: '🎯 Maintenance',     desc: 'Maintain current body' },
+    { key: 'fat_loss', label: '🔥 Fat Loss', desc: 'Burn fat, stay energized' },
+    { key: 'weight_loss', label: '⚖️ Weight Loss', desc: 'Reduce overall weight' },
+    { key: 'maintenance', label: '🎯 Maintenance', desc: 'Maintain current body' },
   ]
   const diets = [
-    { key: 'jain',    label: '🌿 Jain'    },
-    { key: 'veg',     label: '🥦 Veg'     },
+    { key: 'jain', label: '🌿 Jain' },
+    { key: 'veg', label: '🥦 Veg' },
     { key: 'non_veg', label: '🍗 Non-Veg' },
   ]
   return (
@@ -147,7 +152,7 @@ function Step4({ data, update }) {
       <div style={s.fields}>
         <Field label="Do you drink tea or coffee?">
           <div style={s.optionRow}>
-            {['none','tea','coffee','both'].map(b => (
+            {['none', 'tea', 'coffee', 'both'].map(b => (
               <OptionChip key={b} label={b.charAt(0).toUpperCase() + b.slice(1)}
                 selected={data.beverage_habit === b}
                 onSelect={() => {
@@ -163,7 +168,7 @@ function Step4({ data, update }) {
         {data.beverage_habit === 'tea' && (
           <Field label="Tea Type">
             <div style={s.optionRow}>
-              {[{key:'milk',label:'Milk Tea'},{key:'black',label:'Black Tea'},{key:'green',label:'Green Tea'}].map(t => (
+              {[{ key: 'milk', label: 'Milk Tea' }, { key: 'black', label: 'Black Tea' }, { key: 'green', label: 'Green Tea' }].map(t => (
                 <OptionChip key={t.key} label={t.label}
                   selected={data.tea_type === t.key}
                   onSelect={() => update('tea_type', t.key)} />
@@ -174,7 +179,7 @@ function Step4({ data, update }) {
         {data.beverage_habit === 'coffee' && (
           <Field label="Coffee Type">
             <div style={s.optionRow}>
-              {[{key:'milk',label:'Milk Coffee'},{key:'black',label:'Black Coffee'}].map(c => (
+              {[{ key: 'milk', label: 'Milk Coffee' }, { key: 'black', label: 'Black Coffee' }].map(c => (
                 <OptionChip key={c.key} label={c.label}
                   selected={data.coffee_type === c.key}
                   onSelect={() => update('coffee_type', c.key)} />
@@ -186,8 +191,8 @@ function Step4({ data, update }) {
           <>
             <Field label="Morning Beverage">
               <div style={s.optionRow}>
-                {['tea','coffee'].map(b => (
-                  <OptionChip key={b} label={b.charAt(0).toUpperCase()+b.slice(1)}
+                {['tea', 'coffee'].map(b => (
+                  <OptionChip key={b} label={b.charAt(0).toUpperCase() + b.slice(1)}
                     selected={data.morning_beverage === b}
                     onSelect={() => update('morning_beverage', b)} />
                 ))}
@@ -195,8 +200,8 @@ function Step4({ data, update }) {
             </Field>
             <Field label="Evening Beverage">
               <div style={s.optionRow}>
-                {['tea','coffee'].map(b => (
-                  <OptionChip key={b} label={b.charAt(0).toUpperCase()+b.slice(1)}
+                {['tea', 'coffee'].map(b => (
+                  <OptionChip key={b} label={b.charAt(0).toUpperCase() + b.slice(1)}
                     selected={data.evening_beverage === b}
                     onSelect={() => update('evening_beverage', b)} />
                 ))}
@@ -217,7 +222,7 @@ function Step5({ data, update }) {
       <div style={s.fields}>
         <Field label="Do you fast?">
           <div style={s.optionRow}>
-            {['yes','no'].map(v => (
+            {['yes', 'no'].map(v => (
               <OptionChip key={v} label={v === 'yes' ? 'Yes 🙏' : 'No'}
                 selected={data.is_fasting === (v === 'yes')}
                 onSelect={() => update('is_fasting', v === 'yes')} />
@@ -242,7 +247,7 @@ function Step5({ data, update }) {
         )}
         <Field label="Do you go to the gym?">
           <div style={s.optionRow}>
-            {['yes','no'].map(v => (
+            {['yes', 'no'].map(v => (
               <OptionChip key={v} label={v === 'yes' ? 'Yes 🏋️' : 'No 🏠'}
                 selected={data.has_gym === (v === 'yes')}
                 onSelect={() => update('has_gym', v === 'yes')} />
@@ -256,15 +261,15 @@ function Step5({ data, update }) {
 
 function Step6({ data }) {
   const summaryItems = [
-    { label: 'Name',      value: data.name },
-    { label: 'Age',       value: `${data.age} years` },
-    { label: 'Goal',      value: data.goal?.replace('_',' ') },
-    { label: 'Diet',      value: data.diet_preference },
-    { label: 'Height',    value: `${data.height_cm} cm` },
-    { label: 'Weight',    value: `${data.weight_kg} kg` },
-    { label: 'Target',    value: `${data.target_weight_kg} kg` },
-    { label: 'Gym',       value: data.has_gym ? 'Yes' : 'No' },
-    { label: 'Fasting',   value: data.is_fasting ? 'Yes' : 'No' },
+    { label: 'Name', value: data.name },
+    { label: 'Age', value: `${data.age} years` },
+    { label: 'Goal', value: data.goal?.replace('_', ' ') },
+    { label: 'Diet', value: data.diet_preference },
+    { label: 'Height', value: `${data.height_cm} cm` },
+    { label: 'Weight', value: `${data.weight_kg} kg` },
+    { label: 'Target', value: `${data.target_weight_kg} kg` },
+    { label: 'Gym', value: data.has_gym ? 'Yes' : 'No' },
+    { label: 'Fasting', value: data.is_fasting ? 'Yes' : 'No' },
     { label: 'Beverages', value: data.beverage_habit },
   ]
   return (
@@ -353,7 +358,7 @@ function GoalCard({ label, desc, selected, onSelect }) {
 
 function LoadingOverlay() {
   const [sentenceIdx, setSentenceIdx] = useState(0)
-  const [visible, setVisible]         = useState(true)
+  const [visible, setVisible] = useState(true)
 
   useEffect(() => {
     const cycle = () => {
@@ -392,9 +397,9 @@ function LoadingOverlay() {
 // ─── Main Onboarding Component ─────────────────────────────────
 
 function Onboarding() {
-  const navigate    = useNavigate()
+  const navigate = useNavigate()
   const { fetchProfile } = useAuth()
-  const [step, setStep]     = useState(1)
+  const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
 
   const [data, setData] = useState({
@@ -416,9 +421,9 @@ function Onboarding() {
       case 2: return data.height_cm && data.weight_kg && data.target_weight_kg && data.health_time_minutes
       case 3: return data.goal && data.diet_preference
       case 4:
-        if (data.beverage_habit === 'tea')    return !!data.tea_type
+        if (data.beverage_habit === 'tea') return !!data.tea_type
         if (data.beverage_habit === 'coffee') return !!data.coffee_type
-        if (data.beverage_habit === 'both')   return !!(data.morning_beverage && data.evening_beverage)
+        if (data.beverage_habit === 'both') return !!(data.morning_beverage && data.evening_beverage)
         return true
       case 5:
         if (data.is_fasting) return !!(data.fasting_days.trim() && data.fasting_type.trim())
@@ -494,9 +499,9 @@ function Onboarding() {
     }
   }
 
-  const steps     = [Step1, Step2, Step3, Step4, Step5, Step6]
+  const steps = [Step1, Step2, Step3, Step4, Step5, Step6]
   const CurrentStep = steps[step - 1]
-  const progress  = (step / TOTAL_STEPS) * 100
+  const progress = (step / TOTAL_STEPS) * 100
   const stepValid = isStepValid()
   const currentBg = STEP_IMAGES[step - 1]
 
@@ -551,7 +556,7 @@ function Onboarding() {
             style={{
               ...s.nextBtn,
               opacity: (!stepValid || loading) ? 0.45 : 1,
-              cursor:  (!stepValid || loading) ? 'not-allowed' : 'pointer',
+              cursor: (!stepValid || loading) ? 'not-allowed' : 'pointer',
             }}
             className="next-btn"
           >
