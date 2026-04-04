@@ -1,11 +1,37 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Loader2, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { authService } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
 
+import bg6  from '../../assets/images/bg-6.webp'
+import bg7  from '../../assets/images/bg-7.webp'
+import bg8  from '../../assets/images/bg-8.webp'
+import bg9  from '../../assets/images/bg-9.webp'
+import bg10 from '../../assets/images/bg-10.webp'
+import bg11 from '../../assets/images/bg-11.webp'
+
+const STEP_IMAGES = [bg6, bg7, bg8, bg9, bg10, bg11]
 const TOTAL_STEPS = 6
+
+const LOADING_SENTENCES = [
+  'Analyzing your body stats...',
+  'Calculating your daily calorie target...',
+  'Selecting Indian meals for your goal...',
+  'Balancing macros for your diet type...',
+  'Scheduling your training days...',
+  'Factoring in your beverage habits...',
+  'Optimizing for your fasting schedule...',
+  'Personalizing your 7-day meal plan...',
+  'Choosing the right exercises for you...',
+  'Calibrating protein intake targets...',
+  'Preparing your grocery list...',
+  'Finalizing your rest day meals...',
+  'Adding variety to your weekly plan...',
+  'Almost there — polishing your plan...',
+  'Your plan is ready! 🚀',
+]
 
 // ─── Step Components ───────────────────────────────────────────
 
@@ -17,15 +43,18 @@ function Step1({ data, update }) {
       <div style={s.fields}>
         <Field label="Full Name">
           <input style={s.input} placeholder="Your name" value={data.name}
-            onChange={e => update('name', e.target.value)} />
+            onChange={e => update('name', e.target.value)}
+            className="glass-input" />
         </Field>
         <Field label="Age">
           <input style={s.input} type="number" placeholder="Years" value={data.age}
-            onChange={e => update('age', e.target.value)} min="10" max="100" />
+            onChange={e => update('age', e.target.value)} min="10" max="100"
+            className="glass-input" />
         </Field>
         <Field label="City">
           <input style={s.input} placeholder="Your city" value={data.city}
-            onChange={e => update('city', e.target.value)} />
+            onChange={e => update('city', e.target.value)}
+            className="glass-input" />
         </Field>
         <Field label="Gender">
           <div style={s.optionRow}>
@@ -48,19 +77,23 @@ function Step2({ data, update }) {
       <div style={s.fields}>
         <Field label="Height (cm)">
           <input style={s.input} type="number" placeholder="e.g. 175" value={data.height_cm}
-            onChange={e => update('height_cm', e.target.value)} min="100" max="250" />
+            onChange={e => update('height_cm', e.target.value)} min="100" max="250"
+            className="glass-input" />
         </Field>
         <Field label="Current Weight (kg)">
           <input style={s.input} type="number" placeholder="e.g. 70" value={data.weight_kg}
-            onChange={e => update('weight_kg', e.target.value)} min="30" max="300" />
+            onChange={e => update('weight_kg', e.target.value)} min="30" max="300"
+            className="glass-input" />
         </Field>
         <Field label="Target Weight (kg)">
           <input style={s.input} type="number" placeholder="e.g. 65" value={data.target_weight_kg}
-            onChange={e => update('target_weight_kg', e.target.value)} min="30" max="300" />
+            onChange={e => update('target_weight_kg', e.target.value)} min="30" max="300"
+            className="glass-input" />
         </Field>
         <Field label="Daily Health Time (minutes)">
           <input style={s.input} type="number" placeholder="e.g. 60" value={data.health_time_minutes}
-            onChange={e => update('health_time_minutes', e.target.value)} min="0" max="300" />
+            onChange={e => update('health_time_minutes', e.target.value)} min="0" max="300"
+            className="glass-input" />
         </Field>
       </div>
     </div>
@@ -75,9 +108,9 @@ function Step3({ data, update }) {
     { key: 'maintenance',     label: '🎯 Maintenance',     desc: 'Maintain current body' },
   ]
   const diets = [
-    { key: 'jain',    label: '🌿 Jain',    desc: 'No root vegetables' },
-    { key: 'veg',     label: '🥦 Veg',     desc: 'Vegetarian' },
-    { key: 'non_veg', label: '🍗 Non-Veg', desc: 'All foods included' },
+    { key: 'jain',    label: '🌿 Jain'    },
+    { key: 'veg',     label: '🥦 Veg'     },
+    { key: 'non_veg', label: '🍗 Non-Veg' },
   ]
   return (
     <div style={s.stepContent}>
@@ -127,15 +160,10 @@ function Step4({ data, update }) {
             ))}
           </div>
         </Field>
-
-        {(data.beverage_habit === 'tea') && (
+        {data.beverage_habit === 'tea' && (
           <Field label="Tea Type">
             <div style={s.optionRow}>
-              {[
-                { key: 'milk',  label: 'Milk Tea'   },
-                { key: 'black', label: 'Black Tea'  },
-                { key: 'green', label: 'Green Tea'  },
-              ].map(t => (
+              {[{key:'milk',label:'Milk Tea'},{key:'black',label:'Black Tea'},{key:'green',label:'Green Tea'}].map(t => (
                 <OptionChip key={t.key} label={t.label}
                   selected={data.tea_type === t.key}
                   onSelect={() => update('tea_type', t.key)} />
@@ -143,14 +171,10 @@ function Step4({ data, update }) {
             </div>
           </Field>
         )}
-
-        {(data.beverage_habit === 'coffee') && (
+        {data.beverage_habit === 'coffee' && (
           <Field label="Coffee Type">
             <div style={s.optionRow}>
-              {[
-                { key: 'milk',  label: 'Milk Coffee'  },
-                { key: 'black', label: 'Black Coffee' },
-              ].map(c => (
+              {[{key:'milk',label:'Milk Coffee'},{key:'black',label:'Black Coffee'}].map(c => (
                 <OptionChip key={c.key} label={c.label}
                   selected={data.coffee_type === c.key}
                   onSelect={() => update('coffee_type', c.key)} />
@@ -158,8 +182,7 @@ function Step4({ data, update }) {
             </div>
           </Field>
         )}
-
-        {(data.beverage_habit === 'both') && (
+        {data.beverage_habit === 'both' && (
           <>
             <Field label="Morning Beverage">
               <div style={s.optionRow}>
@@ -201,22 +224,22 @@ function Step5({ data, update }) {
             ))}
           </div>
         </Field>
-
         {data.is_fasting && (
           <>
             <Field label="Fasting Days (e.g. monday, thursday)">
               <input style={s.input} placeholder="monday, thursday"
                 value={data.fasting_days}
-                onChange={e => update('fasting_days', e.target.value)} />
+                onChange={e => update('fasting_days', e.target.value)}
+                className="glass-input" />
             </Field>
             <Field label="Fasting Type (e.g. Ekadashi, Navratri)">
               <input style={s.input} placeholder="Type of fast"
                 value={data.fasting_type}
-                onChange={e => update('fasting_type', e.target.value)} />
+                onChange={e => update('fasting_type', e.target.value)}
+                className="glass-input" />
             </Field>
           </>
         )}
-
         <Field label="Do you go to the gym?">
           <div style={s.optionRow}>
             {['yes','no'].map(v => (
@@ -233,24 +256,27 @@ function Step5({ data, update }) {
 
 function Step6({ data }) {
   const summaryItems = [
-    { label: 'Name',       value: data.name },
-    { label: 'Age',        value: `${data.age} years` },
-    { label: 'Goal',       value: data.goal?.replace('_',' ') },
-    { label: 'Diet',       value: data.diet_preference },
-    { label: 'Height',     value: `${data.height_cm} cm` },
-    { label: 'Weight',     value: `${data.weight_kg} kg` },
-    { label: 'Target',     value: `${data.target_weight_kg} kg` },
-    { label: 'Gym',        value: data.has_gym ? 'Yes' : 'No' },
-    { label: 'Fasting',    value: data.is_fasting ? 'Yes' : 'No' },
-    { label: 'Beverages',  value: data.beverage_habit },
+    { label: 'Name',      value: data.name },
+    { label: 'Age',       value: `${data.age} years` },
+    { label: 'Goal',      value: data.goal?.replace('_',' ') },
+    { label: 'Diet',      value: data.diet_preference },
+    { label: 'Height',    value: `${data.height_cm} cm` },
+    { label: 'Weight',    value: `${data.weight_kg} kg` },
+    { label: 'Target',    value: `${data.target_weight_kg} kg` },
+    { label: 'Gym',       value: data.has_gym ? 'Yes' : 'No' },
+    { label: 'Fasting',   value: data.is_fasting ? 'Yes' : 'No' },
+    { label: 'Beverages', value: data.beverage_habit },
   ]
   return (
     <div style={s.stepContent}>
       <h2 style={s.stepTitle}>All set! 🎉</h2>
       <p style={s.stepSubtitle}>Review your profile before we generate your plan</p>
       <div style={s.summaryCard}>
-        {summaryItems.map(item => (
-          <div key={item.label} style={s.summaryRow}>
+        {summaryItems.map((item, i) => (
+          <div key={item.label} style={{
+            ...s.summaryRow,
+            borderBottom: i < summaryItems.length - 1 ? '1px solid rgba(255,255,255,0.25)' : 'none',
+          }}>
             <span style={s.summaryLabel}>{item.label}</span>
             <span style={s.summaryValue}>{item.value || '—'}</span>
           </div>
@@ -258,7 +284,7 @@ function Step6({ data }) {
       </div>
       <div style={s.aiNote}>
         <span style={{ fontSize: '1.25rem' }}>🤖</span>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
           Our AI will generate your personalized 7-day Indian meal plan and training schedule instantly!
         </p>
       </div>
@@ -281,11 +307,13 @@ function OptionChip({ label, selected, onSelect }) {
   return (
     <button type="button" onClick={onSelect} style={{
       ...s.chip,
-      background: selected ? 'var(--accent)' : 'var(--bg-surface-2)',
-      color: selected ? '#0A0A0A' : 'var(--text-secondary)',
-      border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+      background: selected ? 'var(--color-accent)' : 'rgba(255,255,255,0.35)',
+      color: selected ? '#ffffff' : 'var(--color-text-muted)',
+      border: `1px solid ${selected ? 'var(--color-accent)' : 'rgba(255,255,255,0.55)'}`,
       fontWeight: selected ? 700 : 400,
-      transform: selected ? 'scale(1.03)' : 'scale(1)',
+      transform: selected ? 'scale(1.04)' : 'scale(1)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
     }}>
       {label}
     </button>
@@ -296,32 +324,79 @@ function GoalCard({ label, desc, selected, onSelect }) {
   return (
     <button type="button" onClick={onSelect} style={{
       ...s.goalCard,
-      background: selected ? 'rgba(200,241,53,0.1)' : 'var(--bg-surface-2)',
-      border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+      background: selected
+        ? 'rgba(58,158,95,0.18)'
+        : 'rgba(255,255,255,0.35)',
+      border: `1px solid ${selected ? 'var(--color-accent)' : 'rgba(255,255,255,0.55)'}`,
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
     }}>
-      <span style={{ fontSize: '0.9375rem', fontWeight: 600,
-        color: selected ? 'var(--accent)' : 'var(--text-primary)' }}>
+      <span style={{
+        fontSize: '0.9375rem', fontWeight: 600,
+        color: selected ? 'var(--color-accent)' : 'var(--color-text)',
+      }}>
         {label}
       </span>
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
         {desc}
       </span>
       {selected && (
         <div style={s.goalCheck}>
-          <Check size={10} strokeWidth={3} color="#0A0A0A" />
+          <Check size={10} strokeWidth={3} color="#fff" />
         </div>
       )}
     </button>
   )
 }
 
+// ─── Loading Overlay ───────────────────────────────────────────
+
+function LoadingOverlay() {
+  const [sentenceIdx, setSentenceIdx] = useState(0)
+  const [visible, setVisible]         = useState(true)
+
+  useEffect(() => {
+    const cycle = () => {
+      // Fade out
+      setVisible(false)
+      setTimeout(() => {
+        setSentenceIdx(prev => (prev + 1) % LOADING_SENTENCES.length)
+        setVisible(true)  // Fade in
+      }, 400)
+    }
+    const id = setInterval(cycle, 2200)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div style={s.loadingOverlay}>
+      <div style={s.loadingCard} className="glass-heavy">
+        <Loader2
+          size={44}
+          color="var(--color-accent)"
+          style={{ animation: 'spin 1s linear infinite', marginBottom: '24px' }}
+        />
+        <p style={{
+          ...s.loadingSentence,
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'translateY(0)' : 'translateY(8px)',
+        }}>
+          {LOADING_SENTENCES[sentenceIdx]}
+        </p>
+        <p style={s.loadingHint}>This may take a few seconds</p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Onboarding Component ─────────────────────────────────
 
 function Onboarding() {
-  const navigate = useNavigate()
+  const navigate    = useNavigate()
   const { fetchProfile } = useAuth()
-  const [step, setStep] = useState(1)
+  const [step, setStep]     = useState(1)
   const [loading, setLoading] = useState(false)
+
   const [data, setData] = useState({
     name: '', age: '', city: '', gender: '',
     height_cm: '', weight_kg: '', target_weight_kg: '', health_time_minutes: '',
@@ -334,14 +409,12 @@ function Onboarding() {
 
   const update = (key, value) => setData(prev => ({ ...prev, [key]: value }))
 
+  // Track step changes to restart Ken Burns
   const isStepValid = () => {
     switch (step) {
-      case 1:
-        return data.name.trim() && data.age && data.city.trim() && data.gender
-      case 2:
-        return data.height_cm && data.weight_kg && data.target_weight_kg && data.health_time_minutes
-      case 3:
-        return data.goal && data.diet_preference
+      case 1: return data.name.trim() && data.age && data.city.trim() && data.gender
+      case 2: return data.height_cm && data.weight_kg && data.target_weight_kg && data.health_time_minutes
+      case 3: return data.goal && data.diet_preference
       case 4:
         if (data.beverage_habit === 'tea')    return !!data.tea_type
         if (data.beverage_habit === 'coffee') return !!data.coffee_type
@@ -350,14 +423,10 @@ function Onboarding() {
       case 5:
         if (data.is_fasting) return !!(data.fasting_days.trim() && data.fasting_type.trim())
         return data.has_gym !== undefined
-      case 6:
-        return true
-      default:
-        return false
+      case 6: return true
+      default: return false
     }
   }
-
-  const stepValid = isStepValid()
 
   const validateStep = () => {
     switch (step) {
@@ -425,75 +494,142 @@ function Onboarding() {
     }
   }
 
-  const steps = [Step1, Step2, Step3, Step4, Step5, Step6]
+  const steps     = [Step1, Step2, Step3, Step4, Step5, Step6]
   const CurrentStep = steps[step - 1]
-  const progress = (step / TOTAL_STEPS) * 100
+  const progress  = (step / TOTAL_STEPS) * 100
+  const stepValid = isStepValid()
+  const currentBg = STEP_IMAGES[step - 1]
 
   return (
     <div style={s.wrapper}>
-      {/* Header */}
-      <div style={s.header}>
-        {step > 1 ? (
-          <button onClick={handleBack} style={s.backBtn}>
-            <ChevronLeft size={22} color="var(--text-primary)" />
+
+      {/* ── Ken Burns Background Image ── */}
+      <img
+        key={`bg-step-${step}`}
+        src={currentBg}
+        alt=""
+        style={s.bgImage}
+        className={`ken-burns-step-${step}`}
+      />
+
+      {/* ── Overlay ── */}
+      <div style={s.overlay} />
+
+      {/* ── Loading Overlay (full screen) ── */}
+      {loading && <LoadingOverlay />}
+
+      {/* ── Inner layout ── */}
+      <div style={s.inner}>
+
+        {/* Header */}
+        <div style={s.header}>
+          {step > 1 ? (
+            <button onClick={handleBack} style={s.backBtn} className="glass">
+              <ChevronLeft size={20} color="var(--color-text)" />
+            </button>
+          ) : <div style={{ width: '40px' }} />}
+
+          <span style={s.stepCounter}>Step {step} of {TOTAL_STEPS}</span>
+          <div style={{ width: '40px' }} />
+        </div>
+
+        {/* Progress bar */}
+        <div style={s.progressTrack}>
+          <div style={{ ...s.progressFill, width: `${progress}%` }} />
+        </div>
+
+        {/* Step content */}
+        <div style={s.content}>
+          <CurrentStep data={data} update={update} />
+        </div>
+
+        {/* Footer */}
+        <div style={s.footer} className="glass">
+          <button
+            onClick={step === TOTAL_STEPS ? handleSubmit : handleNext}
+            disabled={loading || !stepValid}
+            style={{
+              ...s.nextBtn,
+              opacity: (!stepValid || loading) ? 0.45 : 1,
+              cursor:  (!stepValid || loading) ? 'not-allowed' : 'pointer',
+            }}
+            className="next-btn"
+          >
+            {loading
+              ? <Loader2 size={20} style={{ animation: 'spin 0.8s linear infinite' }} />
+              : step === TOTAL_STEPS
+                ? 'Generate My Plan 🚀'
+                : 'Continue →'
+            }
           </button>
-        ) : <div style={{ width: '40px' }} />}
 
-        <span style={s.stepCounter}>Step {step} of {TOTAL_STEPS}</span>
-        <div style={{ width: '40px' }} />
-      </div>
-
-      {/* Progress bar */}
-      <div style={s.progressTrack}>
-        <div style={{ ...s.progressFill, width: `${progress}%` }} />
-      </div>
-
-      {/* Step content */}
-      <div style={s.content}>
-        <CurrentStep data={data} update={update} />
-      </div>
-
-      {/* Bottom button */}
-      <div style={s.footer}>
-        <button
-          onClick={step === TOTAL_STEPS ? handleSubmit : handleNext}
-          disabled={loading || !stepValid}
-          style={{
-            ...s.nextBtn,
-            opacity: (!stepValid || loading) ? 0.4 : 1,
-            cursor: (!stepValid || loading) ? 'not-allowed' : 'pointer',
-            transform: 'none',
-          }}
-        >
-          {loading ? (
-            <Loader2 size={20} style={{ animation: 'spin 0.8s linear infinite' }} />
-          ) : step === TOTAL_STEPS ? (
-            'Generate My Plan 🚀'
-          ) : (
-            'Continue →'
+          {!stepValid && (
+            <p style={s.hintText}>Complete all fields to continue</p>
           )}
-        </button>
-        {!stepValid && (
-          <p style={{
-            textAlign: 'center',
-            fontSize: '0.75rem',
-            color: 'var(--text-faint)',
-            fontFamily: 'Satoshi, sans-serif',
-            marginTop: '8px',
-          }}>
-            Complete all fields to continue
-          </p>
-        )}
+        </div>
+
       </div>
 
+      {/* ── Scoped styles ── */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        input:focus {
-          outline: none;
-          border-color: var(--accent) !important;
-          box-shadow: 0 0 0 3px rgba(200,241,53,0.15) !important;
+
+        /* Ken Burns — ultra-subtle, 20s "breathing" */
+        @keyframes kenBurns {
+          0%   { transform: scale(1.00) translate(0%,    0%);    }
+          25%  { transform: scale(1.04) translate(-0.6%, -0.4%); }
+          50%  { transform: scale(1.06) translate(-0.3%, -0.8%); }
+          75%  { transform: scale(1.04) translate( 0.4%, -0.4%); }
+          100% { transform: scale(1.00) translate(0%,    0%);    }
         }
-        input::placeholder { color: var(--text-faint); }
+
+        .ken-burns {
+          animation: kenBurns 22s ease-in-out forwards;
+          will-change: transform;
+        }
+
+        /* Crossfade between steps */
+        @keyframes fadeInBg {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
+        /* One rule per step — unique class = browser always re-runs animation */
+        .ken-burns-step-1,
+        .ken-burns-step-2,
+        .ken-burns-step-3,
+        .ken-burns-step-4,
+        .ken-burns-step-5,
+        .ken-burns-step-6 {
+          animation: kenBurns 22s ease-in-out both, fadeInBg 0.8s ease both;
+          will-change: transform;
+        }
+
+        /* Inputs */
+        .glass-input:focus {
+          outline: none;
+          border-color: var(--color-accent) !important;
+          box-shadow: 0 0 0 3px var(--color-accent-glow) !important;
+          background: rgba(255,255,255,0.80) !important;
+        }
+        .glass-input::placeholder { color: var(--color-text-faint); }
+
+        /* Next button hover */
+        .next-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 24px var(--color-accent-glow);
+          background: var(--color-accent-hover) !important;
+        }
+        .next-btn:active:not(:disabled) { transform: translateY(0); }
+
+        /* Loading sentence transition */
+        .loading-sentence {
+          transition: opacity 400ms ease, transform 400ms ease;
+        }
+
+        @media (max-width: 480px) {
+          .onboarding-inner { padding: 0 !important; }
+        }
       `}</style>
     </div>
   )
@@ -504,11 +640,35 @@ function Onboarding() {
 const s = {
   wrapper: {
     minHeight: '100dvh',
-    background: 'var(--bg-primary)',
+    position: 'relative',
+    overflow: 'hidden',
     display: 'flex',
-    flexDirection: 'column',
+    fontFamily: 'var(--font-body)',
+  },
+  bgImage: {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    zIndex: 0,
+    transformOrigin: 'center center',
+  },
+  overlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'linear-gradient(160deg, rgba(220,245,228,0.50) 0%, rgba(180,225,195,0.42) 100%)',
+    zIndex: 1,
+  },
+  inner: {
+    position: 'relative',
+    zIndex: 2,
+    width: '100%',
     maxWidth: '480px',
     margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: '100dvh',
   },
   header: {
     display: 'flex',
@@ -518,31 +678,29 @@ const s = {
   },
   backBtn: {
     width: '40px', height: '40px',
-    background: 'var(--bg-surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
+    borderRadius: '12px',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer',
+    border: 'none',
   },
   stepCounter: {
     fontSize: '0.8125rem',
     fontWeight: 600,
-    color: 'var(--text-secondary)',
-    fontFamily: 'Satoshi, sans-serif',
+    color: 'var(--color-text-muted)',
     letterSpacing: '0.3px',
   },
   progressTrack: {
     height: '3px',
-    background: 'var(--bg-surface-3)',
+    background: 'rgba(255,255,255,0.35)',
     margin: '8px 20px 0',
     borderRadius: '4px',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    background: 'var(--accent)',
+    background: 'var(--color-accent)',
     borderRadius: '4px',
-    transition: 'width 400ms cubic-bezier(0.16,1,0.3,1)',
+    transition: 'width 450ms cubic-bezier(0.16,1,0.3,1)',
   },
   content: {
     flex: 1,
@@ -555,18 +713,16 @@ const s = {
     gap: '24px',
   },
   stepTitle: {
-    fontFamily: 'Clash Display, sans-serif',
-    fontSize: '1.625rem',
+    fontSize: 'clamp(1.4rem, 4vw, 1.7rem)',
     fontWeight: 700,
-    color: 'var(--text-primary)',
+    color: 'var(--color-text)',
     letterSpacing: '-0.4px',
     lineHeight: 1.2,
   },
   stepSubtitle: {
     fontSize: '0.9rem',
-    color: 'var(--text-secondary)',
+    color: 'var(--color-text-muted)',
     marginTop: '-16px',
-    fontFamily: 'Satoshi, sans-serif',
   },
   fields: {
     display: 'flex',
@@ -580,21 +736,22 @@ const s = {
   },
   label: {
     fontSize: '0.8125rem',
-    fontWeight: 500,
-    color: 'var(--text-secondary)',
-    fontFamily: 'Satoshi, sans-serif',
+    fontWeight: 600,
+    color: 'var(--color-text-muted)',
     letterSpacing: '0.2px',
   },
   input: {
     width: '100%',
     padding: '13px 16px',
-    background: 'var(--bg-surface-2)',
-    border: '1px solid var(--border)',
-    borderRadius: '12px',
-    color: 'var(--text-primary)',
+    background: 'rgba(255,255,255,0.60)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    border: '1px solid rgba(255,255,255,0.70)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--color-text)',
     fontSize: '1rem',
-    fontFamily: 'Satoshi, sans-serif',
-    transition: 'border-color 180ms ease, box-shadow 180ms ease',
+    fontFamily: 'var(--font-body)',
+    transition: 'border-color var(--transition), box-shadow var(--transition), background var(--transition)',
   },
   optionRow: {
     display: 'flex',
@@ -602,12 +759,12 @@ const s = {
     gap: '8px',
   },
   chip: {
-    padding: '8px 16px',
+    padding: '8px 18px',
     borderRadius: '999px',
     fontSize: '0.875rem',
-    fontFamily: 'Satoshi, sans-serif',
+    fontFamily: 'var(--font-body)',
     cursor: 'pointer',
-    transition: 'all 180ms ease',
+    transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
     whiteSpace: 'nowrap',
   },
   cardGrid: {
@@ -617,81 +774,124 @@ const s = {
   },
   goalCard: {
     padding: '14px',
-    borderRadius: '14px',
+    borderRadius: 'var(--radius-md)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
     cursor: 'pointer',
     position: 'relative',
-    transition: 'all 180ms ease',
+    transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
     textAlign: 'left',
   },
   goalCheck: {
     position: 'absolute',
     top: '10px', right: '10px',
     width: '18px', height: '18px',
-    background: 'var(--accent)',
+    background: 'var(--color-accent)',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
   summaryCard: {
-    background: 'var(--bg-surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '16px',
+    background: 'rgba(255,255,255,0.55)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: '1px solid rgba(255,255,255,0.65)',
+    borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
+    boxShadow: 'var(--shadow-md)',
   },
   summaryRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 16px',
-    borderBottom: '1px solid var(--border)',
   },
   summaryLabel: {
     fontSize: '0.875rem',
-    color: 'var(--text-secondary)',
-    fontFamily: 'Satoshi, sans-serif',
+    color: 'var(--color-text-muted)',
   },
   summaryValue: {
     fontSize: '0.875rem',
     fontWeight: 600,
-    color: 'var(--text-primary)',
-    fontFamily: 'Satoshi, sans-serif',
+    color: 'var(--color-text)',
     textTransform: 'capitalize',
   },
   aiNote: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '12px',
-    background: 'rgba(200,241,53,0.06)',
-    border: '1px solid rgba(200,241,53,0.2)',
-    borderRadius: '14px',
+    background: 'rgba(58,158,95,0.10)',
+    border: '1px solid rgba(58,158,95,0.25)',
+    borderRadius: 'var(--radius-md)',
     padding: '14px',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
   },
   footer: {
     padding: '16px 20px',
     paddingBottom: 'calc(16px + env(safe-area-inset-bottom))',
-    background: 'var(--bg-primary)',
-    borderTop: '1px solid var(--border)',
+    borderTop: '1px solid rgba(255,255,255,0.30)',
   },
   nextBtn: {
     width: '100%',
     padding: '15px',
-    background: 'var(--accent)',
-    color: '#0A0A0A',
+    background: 'var(--color-accent)',
+    color: '#ffffff',
     border: 'none',
-    borderRadius: '14px',
+    borderRadius: 'var(--radius-md)',
     fontSize: '1rem',
     fontWeight: 700,
-    fontFamily: 'Satoshi, sans-serif',
-    cursor: 'pointer',
+    fontFamily: 'var(--font-body)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    transition: 'opacity 180ms ease, transform 180ms ease',
+    transition: 'background var(--transition), transform var(--transition), box-shadow var(--transition)',
+    letterSpacing: '0.2px',
+  },
+  hintText: {
+    textAlign: 'center',
+    fontSize: '0.75rem',
+    color: 'var(--color-text-faint)',
+    marginTop: '8px',
+  },
+  loadingOverlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 50,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(220,245,228,0.45)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+  },
+  loadingCard: {
+    borderRadius: 'var(--radius-xl)',
+    padding: '40px 36px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
+    maxWidth: '320px',
+    width: '90%',
+  },
+  loadingSentence: {
+    fontSize: '1rem',
+    fontWeight: 600,
+    color: 'var(--color-text)',
+    fontFamily: 'var(--font-body)',
+    lineHeight: 1.5,
+    minHeight: '48px',
+    transition: 'opacity 400ms ease, transform 400ms ease',
+    marginBottom: '12px',
+  },
+  loadingHint: {
+    fontSize: '0.8rem',
+    color: 'var(--color-text-faint)',
+    fontFamily: 'var(--font-body)',
   },
 }
 
