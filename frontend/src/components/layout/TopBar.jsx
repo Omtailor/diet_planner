@@ -7,9 +7,10 @@ const pageTitles = {
   '/account':   'Account',
 }
 
-function TopBar() {
+export default function TopBar() {
   const location = useLocation()
   const title = pageTitles[location.pathname]
+
   if (!title) return null
 
   return (
@@ -22,8 +23,8 @@ function TopBar() {
       maxWidth: '480px',
       height: '60px',
       background: 'rgba(255,255,255,0.75)',
-      backdropFilter: 'blur(20px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      backdropFilter: 'blur(12px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(12px) saturate(180%)',
       borderBottom: '1px solid rgba(255,255,255,0.60)',
       display: 'flex',
       alignItems: 'center',
@@ -42,5 +43,3 @@ function TopBar() {
     </header>
   )
 }
-
-export default TopBar

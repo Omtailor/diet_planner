@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom'
 import BottomNav from './BottomNav'
 import TopBar from './TopBar'
 
-function AppLayout() {
+export default function AppLayout() {
   return (
     <div style={{
       maxWidth: '480px',
@@ -27,5 +27,3 @@ function AppLayout() {
     </div>
   )
 }
-
-export default AppLayout
