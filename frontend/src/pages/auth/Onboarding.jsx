@@ -579,35 +579,43 @@ function Onboarding() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Ken Burns — ultra-subtle, 20s "breathing" */
-        @keyframes kenBurns {
-          0%   { transform: scale(1.00) translate(0%,    0%);    }
-          25%  { transform: scale(1.04) translate(-0.6%, -0.4%); }
-          50%  { transform: scale(1.06) translate(-0.3%, -0.8%); }
-          75%  { transform: scale(1.04) translate( 0.4%, -0.4%); }
-          100% { transform: scale(1.00) translate(0%,    0%);    }
-        }
-
-        .ken-burns {
-          animation: kenBurns 22s ease-in-out forwards;
-          will-change: transform;
-        }
-
         /* Crossfade between steps */
         @keyframes fadeInBg {
-          from { opacity: 0; }
-          to   { opacity: 1; }
+          from { opacity: 0; transform: scale(1.02); }
+          to   { opacity: 1; transform: scale(1); }
         }
 
-        /* One rule per step — unique class = browser always re-runs animation */
+        /* Cinematic Ken Burns - Slow, continuous push-in and pan.
+          We create two variations so the camera direction changes on every step.
+        */
+        @keyframes kenBurnsOdd {
+          0%   { transform: scale(1.0) translate(0%, 0%); }
+          100% { transform: scale(1.8) translate(-2%, -1.5%); }
+        }
+
+        @keyframes kenBurnsEven {
+          0%   { transform: scale(1.0) translate(0%, 0%); }
+          100% { transform: scale(1.8) translate(1.5%, 2%); }
+        }
+
+        /* Apply alternating animations. 'infinite alternate' ensures if a user
+           lingers on a step for >30s, it slowly reverses instead of snapping. */
         .ken-burns-step-1,
-        .ken-burns-step-2,
         .ken-burns-step-3,
+        .ken-burns-step-5 {
+          animation:
+            fadeInBg 1s cubic-bezier(0.16, 1, 0.3, 1) both,
+            kenBurnsOdd 30s linear infinite alternate;
+          will-change: transform, opacity;
+        }
+
+        .ken-burns-step-2,
         .ken-burns-step-4,
-        .ken-burns-step-5,
         .ken-burns-step-6 {
-          animation: kenBurns 22s ease-in-out both, fadeInBg 0.8s ease both;
-          will-change: transform;
+          animation:
+            fadeInBg 1s cubic-bezier(0.16, 1, 0.3, 1) both,
+            kenBurnsEven 30s linear infinite alternate;
+          will-change: transform, opacity;
         }
 
         /* Inputs */

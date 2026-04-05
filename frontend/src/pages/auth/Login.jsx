@@ -44,7 +44,7 @@ function Login() {
 
       {/* ── Video (loops continuously) ── */}
       <video
-        autoPlay muted playsInline loop
+        autoPlay playsInline loop
         poster={bg1}
         style={s.bgVideo}
         preload="auto"

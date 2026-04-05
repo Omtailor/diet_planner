@@ -68,7 +68,7 @@ function Signup() {
 
       {/* ── Background Video (loops) ── */}
       <video
-        autoPlay muted loop playsInline
+        autoPlay playsInline loop
         poster={bg1}
         style={s.bgVideo}
         preload="auto"
