@@ -1,5 +1,5 @@
 import json
-from datetime import date, timedelta
+from datetime import date
 
 from google import genai
 from google.genai import types
@@ -27,12 +27,12 @@ class WeeklyPlanView(APIView):
 
     def get(self, request):
         today = date.today()
-        week_start = today - timedelta(days=today.weekday())
 
         plan = WeeklyPlan.objects.filter(
             user=request.user,
-            week_start_date=week_start,
-        ).first()
+            week_start_date__lte=today,
+            week_end_date__gte=today,
+        ).order_by('-week_start_date').first()
 
         if not plan:
             return Response(
@@ -100,12 +100,12 @@ class GeneratePlanView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Delete existing plan for this week if any
+        # Delete existing plan that covers today if any
         today = date.today()
-        week_start = today - timedelta(days=today.weekday())
         WeeklyPlan.objects.filter(
             user=request.user,
-            week_start_date=week_start
+            week_start_date__lte=today,
+            week_end_date__gte=today,
         ).delete()
 
         # Generate fresh plan

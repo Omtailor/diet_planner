@@ -106,7 +106,7 @@ class MealPlanGenerator:
         if not self.profile.is_fasting:
             return set()
 
-        day_name_to_index = {
+        day_name_to_weekday = {
             "monday": 0,
             "tuesday": 1,
             "wednesday": 2,
@@ -119,9 +119,11 @@ class MealPlanGenerator:
         fasting_raw = (self.profile.fasting_days or "").lower()
         fasting_indices = set()
 
-        for day_name, idx in day_name_to_index.items():
+        for day_name, weekday in day_name_to_weekday.items():
             if day_name in fasting_raw:
-                fasting_indices.add(idx)
+                # Convert absolute weekday → loop index relative to week_start
+                loop_index = (weekday - week_start.weekday()) % 7
+                fasting_indices.add(loop_index)
 
         return fasting_indices
 
@@ -237,7 +239,7 @@ Breakdown       : Breakfast ~25% ({round(net_meal_calories * 0.25)} kcal)
 {beverage_note}
 
 ══════════════════════════════════════════
-WEEK SCHEDULE ({week_start.strftime("%d %b %Y")})
+7-DAY PLAN STARTING TODAY ({week_start.strftime("%A, %d %b %Y")})
 ══════════════════════════════════════════
 {day_schedule}
 
@@ -254,6 +256,7 @@ STRICT RULES
 8. is_jain_friendly: {str(p.diet_preference == 'jain').lower()} for ALL meals
 9. is_fasting_friendly: true ONLY on fasting days, false on all regular days
 10. Macros sanity check: calories ≈ (protein × 4) + (carbs × 4) + (fats × 9)
+11. Day 1 starts on {week_start.strftime("%A, %d %b %Y")} — do NOT assume Monday is Day 1
 
 ══════════════════════════════════════════
 RESPONSE — VALID JSON ONLY, NO MARKDOWN
@@ -262,7 +265,7 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
   "days": [
     {{
       "day_number": 1,
-      "date_label": "Monday, 07 Apr",
+      "date_label": "{week_start.strftime('%A, %d %b')}",
       "is_fasting_day": false,
       "breakfast": {{
         "meal_type": "breakfast",
@@ -347,34 +350,39 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
             user=self.user,
             week_start_date=week_start,
             defaults={
-                'week_end_date': week_end,
-                'target_calories': tdee,
-                'plan_notes': validated.plan_notes or '',
-            }
+                "week_end_date": week_end,
+                "target_calories": tdee,
+                "plan_notes": validated.plan_notes or "",
+            },
         )
 
         for day_data in validated.days:
-            date = week_start + datetime.timedelta(days=day_data.day_number - 1)
+            actual_date = week_start + datetime.timedelta(
+                days=day_data.day_number - 1
+            )
+            actual_weekday = actual_date.weekday()  # 0=Monday ... 6=Sunday
 
             day_meal, _ = DayMeal.objects.get_or_create(
                 weekly_plan=plan,
-                day_of_week=day_data.day_number - 1,
+                day_of_week=actual_weekday,
                 defaults={
-                    'date': date,
-                    'is_fasting_day': day_data.is_fasting_day,
-                    'day_notes': day_data.day_notes or '',
-                }
+                    "date": actual_date,
+                    "is_fasting_day": day_data.is_fasting_day,
+                    "day_notes": day_data.day_notes or "",
+                },
             )
 
-            for slot_name in ['breakfast', 'lunch', 'dinner']:
+            for slot_name in ["breakfast", "lunch", "dinner"]:
                 meal_data = getattr(day_data, slot_name)
 
                 # Parse ingredients safely
                 ingredients_list = []
-                for ing in (meal_data.ingredients or []):
+                for ing in meal_data.ingredients or []:
                     if isinstance(ing, str):
-                        ingredients_list.append({'name': ing, 'quantity': None, 'unit': ''})
-                    elif hasattr(ing, 'dict'):
+                        ingredients_list.append(
+                            {"name": ing, "quantity": None, "unit": ""}
+                        )
+                    elif hasattr(ing, "dict"):
                         ingredients_list.append(ing.dict())
                     elif isinstance(ing, dict):
                         ingredients_list.append(ing)
@@ -382,32 +390,32 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
                 food_item, _ = FoodItem.objects.get_or_create(
                     name=meal_data.name,
                     defaults={
-                        'category':           slot_name,
-                        'diet_type':          self.profile.diet_preference,
-                        'calories':           meal_data.calories,
-                        'protein_g':          meal_data.protein,
-                        'carbs_g':            meal_data.carbs,
-                        'fats_g':             meal_data.fats,
-                        'fiber_g':            meal_data.fiber,
-                        'serving_size_g':     meal_data.serving_size,
-                        'serving_unit':       meal_data.serving_unit,
-                        'ingredients':        ingredients_list,
-                        'is_fasting_friendly': meal_data.is_fasting_friendly,
-                        'is_jain_friendly':   meal_data.is_jain_friendly,
-                    }
+                        "category": slot_name,
+                        "diet_type": self.profile.diet_preference,
+                        "calories": meal_data.calories,
+                        "protein_g": meal_data.protein,
+                        "carbs_g": meal_data.carbs,
+                        "fats_g": meal_data.fats,
+                        "fiber_g": meal_data.fiber,
+                        "serving_size_g": meal_data.serving_size,
+                        "serving_unit": meal_data.serving_unit,
+                        "ingredients": ingredients_list,
+                        "is_fasting_friendly": meal_data.is_fasting_friendly,
+                        "is_jain_friendly": meal_data.is_jain_friendly,
+                    },
                 )
 
                 MealSlot.objects.get_or_create(
                     day_meal=day_meal,
                     slot=slot_name,
                     defaults={
-                        'food_item':  food_item,
-                        'quantity_g': meal_data.serving_size,
-                        'calories':   meal_data.calories,
-                        'protein_g':  meal_data.protein,
-                        'carbs_g':    meal_data.carbs,
-                        'fats_g':     meal_data.fats,
-                    }
+                        "food_item": food_item,
+                        "quantity_g": meal_data.serving_size,
+                        "calories": meal_data.calories,
+                        "protein_g": meal_data.protein,
+                        "carbs_g": meal_data.carbs,
+                        "fats_g": meal_data.fats,
+                    },
                 )
 
         return plan
@@ -425,7 +433,7 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
         """
         if week_start is None:
             today = date.today()
-            week_start = today - timedelta(days=today.weekday())  # Monday
+            week_start = today  # Start from TODAY, not last Monday
 
         tdee = self.calculate_tdee()
         beverage_cal = self.calculate_beverage_calories()
