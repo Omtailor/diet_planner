@@ -31,6 +31,27 @@ function getGreeting() {
   return 'Good evening'
 }
 
+/** Profile payload has no `name` on UserProfile; API adds username & email. */
+function profileGreetingName(profile) {
+  if (!profile) return 'there'
+  const fullName = (profile.name || '').trim()
+  if (fullName) return fullName.split(/\s+/)[0]
+  const first = (profile.first_name || '').trim()
+  if (first) return first.split(/\s+/)[0]
+  const u = (profile.username || '').trim()
+  if (u) return u
+  const email = (profile.email || '').trim()
+  const local = email.split('@')[0]
+  if (local) return local
+  return 'there'
+}
+
+function profileAvatarInitial(profile) {
+  const token = profileGreetingName(profile)
+  if (token === 'there') return 'U'
+  return token[0].toUpperCase()
+}
+
 function formatDate() {
   return new Date().toLocaleDateString('en-IN', {
     weekday: 'long', day: 'numeric', month: 'long'
@@ -669,7 +690,7 @@ const modalHandle = {
 
 function Dashboard() {
   const navigate = useNavigate()
-  const { profile, fetchProfile } = useAuth()
+  const { profile, fetchProfile, user } = useAuth()
   const [dayMeal, setDayMeal] = useState(null)
   const [loadingMeal, setLoadingMeal] = useState(true)
   const [showWeightModal, setShowWeightModal] = useState(false)
@@ -762,12 +783,12 @@ function Dashboard() {
           <h1 style={greetingName}>
             {getGreeting()},{' '}
             <span style={{ color: 'var(--color-accent)' }}>
-              {profile?.name?.split(' ')[0] || 'there'} 👋
+              {profileGreetingName(profile)} 👋
             </span>
           </h1>
         </div>
         <div style={avatarCircle}>
-          {profile?.name?.[0]?.toUpperCase() || 'U'}
+          {profileAvatarInitial(profile)}
         </div>
       </div>
 

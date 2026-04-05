@@ -246,10 +246,10 @@ export default function Account() {
       {/* Profile Header */}
       <div style={S.profileHeader}>
         <div style={S.avatarLarge}>
-          {profile?.name?.[0]?.toUpperCase() || 'U'}
+          {user?.username?.[0]?.toUpperCase() || 'U'}
         </div>
         <div>
-          <h2 style={S.profileName}>{profile?.name || 'User'}</h2>
+          <h2 style={S.profileName}>{user?.username || 'User'}</h2>
           <p style={S.profileGoal}>
             {profile?.goal?.replace('_', ' ') || 'Goal not set'} •{' '}
             {profile?.diet_preference || 'Diet not set'}
