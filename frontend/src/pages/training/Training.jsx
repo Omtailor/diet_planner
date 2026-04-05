@@ -3,8 +3,6 @@ import { Loader2, ChevronRight, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import API from '../../services/api';
-import bgImage from '../../assets/images/bg-12.webp';
-import bgVideoRest from '../../assets/videos/bg-video-01.mp4';
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -120,7 +118,6 @@ export default function Training() {
   // ── Loading ────────────────────────────────────────────────
   if (loading) return (
     <div style={S.page}>
-      <BgLayer isRestDay={false} bgImage={bgImage} bgVideoRest={bgVideoRest} />
       <div style={S.centeredContent}>
         <div style={S.spinnerRing} className="spin-ring" />
         <p style={S.loadingText}>Loading your training plan...</p>
@@ -132,7 +129,6 @@ export default function Training() {
   // ── No Plan ────────────────────────────────────────────────
   if (!plan) return (
     <div style={S.page}>
-      <BgLayer isRestDay={false} bgImage={bgImage} bgVideoRest={bgVideoRest} />
       <div style={{ position: 'relative', zIndex: 2, padding: '24px 16px' }}>
         <div style={S.glassCard}>
           <span style={{ fontSize: '3.5rem' }}>🏋️</span>
@@ -163,9 +159,6 @@ export default function Training() {
 
   return (
     <div style={S.page}>
-      {/* ── Backgrounds ── */}
-      <BgLayer isRestDay={isRestDay} bgImage={bgImage} bgVideoRest={bgVideoRest} />
-
       {/* ── Content ── */}
       <div style={{ position: 'relative', zIndex: 2 }}>
 
@@ -219,50 +212,6 @@ export default function Training() {
 
       </div>
       <GlobalStyles />
-    </div>
-  );
-}
-
-// ─── Background Layer ──────────────────────────────────────────
-function BgLayer({ isRestDay, bgImage, bgVideoRest }) {
-  return (
-    <div style={S.bgBase}>
-      <AnimatePresence mode="wait">
-        {isRestDay ? (
-          <motion.video
-            key="rest-video"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.2 }}
-            src={bgVideoRest}
-            autoPlay muted loop playsInline
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <motion.div
-            key="workout-image"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.2 }}
-            className="ken-burns"
-            style={{
-              width: '100%', height: '100%',
-              backgroundImage: `url(${bgImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
-        )}
-      </AnimatePresence>
-      {/* Light frosted overlay to ensure text readability globally */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.8) 100%)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }} />
     </div>
   );
 }
@@ -518,13 +467,6 @@ function GlobalStyles() {
       @keyframes spin {
         to { transform: rotate(360deg); }
       }
-      @keyframes kenBurns {
-        0%   { transform: scale(1.00) translate(0%, 0%); }
-        25%  { transform: scale(1.06) translate(-1%, 1%); }
-        50%  { transform: scale(1.03) translate(1%, -1%); }
-        75%  { transform: scale(1.08) translate(-1%, 1%); }
-        100% { transform: scale(1.00) translate(0%, 0%); }
-      }
       @keyframes regenPulse {
         0%   { box-shadow: 0 0 0 0 rgba(52,199,89,0.6); }
         70%  { box-shadow: 0 0 0 16px rgba(52,199,89,0); }
@@ -538,7 +480,6 @@ function GlobalStyles() {
       .spin       { animation: spin 0.8s linear infinite; }
       .spin-ring  { animation: spin 0.9s linear infinite; }
       .regen-pulse { animation: regenPulse 0.6s ease-out; }
-      .ken-burns  { animation: kenBurns 24s ease-in-out infinite; transform-origin: center; }
       .day-detail-enter { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
     `}</style>
   );
@@ -561,13 +502,6 @@ const S = {
     minHeight: '100dvh',
     position: 'relative',
     fontFamily: FONT,
-  },
-
-  // ── BG layers ──
-  bgBase: {
-    position: 'fixed',
-    top: 0, left: 0, right: 0, bottom: 0,
-    zIndex: -1, pointerEvents: 'none', overflow: 'hidden',
     background: '#F2F2F7',
   },
 

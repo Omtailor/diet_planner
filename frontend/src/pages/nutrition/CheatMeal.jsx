@@ -7,6 +7,17 @@ import API from '../../services/api'
 const MODES = { IMAGE: 'image', TEXT: 'text' }
 const STAGES = { PICK: 'pick', RESULT: 'result', FOLLOWUP: 'followup', DONE: 'done' }
 
+// ─── Style Tokens ──────────────────────────────────────────────
+const FONT = "'General Sans', sans-serif";
+
+const GLASS_WHITE = {
+  background: 'rgba(255, 255, 255, 0.65)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  border: '1px solid rgba(255, 255, 255, 0.8)',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
+};
+
 export default function CheatMeal() {
   const navigate = useNavigate()
   const fileRef = useRef()
@@ -117,10 +128,10 @@ export default function CheatMeal() {
       <div style={s.header}>
         <button onClick={() => stage !== STAGES.PICK ? setStage(STAGES.PICK) : navigate(-1)}
           style={s.backBtn}>
-          <ChevronLeft size={20} color="var(--text-primary)" />
+          <ChevronLeft size={20} color="var(--color-text)" />
         </button>
         <p style={s.title}>Log Cheat Meal</p>
-        <div style={{ width: 38 }} />
+        <div style={{ width: 44 }} /> {/* Balance back button width */}
       </div>
 
       {/* Banner */}
@@ -140,12 +151,12 @@ export default function CheatMeal() {
             <button
               onClick={() => setMode(MODES.IMAGE)}
               style={{ ...s.modeTab, ...(mode === MODES.IMAGE ? s.modeTabActive : {}) }}>
-              <Camera size={15} /> Photo
+              <Camera size={16} /> Photo
             </button>
             <button
               onClick={() => setMode(MODES.TEXT)}
               style={{ ...s.modeTab, ...(mode === MODES.TEXT ? s.modeTabActive : {}) }}>
-              <Type size={15} /> Manual
+              <Type size={16} /> Manual
             </button>
           </div>
 
@@ -163,32 +174,33 @@ export default function CheatMeal() {
               {images.length === 0 ? (
                 <button onClick={() => fileRef.current?.click()} style={s.uploadZone}>
                   <div style={s.cameraCircle}>
-                    <Camera size={30} color="var(--accent)" />
+                    <Camera size={30} color="#FF3B30" />
                   </div>
                   <p style={s.uploadTitle}>Take photo or upload</p>
                   <p style={s.uploadSub}>Up to 2 images • AI detects the food</p>
                   <div style={s.uploadHint}>Tap to open camera / gallery</div>
                 </button>
               ) : (
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 12 }}>
                   {images.map((img, i) => (
                     <div key={i} style={{ position: 'relative', flex: 1 }}>
                       <img src={img.preview} alt="food"
                         style={{
                           width: '100%', height: 160,
-                          objectFit: 'cover', borderRadius: 12, display: 'block'
+                          objectFit: 'cover', borderRadius: '16px', display: 'block',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                         }} />
                       <button onClick={() => removeImage(i)} style={s.removeBtn}>
-                        <X size={12} color="#fff" />
+                        <X size={14} color="#fff" />
                       </button>
                     </div>
                   ))}
                   {images.length < 2 && (
                     <button onClick={() => fileRef.current?.click()} style={s.addMoreBtn}>
-                      <Camera size={20} color="var(--text-faint)" />
+                      <Camera size={24} color="var(--color-text-faint)" />
                       <span style={{
-                        fontSize: '0.7rem', color: 'var(--text-faint)',
-                        fontFamily: 'Satoshi, sans-serif', marginTop: 4
+                        fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500,
+                        fontFamily: FONT, marginTop: 6
                       }}>Add 2nd photo</span>
                     </button>
                   )}
@@ -197,9 +209,9 @@ export default function CheatMeal() {
 
               {/* Notes */}
               {images.length > 0 && (
-                <div style={{ marginTop: 14 }}>
+                <div style={{ marginTop: 16 }}>
                   <label style={s.label}>Notes (optional)</label>
-                  <input style={s.input} placeholder="e.g. Birthday party..."
+                  <input style={s.input} placeholder="e.g. Birthday party slice..."
                     value={notes} onChange={e => setNotes(e.target.value)} />
                 </div>
               )}
@@ -210,12 +222,12 @@ export default function CheatMeal() {
           {mode === MODES.TEXT && (
             <div style={s.card}>
               <label style={s.label}>What did you eat? *</label>
-              <textarea style={{ ...s.input, minHeight: 90, resize: 'vertical' }}
+              <textarea style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
                 placeholder="e.g. 2 slices of pizza, a can of Coke and some garlic bread..."
                 value={desc} onChange={e => setDesc(e.target.value)}
                 autoFocus />
 
-              <label style={{ ...s.label, marginTop: 14 }}>Notes (optional)</label>
+              <label style={{ ...s.label, marginTop: 16 }}>Notes (optional)</label>
               <input style={s.input}
                 placeholder="e.g. Late night craving, college canteen..."
                 value={notes} onChange={e => setNotes(e.target.value)} />
@@ -228,7 +240,7 @@ export default function CheatMeal() {
             disabled={loading || (mode === MODES.IMAGE ? !images.length : !desc.trim())}
             style={{
               ...s.submitBtn,
-              opacity: loading || (mode === MODES.IMAGE ? !images.length : !desc.trim()) ? 0.4 : 1,
+              opacity: loading || (mode === MODES.IMAGE ? !images.length : !desc.trim()) ? 0.5 : 1,
               cursor: loading ? 'not-allowed' : 'pointer',
             }}>
             {loading
@@ -258,7 +270,7 @@ export default function CheatMeal() {
             disabled={loading || !answer.trim()}
             style={{
               ...s.submitBtn,
-              opacity: loading || !answer.trim() ? 0.4 : 1,
+              opacity: loading || !answer.trim() ? 0.5 : 1,
               cursor: loading ? 'not-allowed' : 'pointer',
             }}>
             {loading
@@ -283,9 +295,9 @@ export default function CheatMeal() {
               <div style={{
                 ...s.confidenceBadge,
                 background: result.ai_confidence > 0.7
-                  ? 'rgba(100,200,80,0.12)' : 'rgba(255,200,0,0.12)',
+                  ? 'rgba(52,199,89,0.12)' : 'rgba(255,149,0,0.12)', // Apple Green or Orange
                 color: result.ai_confidence > 0.7
-                  ? 'var(--success)' : 'var(--warning)',
+                  ? '#34C759' : '#FF9500',
               }}>
                 {result.ai_confidence > 0.7 ? '🎯 High confidence'
                   : result.ai_confidence > 0.4 ? '📊 Medium confidence'
@@ -303,167 +315,185 @@ export default function CheatMeal() {
         </>
       )}
 
-      <div style={{ height: 8 }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ height: 16 }} />
+      <style>{`
+        :root {
+          --color-accent: #34C759;
+          --color-text: #1C1C1E;
+          --color-text-muted: #636366;
+          --color-text-faint: #8E8E93;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   )
 }
 
 // ── Styles ────────────────────────────────────────────────────────
 const s = {
-  page: { display: 'flex', flexDirection: 'column', gap: 14, padding: 16 },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  page: { 
+    display: 'flex', flexDirection: 'column', gap: 16, padding: '16px' 
+  },
+  header: { 
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' 
+  },
   backBtn: {
-    width: 38, height: 38, background: 'var(--bg-surface)',
-    border: '1px solid var(--border)', borderRadius: 10,
+    width: 44, height: 44, 
+    background: 'rgba(255,255,255,0.6)',
+    border: '1px solid rgba(0,0,0,0.04)', 
+    borderRadius: 14,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer'
+    cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
   },
   title: {
-    fontFamily: 'Clash Display, sans-serif', fontSize: '1.1rem',
-    fontWeight: 600, color: 'var(--text-primary)'
+    fontFamily: FONT, fontSize: '1.2rem',
+    fontWeight: 800, color: 'var(--color-text)'
   },
   banner: {
     display: 'flex', alignItems: 'center', gap: 16,
-    background: 'rgba(255,77,77,0.06)',
-    border: '1px solid rgba(255,77,77,0.2)',
-    borderRadius: 18, padding: '16px'
+    ...GLASS_WHITE,
+    background: 'rgba(255, 59, 48, 0.08)', // Light Apple Red tint
+    border: '1px solid rgba(255, 59, 48, 0.2)',
+    borderRadius: 24, padding: '20px'
   },
   bannerTitle: {
-    fontFamily: 'Clash Display, sans-serif', fontSize: '1rem',
-    fontWeight: 600, color: 'var(--text-primary)'
+    fontFamily: FONT, fontSize: '1.1rem',
+    fontWeight: 800, color: 'var(--color-text)'
   },
   bannerSub: {
-    fontSize: '0.8rem', color: 'var(--text-secondary)',
-    fontFamily: 'Satoshi, sans-serif', marginTop: 4
+    fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500,
+    fontFamily: FONT, marginTop: 4
   },
   modeTabs: {
     display: 'flex', gap: 8,
-    background: 'var(--bg-surface)',
-    border: '1px solid var(--border)',
-    borderRadius: 12, padding: 4
+    ...GLASS_WHITE,
+    borderRadius: 20, padding: 8
   },
   modeTab: {
     flex: 1, display: 'flex', alignItems: 'center',
-    justifyContent: 'center', gap: 6,
-    padding: '9px 0', borderRadius: 9, border: 'none',
-    background: 'none', color: 'var(--text-faint)',
-    fontSize: '0.875rem', fontWeight: 600,
-    fontFamily: 'Satoshi, sans-serif', cursor: 'pointer',
-    transition: 'all 180ms ease'
+    justifyContent: 'center', gap: 8,
+    padding: '12px 0', borderRadius: 14, border: 'none',
+    background: 'transparent', color: 'var(--color-text-muted)',
+    fontSize: '0.9rem', fontWeight: 700,
+    fontFamily: FONT, cursor: 'pointer',
+    transition: 'all 200ms ease'
   },
   modeTabActive: {
-    background: 'var(--bg-surface-2)',
-    color: 'var(--text-primary)',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+    background: '#ffffff',
+    color: 'var(--color-text)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
   },
   card: {
-    background: 'var(--bg-surface)', border: '1px solid var(--border)',
-    borderRadius: 18, padding: '16px'
+    ...GLASS_WHITE,
+    borderRadius: 24, padding: '20px'
   },
   uploadZone: {
     width: '100%', display: 'flex', flexDirection: 'column',
-    alignItems: 'center', padding: '36px 16px',
-    background: 'none', border: '2px dashed var(--border)',
-    borderRadius: 14, cursor: 'pointer'
+    alignItems: 'center', padding: '40px 16px',
+    background: 'rgba(255,255,255,0.4)', 
+    border: '2px dashed rgba(0,0,0,0.1)',
+    borderRadius: 20, cursor: 'pointer',
+    transition: 'background 200ms ease'
   },
   cameraCircle: {
     width: 64, height: 64,
-    background: 'rgba(200,241,53,0.1)',
-    border: '2px solid rgba(200,241,53,0.3)',
-    borderRadius: '50%', display: 'flex',
+    background: 'rgba(255, 59, 48, 0.1)',
+    borderRadius: '20px', display: 'flex',
     alignItems: 'center', justifyContent: 'center'
   },
   uploadTitle: {
-    fontFamily: 'Clash Display, sans-serif', fontSize: '1rem',
-    fontWeight: 600, color: 'var(--text-primary)', marginTop: 12
+    fontFamily: FONT, fontSize: '1.1rem',
+    fontWeight: 800, color: 'var(--color-text)', marginTop: 16
   },
   uploadSub: {
-    fontSize: '0.78rem', color: 'var(--text-secondary)',
-    fontFamily: 'Satoshi, sans-serif', marginTop: 6
+    fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500,
+    fontFamily: FONT, marginTop: 6
   },
   uploadHint: {
-    marginTop: 14, fontSize: '0.73rem', color: 'var(--text-faint)',
-    fontFamily: 'Satoshi, sans-serif',
-    background: 'var(--bg-surface-2)',
-    border: '1px solid var(--border)',
-    borderRadius: 999, padding: '5px 14px'
+    marginTop: 16, fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600,
+    fontFamily: FONT,
+    background: 'rgba(0,0,0,0.04)',
+    border: '1px solid rgba(0,0,0,0.05)',
+    borderRadius: 999, padding: '6px 16px'
   },
   removeBtn: {
-    position: 'absolute', top: 6, right: 6,
-    width: 24, height: 24, background: 'rgba(0,0,0,0.6)',
+    position: 'absolute', top: 8, right: 8,
+    width: 28, height: 28, background: 'rgba(0,0,0,0.6)',
+    backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
     border: 'none', borderRadius: '50%', cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center'
   },
   addMoreBtn: {
     flex: 1, minHeight: 160, display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center',
-    background: 'var(--bg-surface-2)',
-    border: '2px dashed var(--border)',
-    borderRadius: 12, cursor: 'pointer', gap: 4
+    background: 'rgba(255,255,255,0.4)',
+    border: '2px dashed rgba(0,0,0,0.1)',
+    borderRadius: 16, cursor: 'pointer', gap: 6
   },
   label: {
-    display: 'block', fontSize: '0.7rem', fontWeight: 700,
-    color: 'var(--text-faint)', letterSpacing: '0.5px',
-    textTransform: 'uppercase', fontFamily: 'Satoshi, sans-serif',
-    marginBottom: 8
+    display: 'block', fontSize: '0.75rem', fontWeight: 700,
+    color: 'var(--color-text-muted)', letterSpacing: '0.5px',
+    textTransform: 'uppercase', fontFamily: FONT,
+    marginBottom: 10
   },
   input: {
-    width: '100%', background: 'var(--bg-surface-2)',
-    border: '1px solid var(--border)', borderRadius: 12,
-    padding: '12px 14px', color: 'var(--text-primary)',
-    fontFamily: 'Satoshi, sans-serif', fontSize: '0.9375rem',
-    outline: 'none'
+    width: '100%', background: 'rgba(255,255,255,0.8)',
+    border: '1px solid rgba(0,0,0,0.05)', borderRadius: 16,
+    padding: '14px 16px', color: 'var(--color-text)',
+    fontFamily: FONT, fontSize: '0.95rem', fontWeight: 500,
+    outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
   },
   submitBtn: {
-    width: '100%', padding: 15,
-    background: 'var(--error)', border: 'none',
-    borderRadius: 14, color: '#fff',
-    fontSize: '0.9375rem', fontWeight: 700,
-    fontFamily: 'Satoshi, sans-serif',
+    width: '100%', padding: 16,
+    background: '#FF3B30', // Apple Red for Cheat Meal action
+    border: 'none',
+    borderRadius: 16, color: '#ffffff',
+    fontSize: '1rem', fontWeight: 800,
+    fontFamily: FONT,
     display: 'flex', alignItems: 'center',
-    justifyContent: 'center', gap: 8,
-    transition: 'opacity 180ms ease', cursor: 'pointer'
+    justifyContent: 'center', gap: 10,
+    boxShadow: '0 8px 24px rgba(255, 59, 48, 0.3)',
+    transition: 'opacity 180ms ease, transform 180ms ease', cursor: 'pointer'
   },
   followUpCard: {
-    background: 'rgba(200,241,53,0.06)',
-    border: '1px solid rgba(200,241,53,0.2)',
-    borderRadius: 18, padding: '20px 16px',
+    ...GLASS_WHITE,
+    background: 'rgba(52, 199, 89, 0.08)',
+    border: '1px solid rgba(52, 199, 89, 0.2)',
+    borderRadius: 24, padding: '24px 20px',
     display: 'flex', flexDirection: 'column',
-    alignItems: 'center', gap: 12
+    alignItems: 'center', gap: 14
   },
-  aiAvatar: { fontSize: '2.5rem' },
+  aiAvatar: { fontSize: '3rem' },
   followUpQ: {
-    fontFamily: 'Satoshi, sans-serif', fontSize: '0.95rem',
-    color: 'var(--text-primary)', textAlign: 'center',
+    fontFamily: FONT, fontSize: '1.05rem', fontWeight: 600,
+    color: 'var(--color-text)', textAlign: 'center',
     lineHeight: 1.5
   },
   resultCard: {
-    background: 'var(--bg-surface)',
-    border: '1px solid var(--border)',
-    borderRadius: 20, padding: '28px 20px',
+    ...GLASS_WHITE,
+    borderRadius: 24, padding: '36px 24px',
     display: 'flex', flexDirection: 'column',
-    alignItems: 'center', gap: 10
+    alignItems: 'center', gap: 12
   },
-  resultCheck: { fontSize: '3rem' },
+  resultCheck: { fontSize: '3.5rem' },
   resultTitle: {
-    fontFamily: 'Clash Display, sans-serif',
-    fontSize: '1.2rem', fontWeight: 700,
-    color: 'var(--text-primary)', textAlign: 'center'
+    fontFamily: FONT,
+    fontSize: '1.4rem', fontWeight: 800,
+    color: 'var(--color-text)', textAlign: 'center'
   },
   resultCals: {
-    fontSize: '2rem', fontWeight: 800,
-    color: 'var(--accent)',
-    fontFamily: 'Clash Display, sans-serif'
+    fontSize: '2.5rem', fontWeight: 800,
+    color: 'var(--color-accent)',
+    fontFamily: FONT, letterSpacing: '-0.5px'
   },
   confidenceBadge: {
-    fontSize: '0.78rem', fontFamily: 'Satoshi, sans-serif',
-    fontWeight: 600, padding: '6px 14px',
-    borderRadius: 999, border: '1px solid transparent'
+    fontSize: '0.85rem', fontFamily: FONT,
+    fontWeight: 700, padding: '6px 16px',
+    borderRadius: 999, border: '1px solid transparent', marginTop: 4
   },
   resultSub: {
-    fontSize: '0.8rem', color: 'var(--text-faint)',
-    fontFamily: 'Satoshi, sans-serif', textAlign: 'center',
-    marginTop: 4
+    fontSize: '0.9rem', color: 'var(--color-text-muted)', fontWeight: 500,
+    fontFamily: FONT, textAlign: 'center',
+    marginTop: 8, lineHeight: 1.5
   },
 }

@@ -7,6 +7,19 @@ import { authService } from '../../services/authService'
 import { groceryService } from '../../services/groceryService'
 import API from '../../services/api'
 
+// ─── Style Tokens ──────────────────────────────────────────────
+const FONT = "'General Sans', sans-serif";
+
+const GLASS_WHITE = {
+  background: 'rgba(255, 255, 255, 0.65)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  border: '1px solid rgba(255, 255, 255, 0.8)',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
+};
+
+// ─── Sub-Components ────────────────────────────────────────────
+
 function CheatMealHistorySection({ onLogNew }) {
   const [meals, setMeals] = useState([])
   const [loading, setLoading] = useState(true)
@@ -27,40 +40,42 @@ function CheatMealHistorySection({ onLogNew }) {
     <div>
       <div style={{
         display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', marginBottom: '14px'
+        alignItems: 'center', marginBottom: '16px'
       }}>
-        <h3 style={modalTitle}>Cheat Meal History</h3>
+        <h3 style={S.modalTitle}>Cheat Meal History</h3>
         <button onClick={onLogNew} style={{
-          background: 'var(--error)', border: 'none',
-          borderRadius: '10px', padding: '8px 14px',
-          color: '#fff', fontSize: '0.8rem', fontWeight: 700,
-          fontFamily: 'Satoshi, sans-serif', cursor: 'pointer',
+          background: '#FF3B30', border: 'none',
+          borderRadius: '12px', padding: '10px 16px',
+          color: '#ffffff', fontSize: '0.85rem', fontWeight: 800,
+          fontFamily: FONT, cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(255,59,48,0.3)',
         }}>
           + Log New
         </button>
       </div>
 
       {loading && (
-        <p style={modalDesc}>Loading history...</p>
+        <p style={S.modalDesc}>Loading history...</p>
       )}
 
       {!loading && meals.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '24px 0' }}>
-          <p style={{ fontSize: '2rem', marginBottom: '8px' }}>🍕</p>
-          <p style={modalDesc}>No cheat meals logged yet.</p>
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <p style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🍕</p>
+          <p style={S.modalDesc}>No cheat meals logged yet.</p>
         </div>
       )}
 
       {!loading && meals.length > 0 && (
         <div style={{
           display: 'flex', flexDirection: 'column',
-          gap: '10px', maxHeight: '340px', overflowY: 'auto'
+          gap: '12px', maxHeight: '380px', overflowY: 'auto',
+          paddingRight: '4px'
         }}>
           {meals.map(m => (
             <div key={m.id} style={{
-              background: 'var(--bg-surface-2)',
-              border: '1px solid var(--border)',
-              borderRadius: '14px', padding: '14px 16px',
+              background: 'rgba(255,255,255,0.7)',
+              border: '1px solid rgba(0,0,0,0.05)',
+              borderRadius: '16px', padding: '16px',
             }}>
               <div style={{
                 display: 'flex',
@@ -68,23 +83,23 @@ function CheatMealHistorySection({ onLogNew }) {
               }}>
                 <div style={{ flex: 1 }}>
                   <p style={{
-                    fontFamily: 'Satoshi, sans-serif', fontWeight: 700,
-                    color: 'var(--text-primary)', fontSize: '0.95rem'
+                    fontFamily: FONT, fontWeight: 800,
+                    color: 'var(--color-text)', fontSize: '1rem'
                   }}>
                     {m.food_name || 'Unknown food'}
                   </p>
                   <p style={{
-                    fontSize: '0.75rem', color: 'var(--text-faint)',
-                    fontFamily: 'Satoshi, sans-serif', marginTop: '3px'
+                    fontSize: '0.8rem', color: 'var(--color-text-faint)', fontWeight: 600,
+                    fontFamily: FONT, marginTop: '4px'
                   }}>
                     {fmt(m.logged_at)} • {m.entry_method === 'image' ? '📸 Photo' : '✍️ Manual'}
                   </p>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <p style={{
-                    fontFamily: 'Clash Display, sans-serif',
-                    fontSize: '1.1rem', fontWeight: 700,
-                    color: 'var(--error)'
+                    fontFamily: FONT,
+                    fontSize: '1.2rem', fontWeight: 800,
+                    color: '#FF3B30'
                   }}>
                     {m.user_edited_calories || m.ai_estimated_calories
                       ? `${Math.round(m.user_edited_calories || m.ai_estimated_calories)} kcal`
@@ -92,20 +107,20 @@ function CheatMealHistorySection({ onLogNew }) {
                   </p>
                   {m.ai_confidence && (
                     <p style={{
-                      fontSize: '0.7rem', color: 'var(--text-faint)',
-                      fontFamily: 'Satoshi, sans-serif'
+                      fontSize: '0.75rem', color: 'var(--color-text-faint)', fontWeight: 600,
+                      fontFamily: FONT, marginTop: '2px'
                     }}>
                       {m.ai_confidence > 0.7 ? '🎯 High'
-                        : m.ai_confidence > 0.4 ? '📊 Medium' : '⚠️ Low'} confidence
+                        : m.ai_confidence > 0.4 ? '📊 Medium' : '⚠️ Low'} conf.
                     </p>
                   )}
                 </div>
               </div>
               {m.notes && (
                 <p style={{
-                  fontSize: '0.78rem', color: 'var(--text-secondary)',
-                  fontFamily: 'Satoshi, sans-serif',
-                  marginTop: '8px', fontStyle: 'italic'
+                  fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500,
+                  fontFamily: FONT,
+                  marginTop: '10px', fontStyle: 'italic'
                 }}>
                   "{m.notes}"
                 </p>
@@ -118,7 +133,9 @@ function CheatMealHistorySection({ onLogNew }) {
   )
 }
 
-function Account() {
+// ─── Main Account Page ─────────────────────────────────────────
+
+export default function Account() {
   const navigate = useNavigate()
   const { profile, logout, fetchProfile, user } = useAuth()
   const [activeSection, setActiveSection] = useState(null)
@@ -224,16 +241,16 @@ function Account() {
   }
 
   return (
-    <div style={pageWrap}>
+    <div style={S.pageWrap}>
 
       {/* Profile Header */}
-      <div style={profileHeader}>
-        <div style={avatarLarge}>
+      <div style={S.profileHeader}>
+        <div style={S.avatarLarge}>
           {profile?.name?.[0]?.toUpperCase() || 'U'}
         </div>
         <div>
-          <h2 style={profileName}>{profile?.name || 'User'}</h2>
-          <p style={profileGoal}>
+          <h2 style={S.profileName}>{profile?.name || 'User'}</h2>
+          <p style={S.profileGoal}>
             {profile?.goal?.replace('_', ' ') || 'Goal not set'} •{' '}
             {profile?.diet_preference || 'Diet not set'}
           </p>
@@ -241,84 +258,84 @@ function Account() {
       </div>
 
       {/* Stats Row */}
-      <div style={statsRow}>
+      <div style={S.statsRow}>
         {[
           { label: 'Weight', value: profile?.weight_kg ? `${profile.weight_kg}kg` : '—' },
           { label: 'Target', value: profile?.target_weight_kg ? `${profile.target_weight_kg}kg` : '—' },
           { label: 'BMI', value: profile?.bmi ? parseFloat(profile.bmi).toFixed(1) : '—' },
         ].map(({ label, value }) => (
-          <div key={label} style={statBox}>
-            <span style={statVal}>{value}</span>
-            <span style={statLabel}>{label}</span>
+          <div key={label} style={S.statBox}>
+            <span style={S.statVal}>{value}</span>
+            <span style={S.statLabel}>{label}</span>
           </div>
         ))}
       </div>
 
       {/* Menu Items */}
-      <div style={menuCard}>
+      <div style={S.menuCard}>
         {menuItems.map(({ icon, label, sub, key }, i, arr) => (
           <button
             key={key}
             onClick={() => handleMenuClick(key)}
             type="button"
             style={{
-              ...menuItem,
-              borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+              ...S.menuItem,
+              borderBottom: i < arr.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none',
             }}
           >
-            <div style={menuIcon}>{icon}</div>
+            <div style={S.menuIcon}>{icon}</div>
             <div style={{ flex: 1, textAlign: 'left' }}>
-              <p style={menuLabel}>{label}</p>
-              <p style={menuSub}>{sub}</p>
+              <p style={S.menuLabel}>{label}</p>
+              <p style={S.menuSub}>{sub}</p>
             </div>
-            <span style={{ color: 'var(--text-faint)', fontSize: '1rem' }}>›</span>
+            <span style={{ color: 'var(--color-text-faint)', fontSize: '1.2rem' }}>›</span>
           </button>
         ))}
       </div>
 
       {/* Inline Detail Modals */}
       {activeSection && (
-        <div style={modalOverlay} onClick={closeModal} role="dialog" aria-modal="true">
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={S.modalOverlay} onClick={closeModal} role="dialog" aria-modal="true">
+          <div style={S.modalCard} onClick={(e) => e.stopPropagation()}>
             {activeSection !== 'grocery' && (
-              <h3 style={modalTitle}>
+              <h3 style={S.modalTitle}>
                 {menuItems.find((x) => x.key === activeSection)?.label || 'Details'}
               </h3>
             )}
 
             {activeSection === 'personal' && (
               <div>
-                <p style={modalDesc}>Update your basic profile info.</p>
+                <p style={S.modalDesc}>Update your basic profile info.</p>
 
-                <label style={fieldLabel}>Name</label>
+                <label style={S.fieldLabel}>Name</label>
                 <input
                   type="text"
                   value={draft?.name || ''}
                   disabled
-                  style={{ ...modalInput, opacity: 0.7, cursor: 'not-allowed' }}
+                  style={{ ...S.modalInput, opacity: 0.6, cursor: 'not-allowed' }}
                 />
 
-                <label style={{ ...fieldLabel, marginTop: '12px' }}>Age</label>
+                <label style={{ ...S.fieldLabel, marginTop: '14px' }}>Age</label>
                 <input
                   type="number"
                   inputMode="numeric"
                   placeholder="e.g. 25"
                   value={draft?.age ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, age: e.target.value }))}
-                  style={modalInput}
+                  style={S.modalInput}
                 />
 
-                <label style={{ ...fieldLabel, marginTop: '12px' }}>City</label>
+                <label style={{ ...S.fieldLabel, marginTop: '14px' }}>City</label>
                 <input
                   type="text"
-                  placeholder="e.g. Pune"
+                  placeholder="e.g. Mumbai"
                   value={draft?.city ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))}
-                  style={modalInput}
+                  style={S.modalInput}
                 />
 
-                <div style={modalActions}>
-                  <button type="button" onClick={closeModal} style={modalSecondaryBtn}>
+                <div style={S.modalActions}>
+                  <button type="button" onClick={closeModal} style={S.modalSecondaryBtn}>
                     Cancel
                   </button>
                   <button
@@ -329,13 +346,9 @@ function Account() {
                         toast.error('Enter a valid age')
                         return
                       }
-
                       setModalSaving(true)
                       try {
-                        await authService.updateProfile({
-                          age: ageNum,
-                          city: draft?.city ?? '',
-                        })
+                        await authService.updateProfile({ age: ageNum, city: draft?.city ?? '' })
                         toast.success('Personal info updated')
                         await fetchProfile()
                         closeModal()
@@ -346,7 +359,7 @@ function Account() {
                       }
                     }}
                     disabled={modalSaving}
-                    style={modalPrimaryBtn}
+                    style={S.modalPrimaryBtn}
                   >
                     {modalSaving ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -356,30 +369,30 @@ function Account() {
 
             {activeSection === 'body' && (
               <div>
-                <p style={modalDesc}>Update weight and height. BMI updates automatically.</p>
+                <p style={S.modalDesc}>Update weight and height. BMI updates automatically.</p>
 
-                <label style={fieldLabel}>Weight (kg)</label>
+                <label style={S.fieldLabel}>Weight (kg)</label>
                 <input
                   type="number"
                   inputMode="decimal"
                   placeholder="e.g. 68.5"
                   value={draft?.weight_kg ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, weight_kg: e.target.value }))}
-                  style={modalInput}
+                  style={S.modalInput}
                 />
 
-                <label style={{ ...fieldLabel, marginTop: '12px' }}>Height (cm)</label>
+                <label style={{ ...S.fieldLabel, marginTop: '14px' }}>Height (cm)</label>
                 <input
                   type="number"
                   inputMode="decimal"
                   placeholder="e.g. 175"
                   value={draft?.height_cm ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, height_cm: e.target.value }))}
-                  style={modalInput}
+                  style={S.modalInput}
                 />
 
-                <div style={modalActions}>
-                  <button type="button" onClick={closeModal} style={modalSecondaryBtn}>
+                <div style={S.modalActions}>
+                  <button type="button" onClick={closeModal} style={S.modalSecondaryBtn}>
                     Cancel
                   </button>
                   <button
@@ -399,10 +412,7 @@ function Account() {
 
                       setModalSaving(true)
                       try {
-                        await authService.updateProfile({
-                          weight_kg: weightNum,
-                          height_cm: heightNum,
-                        })
+                        await authService.updateProfile({ weight_kg: weightNum, height_cm: heightNum })
                         toast.success('Body stats updated')
                         await fetchProfile()
                         closeModal()
@@ -413,7 +423,7 @@ function Account() {
                       }
                     }}
                     disabled={modalSaving}
-                    style={modalPrimaryBtn}
+                    style={S.modalPrimaryBtn}
                   >
                     {modalSaving ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -423,32 +433,32 @@ function Account() {
 
             {activeSection === 'goals' && (
               <div>
-                <p style={modalDesc}>Update your goal and diet preference.</p>
+                <p style={S.modalDesc}>Update your goal and diet preference.</p>
 
-                <label style={fieldLabel}>Goal</label>
+                <label style={S.fieldLabel}>Goal</label>
                 <select
                   value={draft?.goal ?? 'maintenance'}
                   onChange={(e) => setDraft((d) => ({ ...d, goal: e.target.value }))}
-                  style={modalSelect}
+                  style={S.modalSelect}
                 >
                   {goalOptions.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
 
-                <label style={{ ...fieldLabel, marginTop: '12px' }}>Diet Preference</label>
+                <label style={{ ...S.fieldLabel, marginTop: '14px' }}>Diet Preference</label>
                 <select
                   value={draft?.diet_preference ?? 'veg'}
                   onChange={(e) => setDraft((d) => ({ ...d, diet_preference: e.target.value }))}
-                  style={modalSelect}
+                  style={S.modalSelect}
                 >
                   {dietOptions.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
 
-                <div style={modalActions}>
-                  <button type="button" onClick={closeModal} style={modalSecondaryBtn}>
+                <div style={S.modalActions}>
+                  <button type="button" onClick={closeModal} style={S.modalSecondaryBtn}>
                     Cancel
                   </button>
                   <button
@@ -470,7 +480,7 @@ function Account() {
                       }
                     }}
                     disabled={modalSaving}
-                    style={modalPrimaryBtn}
+                    style={S.modalPrimaryBtn}
                   >
                     {modalSaving ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -480,20 +490,20 @@ function Account() {
 
             {activeSection === 'gym' && (
               <div>
-                <p style={modalDesc}>Update your gym schedule preference.</p>
+                <p style={S.modalDesc}>Update your gym schedule preference.</p>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
                   <input
                     type="checkbox"
                     checked={!!draft?.has_gym}
                     onChange={(e) => setDraft((d) => ({ ...d, has_gym: e.target.checked }))}
                   />
-                  <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <span style={{ fontFamily: FONT, fontWeight: 700, color: 'var(--color-text)' }}>
                     I have a gym routine
                   </span>
                 </label>
 
-                <label style={{ ...fieldLabel, marginTop: '12px' }}>Health time (minutes)</label>
+                <label style={{ ...S.fieldLabel, marginTop: '16px' }}>Health time (minutes)</label>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -501,11 +511,11 @@ function Account() {
                   value={draft?.health_time_minutes ?? 60}
                   onChange={(e) => setDraft((d) => ({ ...d, health_time_minutes: e.target.value }))}
                   disabled={!draft?.has_gym}
-                  style={{ ...modalInput, opacity: draft?.has_gym ? 1 : 0.65, cursor: draft?.has_gym ? 'text' : 'not-allowed' }}
+                  style={{ ...S.modalInput, opacity: draft?.has_gym ? 1 : 0.6, cursor: draft?.has_gym ? 'text' : 'not-allowed' }}
                 />
 
-                <div style={modalActions}>
-                  <button type="button" onClick={closeModal} style={modalSecondaryBtn}>
+                <div style={S.modalActions}>
+                  <button type="button" onClick={closeModal} style={S.modalSecondaryBtn}>
                     Cancel
                   </button>
                   <button
@@ -516,7 +526,6 @@ function Account() {
                         toast.error('Enter valid minutes')
                         return
                       }
-
                       setModalSaving(true)
                       try {
                         await authService.updateProfile({
@@ -533,7 +542,7 @@ function Account() {
                       }
                     }}
                     disabled={modalSaving}
-                    style={modalPrimaryBtn}
+                    style={S.modalPrimaryBtn}
                   >
                     {modalSaving ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -549,32 +558,30 @@ function Account() {
 
             {activeSection === 'grocery' && (
               <div>
-                <h3 style={modalTitle}>Grocery List</h3>
-                <p style={modalDesc}>
+                <h3 style={S.modalTitle}>Grocery List</h3>
+                <p style={S.modalDesc}>
                   Check off items as you use them. ({grocery?.checked_items ?? 0}/{grocery?.total_items ?? 0})
                 </p>
 
                 {groceryLoading && (
-                  <p style={{ ...modalDesc, marginTop: '16px' }}>Loading your grocery list...</p>
+                  <p style={{ ...S.modalDesc, marginTop: '20px' }}>Loading your grocery list...</p>
                 )}
 
                 {!groceryLoading && grocery?.items?.length ? (
                   <div style={{
-                    display: 'flex', flexDirection: 'column', gap: '8px',
-                    marginTop: '14px',
-                    overflowY: 'auto',
-                    maxHeight: '48dvh',
-                    paddingRight: '4px',
+                    display: 'flex', flexDirection: 'column', gap: '10px',
+                    marginTop: '16px', overflowY: 'auto',
+                    maxHeight: '48dvh', paddingRight: '4px',
                   }}>
                     {grocery.items.map((it) => (
-                      <label key={it.id} style={groceryRow}>
+                      <label key={it.id} style={S.groceryRow}>
                         <input
                           type="checkbox"
                           checked={!!it.is_checked}
+                          style={{ width: '18px', height: '18px' }}
                           onChange={async (e) => {
                             try {
                               await groceryService.checkItem(it.id, { is_checked: e.target.checked })
-                              // Refetch to keep counts consistent
                               const res = await groceryService.getList()
                               setGrocery(res.data)
                             } catch {
@@ -583,8 +590,12 @@ function Account() {
                           }}
                         />
                         <div style={{ flex: 1 }}>
-                          <div style={groceryName}>{it.ingredient_name}</div>
-                          <div style={grocerySub}>
+                          <div style={{
+                            ...S.groceryName,
+                            color: it.is_checked ? 'var(--color-text-faint)' : 'var(--color-text)',
+                            textDecoration: it.is_checked ? 'line-through' : 'none'
+                          }}>{it.ingredient_name}</div>
+                          <div style={S.grocerySub}>
                             {it.quantity} {it.unit}
                           </div>
                         </div>
@@ -592,16 +603,15 @@ function Account() {
                     ))}
                   </div>
                 ) : (!groceryLoading && (
-                  <p style={{ ...modalDesc, marginTop: '16px' }}>
+                  <p style={{ ...S.modalDesc, marginTop: '20px' }}>
                     No grocery list found yet. Generate a meal plan to create your list.
                   </p>
                 ))}
 
                 <div style={{
                   display: 'flex', gap: '10px',
-                  marginTop: '14px',
-                  paddingTop: '12px',
-                  borderTop: '1px solid var(--border)',
+                  marginTop: '16px', paddingTop: '16px',
+                  borderTop: '1px solid rgba(0,0,0,0.05)',
                   flexShrink: 0,
                 }}>
                   <button
@@ -620,11 +630,11 @@ function Account() {
                       }
                     }}
                     disabled={groceryRefreshing}
-                    style={{ ...modalSecondaryBtn, padding: '12px' }}
+                    style={{ ...S.modalSecondaryBtn, padding: '14px' }}
                   >
                     {groceryRefreshing ? 'Refreshing...' : 'Refresh List'}
                   </button>
-                  <button type="button" onClick={closeModal} style={modalPrimaryBtn}>
+                  <button type="button" onClick={closeModal} style={S.modalPrimaryBtn}>
                     Done
                   </button>
                 </div>
@@ -635,243 +645,199 @@ function Account() {
       )}
 
       {/* App Info */}
-      <div style={infoCard}>
-        <p style={infoText}>NutriAI v1.0</p>
-        <p style={infoText}>AI-powered diet & training planner 🥗</p>
+      <div style={S.infoCard}>
+        <p style={S.infoText}>NutriAI v1.0</p>
+        <p style={S.infoText}>AI-powered diet & training planner 🥗</p>
       </div>
 
       {/* Logout */}
-      <button onClick={handleLogout} style={logoutBtn}>
-        <LogOut size={18} color="var(--error)" />
+      <button onClick={handleLogout} style={S.logoutBtn}>
+        <LogOut size={20} color="#FF3B30" />
         <span style={{
-          fontSize: '0.9375rem', fontWeight: 600,
-          color: 'var(--error)', fontFamily: 'Satoshi, sans-serif'
+          fontSize: '1rem', fontWeight: 800,
+          color: '#FF3B30', fontFamily: FONT
         }}>
           Log Out
         </span>
       </button>
 
-      <div style={{ height: '8px' }} />
+      <div style={{ height: '16px' }} />
+
+      {/* Global CSS mapped to Theme */}
+      <style>{`
+        :root {
+          --color-accent: #34C759;
+          --color-text: #1C1C1E;
+          --color-text-muted: #636366;
+          --color-text-faint: #8E8E93;
+        }
+      `}</style>
     </div>
   )
 }
 
-const pageWrap = {
-  display: 'flex', flexDirection: 'column',
-  gap: '14px', padding: '16px',
-}
-const profileHeader = {
-  display: 'flex', alignItems: 'center', gap: '16px',
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '18px', padding: '20px 16px',
-}
-const avatarLarge = {
-  width: '60px', height: '60px',
-  background: 'var(--accent)', borderRadius: '50%',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: '1.5rem', fontWeight: 700,
-  color: '#0A0A0A', fontFamily: 'Clash Display, sans-serif',
-  flexShrink: 0,
-}
-const profileName = {
-  fontFamily: 'Clash Display, sans-serif',
-  fontSize: '1.25rem', fontWeight: 600,
-  color: 'var(--text-primary)', letterSpacing: '-0.3px',
-}
-const profileGoal = {
-  fontSize: '0.8rem', color: 'var(--text-secondary)',
-  fontFamily: 'Satoshi, sans-serif', marginTop: '4px',
-  textTransform: 'capitalize',
-}
-const statsRow = {
-  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px',
-}
-const statBox = {
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '14px', padding: '14px 10px',
-  display: 'flex', flexDirection: 'column',
-  alignItems: 'center', gap: '4px',
-}
-const statVal = {
-  fontFamily: 'Clash Display, sans-serif',
-  fontSize: '1.25rem', fontWeight: 700,
-  color: 'var(--accent)',
-}
-const statLabel = {
-  fontSize: '0.7rem', fontWeight: 600,
-  color: 'var(--text-faint)', fontFamily: 'Satoshi, sans-serif',
-  letterSpacing: '0.5px', textTransform: 'uppercase',
-}
-const menuCard = {
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '18px', overflow: 'hidden',
-}
-const menuItem = {
-  width: '100%', display: 'flex',
-  alignItems: 'center', gap: '12px',
-  padding: '14px 16px', background: 'none',
-  border: 'none', cursor: 'pointer',
-  transition: 'background 180ms ease',
-}
-const menuIcon = {
-  width: '38px', height: '38px',
-  background: 'var(--bg-surface-2)',
-  borderRadius: '10px',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: '1.1rem', flexShrink: 0,
-}
-const menuLabel = {
-  fontSize: '0.9rem', fontWeight: 600,
-  color: 'var(--text-primary)', fontFamily: 'Satoshi, sans-serif',
-}
-const menuSub = {
-  fontSize: '0.75rem', color: 'var(--text-secondary)',
-  fontFamily: 'Satoshi, sans-serif', marginTop: '2px',
-}
-const infoCard = {
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '14px', padding: '14px 16px',
-  display: 'flex', flexDirection: 'column', gap: '4px',
-  alignItems: 'center',
-}
-const infoText = {
-  fontSize: '0.75rem', color: 'var(--text-faint)',
-  fontFamily: 'Satoshi, sans-serif',
-}
-const logoutBtn = {
-  width: '100%', padding: '15px',
-  background: 'rgba(255,77,77,0.06)',
-  border: '1px solid rgba(255,77,77,0.2)',
-  borderRadius: '14px',
-  display: 'flex', alignItems: 'center',
-  justifyContent: 'center', gap: '10px',
-  cursor: 'pointer',
-  transition: 'all 180ms ease',
-}
+// ─── Styles ────────────────────────────────────────────────────────
+const S = {
+  pageWrap: {
+    display: 'flex', flexDirection: 'column',
+    gap: '16px', padding: '16px',
+  },
+  profileHeader: {
+    display: 'flex', alignItems: 'center', gap: '16px',
+    ...GLASS_WHITE,
+    borderRadius: '24px', padding: '24px 20px',
+  },
+  avatarLarge: {
+    width: '64px', height: '64px',
+    background: 'var(--color-accent)', borderRadius: '20px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '1.8rem', fontWeight: 800,
+    color: '#ffffff', fontFamily: FONT,
+    flexShrink: 0, boxShadow: '0 4px 12px rgba(52,199,89,0.3)',
+  },
+  profileName: {
+    fontFamily: FONT,
+    fontSize: '1.4rem', fontWeight: 800,
+    color: 'var(--color-text)', letterSpacing: '-0.3px',
+  },
+  profileGoal: {
+    fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500,
+    fontFamily: FONT, marginTop: '4px',
+    textTransform: 'capitalize',
+  },
+  statsRow: {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px',
+  },
+  statBox: {
+    ...GLASS_WHITE,
+    borderRadius: '20px', padding: '16px 10px',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', gap: '6px',
+  },
+  statVal: {
+    fontFamily: FONT,
+    fontSize: '1.4rem', fontWeight: 800,
+    color: 'var(--color-accent)',
+  },
+  statLabel: {
+    fontSize: '0.7rem', fontWeight: 700,
+    color: 'var(--color-text-muted)', fontFamily: FONT,
+    letterSpacing: '0.5px', textTransform: 'uppercase',
+  },
+  menuCard: {
+    ...GLASS_WHITE,
+    borderRadius: '24px', overflow: 'hidden',
+  },
+  menuItem: {
+    width: '100%', display: 'flex',
+    alignItems: 'center', gap: '14px',
+    padding: '16px 20px', background: 'transparent',
+    cursor: 'pointer', transition: 'background 180ms ease',
+  },
+  menuIcon: {
+    width: '44px', height: '44px',
+    background: 'rgba(0,0,0,0.03)',
+    borderRadius: '14px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '1.3rem', flexShrink: 0,
+  },
+  menuLabel: {
+    fontSize: '1rem', fontWeight: 700,
+    color: 'var(--color-text)', fontFamily: FONT,
+  },
+  menuSub: {
+    fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500,
+    fontFamily: FONT, marginTop: '2px',
+  },
+  infoCard: {
+    ...GLASS_WHITE,
+    borderRadius: '20px', padding: '16px',
+    display: 'flex', flexDirection: 'column', gap: '4px',
+    alignItems: 'center',
+  },
+  infoText: {
+    fontSize: '0.8rem', color: 'var(--color-text-faint)', fontWeight: 600,
+    fontFamily: FONT,
+  },
+  logoutBtn: {
+    width: '100%', padding: '18px',
+    background: 'rgba(255, 59, 48, 0.08)',
+    border: '1px solid rgba(255, 59, 48, 0.2)',
+    borderRadius: '20px',
+    display: 'flex', alignItems: 'center',
+    justifyContent: 'center', gap: '10px',
+    cursor: 'pointer', transition: 'all 180ms ease',
+  },
 
-const modalOverlay = {
-  position: 'fixed', inset: 0,
-  background: 'rgba(0, 0, 0, 0.45)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  zIndex: 200,
+  // ── Modals ──
+  modalOverlay: {
+    position: 'fixed', inset: 0,
+    background: 'rgba(0, 0, 0, 0.4)',
+    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 200, animation: 'fadeUp 0.2s ease-out'
+  },
+  modalCard: {
+    width: '90%', maxWidth: '420px', maxHeight: '85dvh',
+    ...GLASS_WHITE, background: 'rgba(255,255,255,0.85)',
+    borderRadius: '28px', padding: '24px',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+    display: 'flex', flexDirection: 'column',
+  },
+  modalTitle: {
+    fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800,
+    color: 'var(--color-text)', marginBottom: '8px',
+  },
+  modalDesc: {
+    fontSize: '0.9rem', color: 'var(--color-text-muted)', fontWeight: 500,
+    fontFamily: FONT, marginBottom: '20px', lineHeight: 1.5
+  },
+  modalInput: {
+    width: '100%', padding: '14px 16px',
+    background: 'rgba(255,255,255,0.8)',
+    border: '1px solid rgba(0,0,0,0.05)', borderRadius: '16px',
+    color: 'var(--color-text)', fontSize: '1rem', fontWeight: 500,
+    fontFamily: FONT, boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)', outline: 'none'
+  },
+  modalSelect: {
+    width: '100%', padding: '14px 16px',
+    background: 'rgba(255,255,255,0.8)',
+    border: '1px solid rgba(0,0,0,0.05)', borderRadius: '16px',
+    color: 'var(--color-text)', fontSize: '1rem', fontWeight: 500,
+    fontFamily: FONT, outline: 'none', appearance: 'none'
+  },
+  fieldLabel: {
+    fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-muted)',
+    fontFamily: FONT, marginTop: '12px', marginBottom: '8px', display: 'block',
+    textTransform: 'uppercase', letterSpacing: '0.5px'
+  },
+  modalActions: {
+    display: 'flex', gap: '12px', marginTop: '24px',
+  },
+  modalPrimaryBtn: {
+    flex: 1, padding: '16px',
+    background: 'var(--color-accent)', border: 'none', borderRadius: '16px',
+    color: '#ffffff', fontWeight: 800, fontSize: '1rem',
+    cursor: 'pointer', fontFamily: FONT, boxShadow: '0 8px 24px rgba(52,199,89,0.3)',
+  },
+  modalSecondaryBtn: {
+    flex: 1, padding: '16px',
+    background: 'rgba(0,0,0,0.04)', border: 'none', borderRadius: '16px',
+    color: 'var(--color-text)', fontWeight: 700, fontSize: '1rem',
+    cursor: 'pointer', fontFamily: FONT,
+  },
+  groceryRow: {
+    display: 'flex', alignItems: 'center', gap: '14px',
+    padding: '16px', border: '1px solid rgba(0,0,0,0.04)',
+    borderRadius: '16px', background: 'rgba(255,255,255,0.6)',
+    cursor: 'pointer', transition: 'all 150ms ease'
+  },
+  groceryName: {
+    fontFamily: FONT, fontWeight: 700,
+    fontSize: '1rem', lineHeight: 1.3,
+  },
+  grocerySub: {
+    fontFamily: FONT, color: 'var(--color-text-muted)', fontWeight: 600,
+    fontSize: '0.85rem', marginTop: '4px',
+  },
 }
-
-const modalCard = {
-  width: '90%', maxWidth: '420px',
-  maxHeight: '85dvh',
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '16px',
-  padding: '20px',
-  boxShadow: '0 12px 30px rgba(0,0,0,0.2)',
-  display: 'flex',
-  flexDirection: 'column',
-}
-
-const modalTitle = {
-  fontFamily: 'Clash Display, sans-serif',
-  fontSize: '1.25rem',
-  fontWeight: 600,
-  color: 'var(--text-primary)',
-  marginBottom: '6px',
-}
-
-const modalDesc = {
-  fontSize: '0.875rem',
-  color: 'var(--text-secondary)',
-  fontFamily: 'Satoshi, sans-serif',
-  marginBottom: '16px',
-}
-
-const modalInput = {
-  width: '100%',
-  padding: '13px 16px',
-  background: 'var(--bg-surface-2)',
-  border: '1px solid var(--border)',
-  borderRadius: '12px',
-  color: 'var(--text-primary)',
-  fontSize: '1rem',
-  fontFamily: 'Satoshi, sans-serif',
-}
-
-const modalSelect = {
-  width: '100%',
-  padding: '12px 14px',
-  background: 'var(--bg-surface-2)',
-  border: '1px solid var(--border)',
-  borderRadius: '12px',
-  color: 'var(--text-primary)',
-  fontSize: '1rem',
-  fontFamily: 'Satoshi, sans-serif',
-}
-
-const fieldLabel = {
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  color: 'var(--text-faint)',
-  fontFamily: 'Satoshi, sans-serif',
-  marginTop: '10px',
-  display: 'block',
-}
-
-const modalActions = {
-  display: 'flex',
-  gap: '10px',
-  marginTop: '18px',
-}
-
-const modalPrimaryBtn = {
-  flex: 1,
-  padding: '12px 14px',
-  background: 'var(--accent)',
-  border: 'none',
-  borderRadius: '12px',
-  color: '#0A0A0A',
-  fontWeight: 800,
-  cursor: 'pointer',
-  fontFamily: 'Satoshi, sans-serif',
-}
-
-const modalSecondaryBtn = {
-  flex: 1,
-  padding: '12px 14px',
-  background: 'rgba(255, 255, 255, 0.04)',
-  border: '1px solid var(--border)',
-  borderRadius: '12px',
-  color: 'var(--text-primary)',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontFamily: 'Satoshi, sans-serif',
-}
-
-const groceryRow = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  padding: '10px 12px',
-  border: '1px solid var(--border)',
-  borderRadius: '12px',
-  background: 'var(--bg-surface-2)',
-  cursor: 'pointer',
-}
-
-const groceryName = {
-  fontFamily: 'Satoshi, sans-serif',
-  fontWeight: 800,
-  color: 'var(--text-primary)',
-  fontSize: '0.95rem',
-  lineHeight: 1.3,
-}
-
-const grocerySub = {
-  fontFamily: 'Satoshi, sans-serif',
-  color: 'var(--text-secondary)',
-  fontSize: '0.8rem',
-  marginTop: '3px',
-}
-
-export default Account

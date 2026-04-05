@@ -42,22 +42,32 @@ function getWeekDays(centerDate) {
   return days
 }
 
+// ─── Style Tokens (Matching Training Page) ─────────────────────
+const FONT = "'General Sans', sans-serif";
+
+const GLASS_WHITE = {
+  background: 'rgba(255, 255, 255, 0.65)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  border: '1px solid rgba(255, 255, 255, 0.8)',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
+};
+
 // ─── Skeleton ─────────────────────────────────────────────────
 
 function Skeleton({ width = '100%', height = '16px', radius = '8px' }) {
   return (
     <div style={{
-      width, height, background: 'var(--bg-surface-3)',
+      width, height, background: 'rgba(0,0,0,0.06)',
       borderRadius: radius, overflow: 'hidden', position: 'relative'
     }}>
       <div style={shimmerStyle} />
-      <style>{`@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}`}</style>
     </div>
   )
 }
 const shimmerStyle = {
   position: 'absolute', inset: 0,
-  background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)',
+  background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.4) 50%,transparent 100%)',
   animation: 'shimmer 1.5s ease-in-out infinite',
 }
 
@@ -71,20 +81,21 @@ function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating })
   const cardRef = useRef(null)
 
   const icons = { breakfast: '🌅', lunch: '☀️', dinner: '🌙' }
+  // Apple Light Theme Accent Colors
   const slotColors = {
-    breakfast: 'rgba(255,167,38,0.15)',
-    lunch: 'rgba(200,241,53,0.1)',
-    dinner: 'rgba(96,184,255,0.12)',
+    breakfast: 'rgba(255, 149, 0, 0.12)', // Orange
+    lunch: 'rgba(52, 199, 89, 0.12)',    // Green
+    dinner: 'rgba(0, 122, 255, 0.12)',   // Blue
   }
   const slotAccents = {
-    breakfast: '#FFA726',
-    lunch: '#C8F135',
-    dinner: '#60B8FF',
+    breakfast: '#FF9500',
+    lunch: '#34C759',
+    dinner: '#007AFF',
   }
 
   const icon = icons[slot] || '🍽️'
   const bg = slotColors[slot] || 'transparent'
-  const accent = slotAccents[slot] || 'var(--accent)'
+  const accent = slotAccents[slot] || 'var(--color-accent)'
   const label = slot.charAt(0).toUpperCase() + slot.slice(1)
 
   const name = meal?.food_item?.name || 'No meal assigned'
@@ -127,9 +138,8 @@ function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating })
       onTouchMove={onPointerMove}
       onTouchEnd={onPointerUp}
       style={{
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border)',
-        borderRadius: '22px',
+        ...GLASS_WHITE,
+        borderRadius: '24px',
         overflow: 'hidden',
         userSelect: 'none',
         touchAction: 'pan-y',
@@ -145,8 +155,8 @@ function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating })
       }}>
         <div style={{
           width: '64px', height: '64px',
-          background: 'rgba(255,255,255,0.08)',
-          borderRadius: '16px',
+          background: 'rgba(255,255,255,0.6)',
+          borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '2rem', flexShrink: 0,
         }}>
@@ -155,27 +165,26 @@ function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating })
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <span style={{
-              fontSize: '0.65rem', fontWeight: 700,
+              fontSize: '0.65rem', fontWeight: 800,
               color: accent, letterSpacing: '1px',
-              textTransform: 'uppercase', fontFamily: 'Satoshi, sans-serif',
+              textTransform: 'uppercase', fontFamily: FONT,
             }}>{label}</span>
             {meal?.food_item?.is_fasting_friendly && (
               <span style={tagStyle}>🙏 Fasting</span>
             )}
           </div>
           <h3 style={{
-            fontFamily: 'Clash Display, sans-serif',
-            fontSize: '1.25rem', fontWeight: 600,
-            color: 'var(--text-primary)', letterSpacing: '-0.3px',
+            fontFamily: FONT,
+            fontSize: '1.3rem', fontWeight: 800,
+            color: 'var(--color-text)', letterSpacing: '-0.3px',
             lineHeight: 1.2,
           }}>{name}</h3>
           {meal?.food_item?.serving_size && (
             <p style={{
-              fontSize: '0.8rem', color: 'var(--text-secondary)',
-              fontFamily: 'Satoshi, sans-serif', marginTop: '4px'
+              fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500,
+              fontFamily: FONT, marginTop: '4px'
             }}>
-              {meal.quantity} × {meal.food_item.serving_size}
-              {meal.food_item.serving_unit}
+              {meal.quantity} × {meal.food_item.serving_size} {meal.food_item.serving_unit}
             </p>
           )}
         </div>
@@ -183,31 +192,31 @@ function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating })
 
       {/* Macro pills */}
       <div style={{
-        display: 'flex', gap: '8px', padding: '14px 20px',
-        borderBottom: '1px solid var(--border)', flexWrap: 'wrap'
+        display: 'flex', gap: '8px', padding: '16px 20px',
+        borderBottom: '1px solid rgba(0,0,0,0.04)', flexWrap: 'wrap'
       }}>
         {[
           { label: 'Calories', value: `${calories}`, unit: 'kcal', color: accent },
-          { label: 'Protein', value: `${protein}`, unit: 'g', color: '#60B8FF' },
-          { label: 'Carbs', value: `${carbs}`, unit: 'g', color: 'var(--warning)' },
-          { label: 'Fats', value: `${fats}`, unit: 'g', color: 'var(--error)' },
+          { label: 'Protein', value: `${protein}`, unit: 'g', color: '#007AFF' },
+          { label: 'Carbs', value: `${carbs}`, unit: 'g', color: '#FF9500' },
+          { label: 'Fats', value: `${fats}`, unit: 'g', color: '#FF3B30' },
         ].map(({ label, value, unit, color }) => (
           <div key={label} style={{
-            background: 'var(--bg-surface-2)',
-            border: '1px solid var(--border)',
-            borderRadius: '10px', padding: '8px 12px',
+            background: 'rgba(0,0,0,0.02)',
+            border: '1px solid rgba(0,0,0,0.04)',
+            borderRadius: '12px', padding: '10px 8px',
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             minWidth: '64px', flex: 1,
           }}>
             <span style={{
-              fontSize: '1rem', fontWeight: 700,
-              color, fontFamily: 'Satoshi, sans-serif', lineHeight: 1
+              fontSize: '1.1rem', fontWeight: 800,
+              color, fontFamily: FONT, lineHeight: 1
             }}>
               {value}<span style={{ fontSize: '0.65rem', marginLeft: '1px' }}>{unit}</span>
             </span>
             <span style={{
-              fontSize: '0.65rem', color: 'var(--text-faint)',
-              fontFamily: 'Satoshi, sans-serif', marginTop: '3px',
+              fontSize: '0.65rem', color: 'var(--color-text-faint)', fontWeight: 600,
+              fontFamily: FONT, marginTop: '4px',
               letterSpacing: '0.3px', textTransform: 'uppercase'
             }}>
               {label}
@@ -218,15 +227,15 @@ function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating })
 
       {/* Ingredients preview */}
       {meal?.food_item?.ingredients?.length > 0 && (
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
           <p style={{
-            fontSize: '0.7rem', color: 'var(--text-faint)',
-            fontFamily: 'Satoshi, sans-serif', letterSpacing: '0.5px',
-            textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px'
+            fontSize: '0.7rem', color: 'var(--color-text-faint)',
+            fontFamily: FONT, letterSpacing: '0.5px',
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: '10px'
           }}>
             Ingredients
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {meal.food_item.ingredients.slice(0, 5).map((ing, i) => (
               <span key={i} style={ingTag}>
                 {typeof ing === 'object' ? ing.name : ing}
@@ -240,18 +249,19 @@ function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating })
       )}
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '10px', padding: '14px 20px' }}>
+      <div style={{ display: 'flex', gap: '10px', padding: '16px 20px' }}>
         <button
           onClick={onViewDetail}
           style={{
-            flex: 1, padding: '12px',
-            background: accent, color: '#0A0A0A',
-            border: 'none', borderRadius: '12px',
-            fontSize: '0.875rem', fontWeight: 700,
-            fontFamily: 'Satoshi, sans-serif', cursor: 'pointer',
+            flex: 1, padding: '14px',
+            background: 'var(--color-accent)', color: '#ffffff',
+            border: 'none', borderRadius: '16px',
+            fontSize: '0.9rem', fontWeight: 700,
+            fontFamily: FONT, cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(52,199,89,0.3)',
             transition: 'opacity 180ms ease, transform 180ms ease',
           }}>
-          View Nutrition 🌸
+          View Nutrition Details
         </button>
       </div>
     </div>
@@ -259,19 +269,19 @@ function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating })
 }
 
 const tagStyle = {
-  fontSize: '0.65rem', fontWeight: 600,
-  color: 'var(--text-secondary)',
-  background: 'var(--bg-surface-3)',
-  border: '1px solid var(--border)',
-  borderRadius: '999px', padding: '2px 8px',
-  fontFamily: 'Satoshi, sans-serif',
+  fontSize: '0.65rem', fontWeight: 700,
+  color: 'var(--color-text-muted)',
+  background: 'rgba(0,0,0,0.04)',
+  border: '1px solid rgba(0,0,0,0.05)',
+  borderRadius: '999px', padding: '3px 10px',
+  fontFamily: FONT,
 }
 const ingTag = {
-  fontSize: '0.75rem', color: 'var(--text-secondary)',
-  background: 'var(--bg-surface-2)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px', padding: '3px 10px',
-  fontFamily: 'Satoshi, sans-serif',
+  fontSize: '0.75rem', color: 'var(--color-text)', fontWeight: 500,
+  background: 'rgba(255,255,255,0.6)',
+  border: '1px solid rgba(0,0,0,0.06)',
+  borderRadius: '10px', padding: '5px 12px',
+  fontFamily: FONT,
 }
 
 // ─── Grocery Mini Card ─────────────────────────────────────────
@@ -280,35 +290,34 @@ function GroceryCard({ onView }) {
   return (
     <button onClick={onView} style={{
       width: '100%',
-      background: 'rgba(200,241,53,0.06)',
-      border: '1px solid rgba(200,241,53,0.2)',
-      borderRadius: '16px', padding: '16px',
-      display: 'flex', alignItems: 'center', gap: '12px',
+      ...GLASS_WHITE,
+      borderRadius: '20px', padding: '16px',
+      display: 'flex', alignItems: 'center', gap: '14px',
       cursor: 'pointer', transition: 'all 180ms ease',
     }}>
       <div style={{
-        width: '44px', height: '44px',
-        background: 'rgba(200,241,53,0.12)', borderRadius: '12px',
+        width: '48px', height: '48px',
+        background: 'rgba(52,199,89,0.15)', borderRadius: '14px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1.25rem', flexShrink: 0
+        fontSize: '1.4rem', flexShrink: 0
       }}>
         🛒
       </div>
       <div style={{ flex: 1, textAlign: 'left' }}>
         <p style={{
-          fontSize: '0.875rem', fontWeight: 600,
-          color: 'var(--text-primary)', fontFamily: 'Satoshi, sans-serif'
+          fontSize: '1rem', fontWeight: 700,
+          color: 'var(--color-text)', fontFamily: FONT
         }}>
           Weekly Grocery List
         </p>
         <p style={{
-          fontSize: '0.75rem', color: 'var(--text-secondary)',
-          fontFamily: 'Satoshi, sans-serif', marginTop: '2px'
+          fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500,
+          fontFamily: FONT, marginTop: '2px'
         }}>
           View & check ingredients
         </p>
       </div>
-      <ChevronRight size={18} color="var(--accent)" />
+      <ChevronRight size={20} color="var(--color-text-muted)" />
     </button>
   )
 }
@@ -319,39 +328,38 @@ function CheatMealButton({ onLog }) {
   return (
     <button onClick={onLog} style={{
       width: '100%',
-      background: 'rgba(255,77,77,0.06)',
-      border: '1px solid rgba(255,77,77,0.2)',
-      borderRadius: '16px', padding: '16px',
-      display: 'flex', alignItems: 'center', gap: '12px',
+      ...GLASS_WHITE,
+      borderRadius: '20px', padding: '16px',
+      display: 'flex', alignItems: 'center', gap: '14px',
       cursor: 'pointer', transition: 'all 180ms ease',
     }}>
       <div style={{
-        width: '44px', height: '44px',
-        background: 'rgba(255,77,77,0.12)', borderRadius: '12px',
+        width: '48px', height: '48px',
+        background: 'rgba(255,59,48,0.15)', borderRadius: '14px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1.25rem', flexShrink: 0
+        fontSize: '1.4rem', flexShrink: 0
       }}>
         🍔
       </div>
       <div style={{ flex: 1, textAlign: 'left' }}>
         <p style={{
-          fontSize: '0.875rem', fontWeight: 600,
-          color: 'var(--text-primary)', fontFamily: 'Satoshi, sans-serif'
+          fontSize: '1rem', fontWeight: 700,
+          color: 'var(--color-text)', fontFamily: FONT
         }}>
           Log Cheat Meal
         </p>
         <p style={{
-          fontSize: '0.75rem', color: 'var(--text-secondary)',
-          fontFamily: 'Satoshi, sans-serif', marginTop: '2px'
+          fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500,
+          fontFamily: FONT, marginTop: '2px'
         }}>
           AI detects food & adjusts plan
         </p>
       </div>
       <span style={{
-        fontSize: '0.75rem', fontWeight: 700,
-        color: 'var(--error)', background: 'rgba(255,77,77,0.1)',
-        borderRadius: '999px', padding: '3px 10px',
-        fontFamily: 'Satoshi, sans-serif'
+        fontSize: '0.8rem', fontWeight: 700,
+        color: '#FF3B30', background: 'rgba(255,59,48,0.1)',
+        borderRadius: '999px', padding: '4px 12px',
+        fontFamily: FONT
       }}>+ Log</span>
     </button>
   )
@@ -359,7 +367,7 @@ function CheatMealButton({ onLog }) {
 
 // ─── Main Nutrition Page ───────────────────────────────────────
 
-function Nutrition() {
+export default function Nutrition() {
   const navigate = useNavigate()
   const [dateOffset, setDateOffset] = useState(0)
   const [selectedDate, setSelectedDate] = useState(getDateStr(0))
@@ -440,10 +448,10 @@ function Nutrition() {
   const weekDays = getWeekDays(selectedDate)
 
   return (
-    <div style={pageWrap}>
+    <div style={S.pageWrap}>
 
       {/* ── Week Strip ── */}
-      <div style={weekStrip}>
+      <div style={S.weekStrip}>
         {weekDays.map((d) => {
           const isSelected = d === selectedDate
           const isToday = d === getDateStr(0)
@@ -454,31 +462,32 @@ function Nutrition() {
               onClick={() => { setSelectedDate(d); setDateOffset(0); setActiveSlot(0) }}
               style={{
                 display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: '4px',
-                padding: '8px 6px', borderRadius: '12px',
-                border: 'none', cursor: 'pointer', minWidth: '36px',
-                background: isSelected ? 'var(--accent)' : 'transparent',
-                transition: 'all 180ms ease',
+                alignItems: 'center', gap: '6px',
+                padding: '10px 8px', borderRadius: '16px',
+                border: 'none', cursor: 'pointer', minWidth: '44px',
+                background: isSelected ? 'var(--color-accent)' : 'transparent',
+                boxShadow: isSelected ? '0 4px 12px rgba(52,199,89,0.3)' : 'none',
+                transition: 'all 200ms ease',
               }}>
               <span style={{
-                fontSize: '0.65rem', fontWeight: 600,
-                color: isSelected ? '#0A0A0A' : 'var(--text-faint)',
-                fontFamily: 'Satoshi, sans-serif',
-                textTransform: 'uppercase', letterSpacing: '0.3px'
+                fontSize: '0.65rem', fontWeight: 700,
+                color: isSelected ? '#ffffff' : 'var(--color-text-faint)',
+                fontFamily: FONT,
+                textTransform: 'uppercase', letterSpacing: '0.5px'
               }}>
                 {dayLabel}
               </span>
               <span style={{
-                fontSize: '0.9rem', fontWeight: 700,
-                color: isSelected ? '#0A0A0A' : isToday ? 'var(--accent)' : 'var(--text-primary)',
-                fontFamily: 'Satoshi, sans-serif'
+                fontSize: '1rem', fontWeight: 800,
+                color: isSelected ? '#ffffff' : isToday ? 'var(--color-accent)' : 'var(--color-text)',
+                fontFamily: FONT
               }}>
                 {dayNum}
               </span>
               {isToday && !isSelected && (
                 <div style={{
-                  width: '4px', height: '4px',
-                  background: 'var(--accent)', borderRadius: '50%'
+                  width: '5px', height: '5px', marginTop: '2px',
+                  background: 'var(--color-accent)', borderRadius: '50%'
                 }} />
               )}
             </button>
@@ -487,47 +496,48 @@ function Nutrition() {
       </div>
 
       {/* ── Date Header ── */}
-      <div style={dateHeader}>
-        <button onClick={() => handleDateChange(-1)} style={navBtn}>
-          <ChevronLeft size={18} color="var(--text-primary)" />
+      <div style={S.dateHeader}>
+        <button onClick={() => handleDateChange(-1)} style={S.navBtn}>
+          <ChevronLeft size={20} color="var(--color-text)" />
         </button>
         <div style={{ textAlign: 'center' }}>
           <p style={{
-            fontFamily: 'Clash Display, sans-serif',
-            fontSize: '1.1rem', fontWeight: 600,
-            color: 'var(--text-primary)', letterSpacing: '-0.2px'
+            fontFamily: FONT,
+            fontSize: '1.2rem', fontWeight: 800,
+            color: 'var(--color-text)', letterSpacing: '-0.2px'
           }}>
             {formatDisplayDate(selectedDate)}
           </p>
           <p style={{
-            fontSize: '0.75rem', color: 'var(--text-secondary)',
-            fontFamily: 'Satoshi, sans-serif'
+            fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500,
+            fontFamily: FONT, marginTop: '2px'
           }}>
             {formatFullDate(selectedDate)}
           </p>
         </div>
-        <button onClick={() => handleDateChange(1)} style={navBtn}>
-          <ChevronRight size={18} color="var(--text-primary)" />
+        <button onClick={() => handleDateChange(1)} style={S.navBtn}>
+          <ChevronRight size={20} color="var(--color-text)" />
         </button>
       </div>
 
       {/* ── Slot Tabs ── */}
-      <div style={slotTabs}>
+      <div style={S.slotTabs}>
         {slots.map((slot, i) => (
           <button key={slot}
             onClick={() => setActiveSlot(i)}
             style={{
-              flex: 1, padding: '10px 4px',
-              background: activeSlot === i ? 'var(--accent)' : 'var(--bg-surface)',
+              flex: 1, padding: '12px 6px',
+              background: activeSlot === i ? 'var(--color-accent)' : 'rgba(255,255,255,0.4)',
               border: '1px solid',
-              borderColor: activeSlot === i ? 'var(--accent)' : 'var(--border)',
-              borderRadius: '12px',
-              fontSize: '0.8125rem', fontWeight: activeSlot === i ? 700 : 500,
-              color: activeSlot === i ? '#0A0A0A' : 'var(--text-secondary)',
-              fontFamily: 'Satoshi, sans-serif', cursor: 'pointer',
+              borderColor: activeSlot === i ? 'var(--color-accent)' : 'rgba(0,0,0,0.04)',
+              borderRadius: '16px',
+              fontSize: '0.85rem', fontWeight: activeSlot === i ? 700 : 600,
+              color: activeSlot === i ? '#ffffff' : 'var(--color-text-muted)',
+              fontFamily: FONT, cursor: 'pointer',
               transition: 'all 200ms ease',
               display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '5px',
+              justifyContent: 'center', gap: '6px',
+              boxShadow: activeSlot === i ? '0 4px 12px rgba(52,199,89,0.3)' : 'none',
             }}>
             {slot === 'breakfast' ? '🌅' : slot === 'lunch' ? '☀️' : '🌙'}
             {slot.charAt(0).toUpperCase() + slot.slice(1)}
@@ -536,27 +546,27 @@ function Nutrition() {
       </div>
 
       {/* ── Regenerate Bar ── */}
-      <div style={regenBar}>
+      <div style={S.regenBar}>
         <p style={{
-          fontSize: '0.8rem', color: 'var(--text-secondary)',
-          fontFamily: 'Satoshi, sans-serif'
+          fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600,
+          fontFamily: FONT
         }}>
           {dayMeal?.is_fasting_day ? '🙏 Fasting day' : '📅 Regular day'}
         </p>
-        <button onClick={handleRegenerate} disabled={regenerating} style={regenBtn}>
+        <button onClick={handleRegenerate} disabled={regenerating} style={S.regenBtn}>
           {regenerating
-            ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
-            : <RefreshCw size={14} />}
-          <span style={{ fontSize: '0.75rem', fontFamily: 'Satoshi, sans-serif' }}>
-            Regenerate Day
+            ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+            : <RefreshCw size={16} />}
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, fontFamily: FONT }}>
+            Regenerate
           </span>
         </button>
       </div>
 
       {/* ── Meal Swipe Card ── */}
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <Skeleton height="280px" radius="22px" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <Skeleton height="320px" radius="24px" />
         </div>
       ) : dayMeal ? (
         <SwipeMealCard
@@ -569,30 +579,30 @@ function Nutrition() {
           regenerating={regenerating}
         />
       ) : (
-        <div style={emptyState}>
-          <span style={{ fontSize: '3rem' }}>🍽️</span>
+        <div style={S.emptyState}>
+          <span style={{ fontSize: '3.5rem' }}>🍽️</span>
           <p style={{
-            fontSize: '1rem', color: 'var(--text-secondary)',
-            fontFamily: 'Satoshi, sans-serif', textAlign: 'center'
+            fontSize: '1.2rem', color: 'var(--color-text)', fontWeight: 700,
+            fontFamily: FONT, textAlign: 'center', marginTop: '8px'
           }}>
-            No meal plan for this day
+            No meal plan generated
           </p>
           <p style={{
-            fontSize: '0.8rem', color: 'var(--text-faint)',
-            fontFamily: 'Satoshi, sans-serif', textAlign: 'center'
+            fontSize: '0.9rem', color: 'var(--color-text-muted)', fontWeight: 500,
+            fontFamily: FONT, textAlign: 'center', maxWidth: '24ch', lineHeight: 1.5
           }}>
-            Navigate to a day within your current week
+            Navigate to a day within your current week or generate a new plan.
           </p>
         </div>
       )}
 
       {/* ── Slot Dots ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
         {slots.map((_, i) => (
           <button key={i} onClick={() => setActiveSlot(i)} style={{
-            width: activeSlot === i ? '20px' : '6px',
-            height: '6px',
-            background: activeSlot === i ? 'var(--accent)' : 'var(--bg-surface-3)',
+            width: activeSlot === i ? '24px' : '8px',
+            height: '8px',
+            background: activeSlot === i ? 'var(--color-accent)' : 'rgba(0,0,0,0.1)',
             borderRadius: '999px', border: 'none', cursor: 'pointer',
             transition: 'all 200ms ease', padding: 0,
           }} />
@@ -600,63 +610,67 @@ function Nutrition() {
       </div>
 
       {/* ── Grocery + Cheat Meal ── */}
+      <div style={{ height: '8px' }} />
       <GroceryCard onView={() => { setShowGrocery(true); fetchGrocery() }} />
       <CheatMealButton onLog={() => navigate('/cheat-meal')} />
-      <div style={{ height: '8px' }} />
+      <div style={{ height: '16px' }} />
 
       {/* ── Grocery Modal ── */}
       {showGrocery && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 999,
-          background: 'rgba(0,0,0,0.7)',
+          background: 'rgba(0,0,0,0.4)', // Softer dark overlay
           display: 'flex', alignItems: 'flex-end',
-          backdropFilter: 'blur(4px)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          animation: 'fadeUp 0.3s ease-out'
         }}
           onClick={() => setShowGrocery(false)}>
 
           <div style={{
             width: '100%', maxHeight: '85dvh',
-            background: 'var(--bg-surface)',
-            borderRadius: '24px 24px 0 0',
-            padding: '20px',
+            ...GLASS_WHITE, // Glass modal!
+            background: 'rgba(255, 255, 255, 0.85)',
+            borderRadius: '32px 32px 0 0',
+            padding: '24px',
             display: 'flex', flexDirection: 'column',
-            boxShadow: '0 -8px 32px rgba(0,0,0,0.4)',
+            boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
           }}
             onClick={e => e.stopPropagation()}>
 
             {/* Handle bar */}
             <div style={{
-              width: '40px', height: '4px', borderRadius: '2px',
-              background: 'var(--border)', margin: '0 auto 16px',
+              width: '48px', height: '5px', borderRadius: '3px',
+              background: 'rgba(0,0,0,0.15)', margin: '0 auto 20px',
             }} />
 
             {/* Header */}
             <div style={{
               display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between', marginBottom: '16px',
+              justifyContent: 'space-between', marginBottom: '20px',
             }}>
               <div>
                 <p style={{
-                  fontFamily: 'Clash Display, sans-serif',
-                  fontSize: '1.2rem', fontWeight: 700,
-                  color: 'var(--text-primary)',
-                }}>🛒 Weekly Grocery List</p>
+                  fontFamily: FONT,
+                  fontSize: '1.4rem', fontWeight: 800,
+                  color: 'var(--color-text)',
+                }}>🛒 Grocery List</p>
                 {grocery && (
                   <p style={{
-                    fontSize: '0.75rem', color: 'var(--text-faint)',
-                    fontFamily: 'Satoshi, sans-serif', marginTop: '2px',
+                    fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500,
+                    fontFamily: FONT, marginTop: '4px',
                   }}>
                     {grocery.checked_items}/{grocery.total_items} items checked
                   </p>
                 )}
               </div>
               <button onClick={() => setShowGrocery(false)} style={{
-                background: 'var(--bg-surface-2)', border: '1px solid var(--border)',
-                borderRadius: '50%', width: '34px', height: '34px',
+                background: 'rgba(0,0,0,0.05)', border: 'none',
+                borderRadius: '50%', width: '36px', height: '36px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}>
-                <X size={16} color="var(--text-secondary)" />
+                <X size={20} color="var(--color-text-muted)" />
               </button>
             </div>
 
@@ -664,53 +678,53 @@ function Nutrition() {
             {groceryLoading ? (
               <div style={{
                 display: 'flex', justifyContent: 'center',
-                padding: '40px', color: 'var(--text-faint)',
+                padding: '60px 40px', color: 'var(--color-text-faint)',
               }}>
-                <Loader2 size={28} color="var(--accent)"
+                <Loader2 size={32} color="var(--color-accent)"
                   style={{ animation: 'spin 0.8s linear infinite' }} />
               </div>
             ) : !grocery?.items?.length ? (
               <p style={{
-                textAlign: 'center', padding: '40px',
-                color: 'var(--text-faint)',
-                fontFamily: 'Satoshi, sans-serif', fontSize: '0.9rem',
+                textAlign: 'center', padding: '60px 40px',
+                color: 'var(--color-text-muted)', fontWeight: 500,
+                fontFamily: FONT, fontSize: '1rem',
               }}>No grocery list found. Generate your meal plan first.</p>
             ) : (
               <div style={{
                 overflowY: 'auto', flex: 1,
-                display: 'flex', flexDirection: 'column', gap: '8px',
+                display: 'flex', flexDirection: 'column', gap: '10px',
                 paddingRight: '4px',
               }}>
                 {grocery.items.map(item => (
                   <button key={item.id}
                     onClick={() => toggleItem(item.id, item.is_checked)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '12px',
-                      padding: '12px 14px',
+                      display: 'flex', alignItems: 'center', gap: '14px',
+                      padding: '16px',
                       background: item.is_checked
-                        ? 'rgba(109,170,69,0.08)'
-                        : 'var(--bg-surface-2)',
+                        ? 'rgba(52,199,89,0.08)'
+                        : 'rgba(255,255,255,0.6)',
                       border: `1px solid ${item.is_checked
-                        ? 'rgba(109,170,69,0.3)'
-                        : 'var(--border)'}`,
-                      borderRadius: '12px', cursor: 'pointer',
+                        ? 'rgba(52,199,89,0.3)'
+                        : 'rgba(0,0,0,0.05)'}`,
+                      borderRadius: '16px', cursor: 'pointer',
                       transition: 'all 180ms ease', textAlign: 'left',
                     }}>
                     {item.is_checked
-                      ? <CheckSquare size={18} color="#6daa45" />
-                      : <Square size={18} color="var(--text-faint)" />}
+                      ? <CheckSquare size={22} color="var(--color-accent)" />
+                      : <Square size={22} color="var(--color-text-faint)" />}
                     <div style={{ flex: 1 }}>
                       <p style={{
-                        fontFamily: 'Satoshi, sans-serif', fontWeight: 600,
-                        fontSize: '0.9rem',
+                        fontFamily: FONT, fontWeight: 700,
+                        fontSize: '1rem',
                         color: item.is_checked
-                          ? 'var(--text-faint)' : 'var(--text-primary)',
+                          ? 'var(--color-text-muted)' : 'var(--color-text)',
                         textDecoration: item.is_checked ? 'line-through' : 'none',
                       }}>{item.ingredient_name}</p>
                     </div>
                     <span style={{
-                      fontSize: '0.75rem', color: 'var(--text-faint)',
-                      fontFamily: 'Satoshi, sans-serif', flexShrink: 0,
+                      fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600,
+                      fontFamily: FONT, flexShrink: 0,
                     }}>
                       {item.quantity} {item.unit}
                     </span>
@@ -721,11 +735,12 @@ function Nutrition() {
 
             {/* Done button */}
             <button onClick={() => setShowGrocery(false)} style={{
-              marginTop: '14px', padding: '14px',
-              background: 'var(--accent)', border: 'none',
-              borderRadius: '14px', color: '#0A0A0A',
-              fontFamily: 'Satoshi, sans-serif', fontWeight: 800,
-              fontSize: '0.9375rem', cursor: 'pointer', flexShrink: 0,
+              marginTop: '20px', padding: '16px',
+              background: 'var(--color-accent)', border: 'none',
+              borderRadius: '16px', color: '#ffffff',
+              fontFamily: FONT, fontWeight: 800,
+              fontSize: '1rem', cursor: 'pointer', flexShrink: 0,
+              boxShadow: '0 8px 24px rgba(52,199,89,0.3)',
             }}>
               Done
             </button>
@@ -733,57 +748,78 @@ function Nutrition() {
         </div>
       )}
 
+      {/* Global CSS mapped to the new theme variables */}
       <style>{`
+        :root {
+          --color-accent: #34C759;
+          --color-text: #1C1C1E;
+          --color-text-muted: #636366;
+          --color-text-faint: #8E8E93;
+        }
+        body, #root { 
+          background: #F2F2F7 !important; 
+          color: var(--color-text);
+          margin: 0;
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%) }
+          100% { transform: translateX(100%) }
+        }
       `}</style>
     </div>
   )
 }
 
-const pageWrap = {
-  display: 'flex', flexDirection: 'column',
-  gap: '14px', padding: '12px 16px',
+// ─── Local Layout Styles ───────────────────────────────────────
+const S = {
+  pageWrap: {
+    display: 'flex', flexDirection: 'column',
+    gap: '16px', padding: '16px',
+  },
+  weekStrip: {
+    ...GLASS_WHITE,
+    display: 'flex', justifyContent: 'space-between',
+    borderRadius: '24px', padding: '10px',
+  },
+  dateHeader: {
+    display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', padding: '4px 8px',
+  },
+  navBtn: {
+    width: '44px', height: '44px',
+    background: 'rgba(255,255,255,0.6)',
+    border: '1px solid rgba(0,0,0,0.04)',
+    borderRadius: '14px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+  },
+  slotTabs: {
+    display: 'flex', gap: '8px',
+    ...GLASS_WHITE, padding: '8px', borderRadius: '24px',
+  },
+  regenBar: {
+    display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 4px',
+  },
+  regenBtn: {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    background: 'rgba(255,255,255,0.6)',
+    border: '1px solid rgba(0,0,0,0.05)',
+    borderRadius: '12px', padding: '8px 14px',
+    color: 'var(--color-text)', cursor: 'pointer',
+    transition: 'all 180ms ease', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+  },
+  emptyState: {
+    ...GLASS_WHITE,
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    gap: '8px', padding: '60px 24px',
+    borderRadius: '24px',
+  }
 }
-const weekStrip = {
-  display: 'flex', justifyContent: 'space-between',
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '16px', padding: '8px',
-}
-const dateHeader = {
-  display: 'flex', alignItems: 'center',
-  justifyContent: 'space-between', padding: '0 4px',
-}
-const navBtn = {
-  width: '38px', height: '38px',
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '10px',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  cursor: 'pointer',
-}
-const slotTabs = {
-  display: 'flex', gap: '8px',
-}
-const regenBar = {
-  display: 'flex', alignItems: 'center',
-  justifyContent: 'space-between',
-}
-const regenBtn = {
-  display: 'flex', alignItems: 'center', gap: '5px',
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px', padding: '7px 12px',
-  color: 'var(--text-secondary)', cursor: 'pointer',
-  transition: 'all 180ms ease',
-}
-const emptyState = {
-  display: 'flex', flexDirection: 'column',
-  alignItems: 'center', justifyContent: 'center',
-  gap: '12px', padding: '48px 20px',
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '22px',
-}
-
-export default Nutrition

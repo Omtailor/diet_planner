@@ -44,9 +44,9 @@ function getTodayStr() {
 function getBMICategory(bmi) {
   if (!bmi) return { label: 'Unknown', color: 'var(--color-text-faint)' }
   if (bmi < 18.5) return { label: 'Underweight', color: '#60B8FF' }
-  if (bmi < 25)   return { label: 'Normal',       color: 'var(--color-accent)' }
-  if (bmi < 30)   return { label: 'Overweight',   color: '#e09a2e' }
-  return               { label: 'Obese',          color: '#e05252' }
+  if (bmi < 25) return { label: 'Normal', color: 'var(--color-accent)' }
+  if (bmi < 30) return { label: 'Overweight', color: '#e09a2e' }
+  return { label: 'Obese', color: '#e05252' }
 }
 
 function getBMIPosition(bmi) {
@@ -97,8 +97,8 @@ function SkeletonBlock({ width = '100%', height = '16px', radius = '8px' }) {
 
 function CalorieRing({ consumed = 0, target = 2000 }) {
   const animated = useCountUp(consumed)
-  const pct  = Math.min(consumed / target, 1)
-  const r    = 54
+  const pct = Math.min(consumed / target, 1)
+  const r = 54
   const circ = 2 * Math.PI * r
   const dash = pct * circ
 
@@ -108,7 +108,7 @@ function CalorieRing({ consumed = 0, target = 2000 }) {
         style={{ filter: 'drop-shadow(0 0 8px rgba(76,175,80,0.4))' }}>
         <defs>
           <linearGradient id="calorieGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="#4CAF50" />
+            <stop offset="0%" stopColor="#4CAF50" />
             <stop offset="100%" stopColor="#1a7a42" />
           </linearGradient>
         </defs>
@@ -206,8 +206,8 @@ function MacroBar({ label, value, max, glowColor, trackColor }) {
 function MealPreviewCard({ slot, meal, onTap, index = 0 }) {
   const config = {
     breakfast: { emoji: '🌅', label: 'Breakfast' },
-    lunch:     { emoji: '☀️', label: 'Lunch' },
-    dinner:    { emoji: '🌙', label: 'Dinner' },
+    lunch: { emoji: '☀️', label: 'Lunch' },
+    dinner: { emoji: '🌙', label: 'Dinner' },
   }
   const { emoji, label } = config[slot] || { emoji: '🍽️', label: slot }
 
@@ -278,7 +278,7 @@ const mealThumb = {
 
 function WeightCard({ profile, onUpdate }) {
   const current = profile?.weight_kg
-  const target  = profile?.target_weight_kg
+  const target = profile?.target_weight_kg
   const diff = current && target ? Math.abs(current - target) : 0
   const totalToLose = current && target ? Math.abs(current - target) + 1 : 1
   const progressPct = current && target
@@ -341,48 +341,114 @@ function BMICard({ profile }) {
   const cat = getBMICategory(bmi)
   const pos = getBMIPosition(bmi)
 
+  // 28 ticks total, color zones matching the gradient
+  const TICKS = 28
+  const getTickColor = (i) => {
+    const pct = i / (TICKS - 1)
+    if (pct < 0.25) return '#60B8FF'   // underweight - blue
+    if (pct < 0.50) return '#4CAF50'   // normal - green
+    if (pct < 0.75) return '#e09a2e'   // overweight - amber
+    return '#e05252'                     // obese - red
+  }
+
   return (
     <div style={glassCard}>
-      <p style={sectionLabel}>Your BMI</p>
-      <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-          <span style={{
-            fontFamily: "'General Sans', sans-serif",
-            fontSize: '2.5rem', fontWeight: 700,
-            color: 'var(--color-text)', lineHeight: 1,
-          }}>{bmi || '—'}</span>
-          <span style={{
-            fontSize: '0.875rem', fontWeight: 600, color: cat.color,
-            fontFamily: "'General Sans', sans-serif",
-          }}>{cat.label}</span>
-        </div>
+      {/* Header row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p style={sectionLabel}>Your Weight is</p>
+        <span style={{
+          fontSize: '0.75rem', fontWeight: 600,
+          color: cat.color,
+          background: `${cat.color}18`,
+          border: `1px solid ${cat.color}40`,
+          borderRadius: '20px',
+          padding: '3px 10px',
+          fontFamily: "'General Sans', sans-serif",
+        }}>{cat.label}</span>
+      </div>
 
-        <div style={{ position: 'relative' }}>
+      {/* BMI value */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', margin: '8px 0 16px' }}>
+        <span style={{
+          fontFamily: "'General Sans', sans-serif",
+          fontSize: '2.75rem', fontWeight: 700,
+          color: 'var(--color-text)', lineHeight: 1,
+        }}>{bmi || '—'}</span>
+        <span style={{
+          fontSize: '0.9rem', fontWeight: 500,
+          color: 'var(--color-text-muted)',
+          fontFamily: "'General Sans', sans-serif",
+        }}>BMI</span>
+      </div>
+
+      {/* Tick bar with needle */}
+      <div style={{ position: 'relative', paddingTop: '14px' }}>
+        {/* Needle marker */}
+        {bmi && (
           <div style={{
-            height: '10px', borderRadius: '6px',
-            background: 'linear-gradient(to right, #60B8FF 0%, #4CAF50 33%, #e09a2e 66%, #e05252 100%)',
-          }} />
-          {bmi && (
+            position: 'absolute',
+            top: 0,
+            left: `calc(${pos}% - 1px)`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            transition: 'left 700ms cubic-bezier(0.16,1,0.3,1)',
+            zIndex: 2,
+          }}>
+            {/* Triangle needle */}
             <div style={{
-              position: 'absolute', top: '-5px',
-              left: `calc(${pos}% - 6px)`,
-              width: '12px', height: '20px',
-              background: 'white', borderRadius: '4px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
-              transition: 'left 700ms cubic-bezier(0.16,1,0.3,1)',
-              animation: 'bmiBreath 2.5s ease-in-out infinite',
+              width: 0, height: 0,
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '8px solid var(--color-text)',
             }} />
-          )}
-        </div>
+          </div>
+        )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          {['Underweight', 'Normal', 'Overweight', 'Obese'].map(l => (
-            <span key={l} style={{
-              fontSize: '0.6rem', color: 'var(--color-text-faint)',
-              fontFamily: "'General Sans', sans-serif",
-            }}>{l}</span>
-          ))}
+        {/* Tick marks */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '3px',
+          height: '28px',
+        }}>
+          {Array.from({ length: TICKS }).map((_, i) => {
+            const tickPct = i / (TICKS - 1)
+            const isNearNeedle = bmi && Math.abs(tickPct * 100 - pos) < 4
+            return (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  height: isNearNeedle ? '28px' : (i % 4 === 0 ? '20px' : '14px'),
+                  background: getTickColor(i),
+                  borderRadius: '2px',
+                  opacity: isNearNeedle ? 1 : 0.75,
+                  transition: 'height 600ms ease',
+                }}
+              />
+            )
+          })}
         </div>
+      </div>
+
+      {/* Labels */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', marginTop: '8px',
+      }}>
+        {[
+          { label: 'Underweight', color: '#60B8FF' },
+          { label: 'Normal', color: '#4CAF50' },
+          { label: 'Overweight', color: '#e09a2e' },
+          { label: 'Obese', color: '#e05252' },
+        ].map(({ label, color }) => (
+          <span key={label} style={{
+            fontSize: '0.6rem',
+            color: cat.label === label ? color : 'var(--color-text-faint)',
+            fontFamily: "'General Sans', sans-serif",
+            fontWeight: cat.label === label ? 700 : 400,
+          }}>{label}</span>
+        ))}
       </div>
     </div>
   )
@@ -391,7 +457,7 @@ function BMICard({ profile }) {
 // ─── Quote Card ────────────────────────────────────────────────
 
 function QuoteCard() {
-  const [idx, setIdx]         = useState(() => Math.floor(Math.random() * QUOTES.length))
+  const [idx, setIdx] = useState(() => Math.floor(Math.random() * QUOTES.length))
   const [visible, setVisible] = useState(true)
 
   const nextQuote = () => {
@@ -444,7 +510,7 @@ const quoteCardStyle = {
 // ─── Weight Modal ──────────────────────────────────────────────
 
 function WeightModal({ current, onClose, onSave }) {
-  const [val, setVal]         = useState(current || '')
+  const [val, setVal] = useState(current || '')
   const [loading, setLoading] = useState(false)
 
   const handleSave = async () => {
@@ -604,10 +670,10 @@ const modalHandle = {
 function Dashboard() {
   const navigate = useNavigate()
   const { profile, fetchProfile } = useAuth()
-  const [dayMeal, setDayMeal]             = useState(null)
-  const [loadingMeal, setLoadingMeal]     = useState(true)
+  const [dayMeal, setDayMeal] = useState(null)
+  const [loadingMeal, setLoadingMeal] = useState(true)
   const [showWeightModal, setShowWeightModal] = useState(false)
-  const [regenerating, setRegenerating]   = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
 
   const today = getTodayStr()
 
@@ -634,20 +700,20 @@ function Dashboard() {
   }
 
   const getMealSlot = (slot) => dayMeal?.meal_slots?.find(m => m.slot === slot)
-  const totalCals   = dayMeal?.meal_slots?.reduce((s, m) => s + (m.calories || 0), 0) || 0
-  const targetCals  = profile?.target_calories || 2000
+  const totalCals = dayMeal?.meal_slots?.reduce((s, m) => s + (m.calories || 0), 0) || 0
+  const targetCals = profile?.target_calories || 2000
 
   const macros = dayMeal?.meal_slots?.reduce((acc, m) => ({
     protein: acc.protein + (m.protein_g || 0),
-    carbs:   acc.carbs   + (m.carbs_g   || 0),
-    fats:    acc.fats    + (m.fats_g    || 0),
+    carbs: acc.carbs + (m.carbs_g || 0),
+    fats: acc.fats + (m.fats_g || 0),
   }), { protein: 0, carbs: 0, fats: 0 }) || { protein: 0, carbs: 0, fats: 0 }
 
   const status = dayMeal?.status || 'on_track'
   const statusConfig = {
-    on_track:    { label: 'On Track ✅',  color: 'var(--color-accent)' },
-    adjusted:    { label: 'Adjusted ⚠️', color: '#e09a2e' },
-    regenerated: { label: 'Updated 🔄',  color: 'var(--color-accent)' },
+    on_track: { label: 'On Track ✅', color: 'var(--color-accent)' },
+    adjusted: { label: 'Adjusted ⚠️', color: '#e09a2e' },
+    regenerated: { label: 'Updated 🔄', color: 'var(--color-accent)' },
   }
   const sc = statusConfig[status] || statusConfig.on_track
 
