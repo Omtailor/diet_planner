@@ -617,7 +617,7 @@ const S = {
   // ── Hero Top Bar ──
   heroHeader: {
     position: 'relative', width: '100%',
-    padding: '16px', paddingTop: '80px', // padding to clear navbar
+    padding: '16px', paddingTop: '16px', // padding to clear navbar
   },
   heroOverlay: {
     ...GLASS_WHITE,
