@@ -34,7 +34,7 @@ function formatFullDate(dateStr) {
 function getWeekDays(centerDate) {
   const center = new Date(centerDate)
   const days = []
-  for (let i = -3; i <= 3; i++) {
+  for (let i = -15; i <= 29; i++) {
     const d = new Date(center)
     d.setDate(center.getDate() + i)
     days.push(d.toISOString().split('T')[0])
@@ -369,6 +369,7 @@ function CheatMealButton({ onLog }) {
 
 export default function Nutrition() {
   const navigate = useNavigate()
+  const weekStripRef = useRef(null)
   const [dateOffset, setDateOffset] = useState(0)
   const [selectedDate, setSelectedDate] = useState(getDateStr(0))
   const [dayMeal, setDayMeal] = useState(null)
@@ -378,11 +379,51 @@ export default function Nutrition() {
   const [showGrocery, setShowGrocery] = useState(false)
   const [grocery, setGrocery] = useState(null)
   const [groceryLoading, setGroceryLoading] = useState(false)
+  const [generatingNextWeek, setGeneratingNextWeek] = useState(false)
+  const [nextWeekExists, setNextWeekExists] = useState(false)
+  const [latestPlanEndDate, setLatestPlanEndDate] = useState(null)  // always latest plan's end
   const slots = ['breakfast', 'lunch', 'dinner']
 
   useEffect(() => {
     fetchDayMeal(selectedDate)
   }, [selectedDate])
+
+  useEffect(() => {
+    checkNextWeekPlan()
+  }, [])
+
+  useEffect(() => {
+    if (!weekStripRef.current) return
+    const selected = weekStripRef.current.querySelector('[data-selected="true"]')
+    if (selected) {
+      selected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    }
+  }, [selectedDate])
+
+  const checkNextWeekPlan = async () => {
+    try {
+      // Always fetch LATEST plan — not necessarily the current week
+      const res = await mealService.getLatestPlan()
+      const endDateStr = res.data?.week_end_date   // e.g. "2026-04-11"
+      setLatestPlanEndDate(endDateStr || null)
+
+      // Check if next week plan already exists
+      if (endDateStr) {
+        const nextStartDate = new Date(endDateStr)
+        nextStartDate.setDate(nextStartDate.getDate() + 1)
+        const nextStartStr = nextStartDate.toISOString().split('T')[0]
+        try {
+          await mealService.getDayMeal(nextStartStr)
+          setNextWeekExists(true)
+        } catch {
+          setNextWeekExists(false)
+        }
+      }
+    } catch {
+      setLatestPlanEndDate(null)
+      setNextWeekExists(false)
+    }
+  }
 
   const fetchDayMeal = async (date) => {
     setLoading(true)
@@ -413,6 +454,20 @@ export default function Nutrition() {
       toast.error('Failed to regenerate')
     } finally {
       setRegenerating(false)
+    }
+  }
+
+  const handleGenerateNextWeek = async () => {
+    setGeneratingNextWeek(true)
+    try {
+      await mealService.generateNextWeek()
+      setNextWeekExists(true)
+      toast.success('Next week plan generated! 🗓️')
+    } catch (err) {
+      const msg = err?.response?.data?.detail || 'Failed to generate next week plan'
+      toast.error(msg)
+    } finally {
+      setGeneratingNextWeek(false)
     }
   }
 
@@ -447,11 +502,29 @@ export default function Nutrition() {
 
   const weekDays = getWeekDays(selectedDate)
 
+  // Compute activation date = latestPlanEndDate + 1 day at 12 AM
+  const nextWeekActivationDate = latestPlanEndDate
+    ? (() => {
+        const d = new Date(latestPlanEndDate)
+        d.setDate(d.getDate() + 1)
+        d.setHours(0, 0, 0, 0)
+        return d
+      })()
+    : null
+
+  const nextWeekButtonActive = nextWeekActivationDate
+    ? new Date() >= nextWeekActivationDate
+    : false
+
+  const nextWeekAvailableLabel = nextWeekActivationDate
+    ? nextWeekActivationDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+    : ''
+
   return (
     <div style={S.pageWrap}>
 
       {/* ── Week Strip ── */}
-      <div style={S.weekStrip}>
+      <div ref={weekStripRef} style={S.weekStrip} className="week-strip">
         {weekDays.map((d) => {
           const isSelected = d === selectedDate
           const isToday = d === getDateStr(0)
@@ -459,12 +532,15 @@ export default function Nutrition() {
           const dayNum = new Date(d).getDate()
           return (
             <button key={d}
+              data-selected={isSelected}
               onClick={() => { setSelectedDate(d); setDateOffset(0); setActiveSlot(0) }}
               style={{
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: '6px',
                 padding: '10px 8px', borderRadius: '16px',
-                border: 'none', cursor: 'pointer', minWidth: '44px',
+                border: 'none', cursor: 'pointer',
+                minWidth: '44px', flexShrink: 0,
+                scrollSnapAlign: 'center',
                 background: isSelected ? 'var(--color-accent)' : 'transparent',
                 boxShadow: isSelected ? '0 4px 12px rgba(52,199,89,0.3)' : 'none',
                 transition: 'all 200ms ease',
@@ -608,6 +684,75 @@ export default function Nutrition() {
           }} />
         ))}
       </div>
+
+      {/* ── Next Week Plan ── */}
+      <div style={{ height: '8px' }} />
+      {latestPlanEndDate && (
+        nextWeekExists ? (
+          <div style={{
+            ...GLASS_WHITE,
+            borderRadius: '20px', padding: '14px 16px',
+            display: 'flex', alignItems: 'center', gap: '12px',
+            border: '1px solid rgba(52,199,89,0.2)',
+          }}>
+            <span style={{ fontSize: '1.2rem' }}>✅</span>
+            <p style={{
+              fontSize: '0.9rem', fontWeight: 600,
+              color: 'var(--color-text-muted)', fontFamily: FONT,
+            }}>
+              Next week plan is ready
+            </p>
+          </div>
+        ) : (
+          <button
+            onClick={nextWeekButtonActive ? handleGenerateNextWeek : undefined}
+            disabled={!nextWeekButtonActive || generatingNextWeek}
+            style={{
+              width: '100%', ...GLASS_WHITE,
+              borderRadius: '20px', padding: '16px',
+              display: 'flex', alignItems: 'center', gap: '14px',
+              cursor: nextWeekButtonActive && !generatingNextWeek ? 'pointer' : 'not-allowed',
+              border: `1px solid ${nextWeekButtonActive ? 'rgba(52,199,89,0.25)' : 'rgba(0,0,0,0.06)'}`,
+              opacity: nextWeekButtonActive ? 1 : 0.55,
+              transition: 'all 180ms ease',
+            }}
+          >
+            <div style={{
+              width: '48px', height: '48px',
+              background: nextWeekButtonActive ? 'rgba(52,199,89,0.15)' : 'rgba(0,0,0,0.05)',
+              borderRadius: '14px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.4rem', flexShrink: 0,
+            }}>
+              🗓️
+            </div>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <p style={{
+                fontSize: '1rem', fontWeight: 700,
+                color: 'var(--color-text)', fontFamily: FONT,
+              }}>
+                Generate Next Week Plan
+              </p>
+              <p style={{
+                fontSize: '0.8rem', fontWeight: 500,
+                fontFamily: FONT, marginTop: '2px',
+                color: nextWeekButtonActive ? 'var(--color-text-muted)' : '#FF9500',
+              }}>
+                {nextWeekButtonActive
+                  ? 'Meal + training plan for next 7 days'
+                  : `Available on ${nextWeekAvailableLabel}`}
+              </p>
+            </div>
+            {generatingNextWeek
+              ? <Loader2 size={20} color="var(--color-accent)"
+                  style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+              : <ChevronRight size={20}
+                  color={nextWeekButtonActive ? 'var(--color-accent)' : 'var(--color-text-faint)'}
+                  style={{ flexShrink: 0 }} />
+            }
+          </button>
+        )
+      )}
 
       {/* ── Grocery + Cheat Meal ── */}
       <div style={{ height: '8px' }} />
@@ -770,6 +915,7 @@ export default function Nutrition() {
           0% { transform: translateX(-100%) }
           100% { transform: translateX(100%) }
         }
+        .week-strip::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   )
@@ -783,8 +929,13 @@ const S = {
   },
   weekStrip: {
     ...GLASS_WHITE,
-    display: 'flex', justifyContent: 'space-between',
+    display: 'flex',
     borderRadius: '24px', padding: '10px',
+    overflowX: 'auto',
+    gap: '4px',
+    scrollbarWidth: 'none',         // Firefox
+    msOverflowStyle: 'none',        // IE
+    scrollSnapType: 'x mandatory',
   },
   dateHeader: {
     display: 'flex', alignItems: 'center',

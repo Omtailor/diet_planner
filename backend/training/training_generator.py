@@ -8,15 +8,16 @@ Rules:
 - Rest days   → based on health_time (< 30 min/day = more rest days)
 - Age > 50    → more flexibility, less heavy strength
 """
+
 from datetime import timedelta
 from .models import Exercise, TrainingPlan, DayTraining
 
 
 def generate_training_plan(user, profile, week_start=None):
     from datetime import date
+
     if week_start is None:
-        today = date.today()
-        week_start = today - timedelta(days=today.weekday())
+        week_start = date.today()  # ← start from today, not Monday
 
     # Delete existing plan for this week
     TrainingPlan.objects.filter(user=user, week_start_date=week_start).delete()
@@ -24,30 +25,33 @@ def generate_training_plan(user, profile, week_start=None):
     plan = TrainingPlan.objects.create(
         user=user,
         week_start_date=week_start,
+        week_end_date=week_start + timedelta(days=6),  # ← ADD THIS
         is_active=True,
     )
 
-    has_gym = getattr(profile, 'has_gym', False)
-    age = getattr(profile, 'age', 25)
-    health_minutes = getattr(profile, 'health_time_minutes', 60)
+    has_gym = getattr(profile, "has_gym", False)
+    age = getattr(profile, "age", 25)
+    health_minutes = getattr(profile, "health_time_minutes", 60)
 
     # Determine rest days per week based on available time
     if health_minutes < 30:
-        rest_days = {2, 4, 6}      # 3 rest days (Wed, Fri, Sun)
+        rest_days = {2, 4, 6}  # 3 rest days (Wed, Fri, Sun)
     elif health_minutes < 60:
-        rest_days = {3, 6}         # 2 rest days (Thu, Sun)
+        rest_days = {3, 6}  # 2 rest days (Thu, Sun)
     else:
-        rest_days = {6}            # 1 rest day (Sunday only)
+        rest_days = {6}  # 1 rest day (Sunday only)
 
     # Filter exercises by equipment
     if has_gym:
-        pool = list(Exercise.objects.filter(equipment__in=['gym', 'none']))
+        pool = list(Exercise.objects.filter(equipment__in=["gym", "none"]))
     else:
-        pool = list(Exercise.objects.filter(equipment='none'))
+        pool = list(Exercise.objects.filter(equipment="none"))
 
     # For older users, prefer flexibility + bodyweight
     if age > 50:
-        preferred = [e for e in pool if e.category in ('flexibility', 'bodyweight', 'cardio')]
+        preferred = [
+            e for e in pool if e.category in ("flexibility", "bodyweight", "cardio")
+        ]
         if len(preferred) >= 3:
             pool = preferred
 
@@ -60,15 +64,15 @@ def generate_training_plan(user, profile, week_start=None):
 
     for day_index in range(7):
         current_date = week_start + timedelta(days=day_index)
+        actual_weekday = current_date.weekday()   # ← real weekday (0=Mon...6=Sun)
         is_rest = day_index in rest_days
 
         day_training = DayTraining.objects.create(
             training_plan=plan,
-            day_of_week=day_index,
+            day_of_week=actual_weekday,   # ← stores correct weekday
             date=current_date,
             is_rest_day=is_rest,
         )
-
         if not is_rest:
             # Pick 3-4 exercises not used recently
             available = [e for e in pool if e.id not in used_exercise_ids]

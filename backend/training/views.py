@@ -14,11 +14,16 @@ class WeeklyTrainingView(APIView):
 
     def get(self, request):
         today = date.today()
-        week_start = today - timedelta(days=today.weekday())
-        try:
-            plan = TrainingPlan.objects.get(user=request.user, week_start_date=week_start)
-        except TrainingPlan.DoesNotExist:
+        plan = TrainingPlan.objects.filter(
+            user=request.user,
+            week_start_date__lte=today,
+            week_end_date__gte=today,
+        ).order_by('-week_start_date').first()
+
+        if not plan:
             return Response({'error': 'No training plan found for this week.'}, status=404)
+        
+        # Added the missing return for the successful scenario
         return Response(TrainingPlanSerializer(plan).data)
 
 
@@ -53,7 +58,17 @@ class GenerateTrainingPlanView(APIView):
         except Exception:
             return Response({'error': 'Profile not found. Complete onboarding first.'}, status=400)
 
-        plan = generate_training_plan(request.user, profile)
+        # Support optional week_start from request body (for next-week generation)
+        week_start_str = request.data.get('week_start')
+        if week_start_str:
+            try:
+                week_start = date.fromisoformat(week_start_str)
+            except ValueError:
+                return Response({'error': 'Invalid week_start format. Use YYYY-MM-DD.'}, status=400)
+        else:
+            week_start = date.today()   # ← start from today, not Monday
+
+        plan = generate_training_plan(request.user, profile, week_start=week_start)
         if not plan:
             return Response({'error': 'Training plan generation failed.'}, status=500)
 
