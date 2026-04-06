@@ -6,7 +6,6 @@ import { useAuth } from '../../context/AuthContext'
 import { authService } from '../../services/authService'
 
 import bgVideo from '../../assets/videos/bg-video.mp4'
-import bg1 from '../../assets/images/bg-1.webp'
 
 function Login() {
   const navigate = useNavigate()
@@ -44,8 +43,7 @@ function Login() {
 
       {/* ── Video (loops continuously) ── */}
       <video
-        autoPlay playsInline loop
-        poster={bg1}
+        autoPlay playsInline loop muted
         style={s.bgVideo}
         preload="auto"
       >
