@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import date, timedelta
 
 from google import genai
@@ -308,18 +309,46 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
     # ──────────────────────────────────────────────────────
 
     def fetch_from_gemini(self, prompt: str) -> WeeklyPlanSchema | None:
-        try:
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.4,
-                    response_mime_type="application/json",
-                ),
-            )
-            raw = response.text.strip()
-        except Exception as e:
-            print(f"[MealGenerator] Gemini API call failed: {e}")
+        import time
+
+        # Primary model with retries, fallback to 2.0-flash on persistent 503
+        models_to_try = [
+            ("gemini-2.5-flash", 3),  # primary
+            ("gemini-2.5-flash-lite", 2),  # fallback
+        ]
+
+        raw = None
+
+        for model_name, max_attempts in models_to_try:
+            print(f"[MealGenerator] Trying model: {model_name}")
+            for attempt in range(max_attempts):
+                try:
+                    response = self.client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.4,
+                            response_mime_type="application/json",
+                        ),
+                    )
+                    raw = response.text.strip()
+                    print(f"[MealGenerator] ✓ Got response from {model_name}")
+                    break  # Success — exit attempt loop
+
+                except Exception as e:
+                    print(
+                        f"[MealGenerator] {model_name} attempt {attempt+1} failed: {e}"
+                    )
+                    if attempt < max_attempts - 1:
+                        wait = (attempt + 1) * 10
+                        print(f"[MealGenerator] Retrying in {wait}s...")
+                        time.sleep(wait)
+
+            if raw:
+                break  # Got a response — exit model loop
+
+        if not raw:
+            print("[MealGenerator] All models and attempts failed.")
             return None
 
         try:
@@ -357,9 +386,7 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
         )
 
         for day_data in validated.days:
-            actual_date = week_start + datetime.timedelta(
-                days=day_data.day_number - 1
-            )
+            actual_date = week_start + datetime.timedelta(days=day_data.day_number - 1)
             actual_weekday = actual_date.weekday()  # 0=Monday ... 6=Sunday
 
             day_meal, _ = DayMeal.objects.get_or_create(

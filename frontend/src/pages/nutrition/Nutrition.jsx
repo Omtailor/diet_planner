@@ -766,22 +766,7 @@ export default function Nutrition() {
   const weekDays = getWeekDays(selectedDate)
 
   // Compute activation date = latestPlanEndDate + 1 day at 12 AM
-  const nextWeekActivationDate = latestPlanEndDate
-    ? (() => {
-      const d = new Date(latestPlanEndDate)
-      d.setDate(d.getDate() + 1)
-      d.setHours(0, 0, 0, 0)
-      return d
-    })()
-    : null
-
-  const nextWeekButtonActive = nextWeekActivationDate
-    ? new Date() >= nextWeekActivationDate
-    : false
-
-  const nextWeekAvailableLabel = nextWeekActivationDate
-    ? nextWeekActivationDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-    : ''
+  const nextWeekButtonActive = !nextWeekExists
 
   return (
     <div style={S.pageWrap}>
@@ -1002,8 +987,15 @@ export default function Nutrition() {
                 color: nextWeekButtonActive ? 'var(--color-text-muted)' : '#FF9500',
               }}>
                 {nextWeekButtonActive
-                  ? 'Meal + training plan for next 7 days'
-                  : `Available on ${nextWeekAvailableLabel}`}
+                  ? `Starts ${(() => {
+                    if (!latestPlanEndDate) return 'today'
+                    const d = new Date(latestPlanEndDate)
+                    d.setDate(d.getDate() + 1)
+                    const today = new Date(); today.setHours(0, 0, 0, 0)
+                    const start = d > today ? d : today
+                    return start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                  })()} · 7 day meal + training plan`
+                  : 'Next week plan already generated'}
               </p>
             </div>
             {generatingNextWeek

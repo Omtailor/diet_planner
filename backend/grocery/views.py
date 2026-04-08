@@ -10,19 +10,22 @@ from .grocery_generator import generate_grocery_list
 
 
 class GroceryListView(APIView):
-    """GET /api/grocery/ — Get this week's grocery list."""
+    """GET /api/grocery/ — Get the latest grocery list."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        today = date.today()
-        week_start = today - timedelta(days=today.weekday())
-
         try:
-            grocery = GroceryList.objects.get(
-                user=request.user,
-                weekly_plan__week_start_date=week_start,
-            )
-        except GroceryList.DoesNotExist:
+            # ✅ FIXED: Get latest plan's grocery, not fixed Mon week_start
+            grocery = GroceryList.objects.filter(
+                user=request.user
+            ).order_by('-weekly_plan__week_start_date').first()
+
+            if not grocery:
+                return Response(
+                    {'error': 'No grocery list found. Generate a meal plan first.'},
+                    status=404,
+                )
+        except Exception:
             return Response(
                 {'error': 'No grocery list found. Generate a meal plan first.'},
                 status=404,
@@ -60,7 +63,7 @@ class CheckGroceryItemView(APIView):
 
 
 class RefreshGroceryListView(APIView):
-    """POST /api/grocery/refresh/ — Rebuild grocery list from current meal plan."""
+    """POST /api/grocery/refresh/ — Rebuild grocery list from latest meal plan."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

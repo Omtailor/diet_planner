@@ -10,9 +10,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Safety net — force-hide loader after 5s no matter what in case the network hangs
+    const timeout = setTimeout(() => setLoading(false), 5000)
+
     const token = safeStorage.get('access_token')
     if (token) fetchProfile()
     else setLoading(false)
+
+    return () => clearTimeout(timeout)
   }, [])
 
   const fetchProfile = async () => {
