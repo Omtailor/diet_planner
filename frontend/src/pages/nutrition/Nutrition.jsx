@@ -11,7 +11,11 @@ import API from '../../services/api'
 function getDateStr(offset = 0) {
   const d = new Date()
   d.setDate(d.getDate() + offset)
-  return d.toISOString().split('T')[0]
+  // Use local date parts instead of toISOString
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 function formatDisplayDate(dateStr) {
@@ -422,6 +426,9 @@ export default function Nutrition() {
   const [nextWeekExists, setNextWeekExists] = useState(false)
   const [latestPlanEndDate, setLatestPlanEndDate] = useState(null)  // always latest plan's end
   const [exportPdfLoading, setExportPdfLoading] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportStartDate, setExportStartDate] = useState(getDateStr(0))
+  const [exportEndDate, setExportEndDate] = useState(getDateStr(6))
   const slots = ['breakfast', 'lunch', 'dinner']
 
   useEffect(() => {
@@ -541,20 +548,39 @@ export default function Nutrition() {
   }
 
   const handleExportPdf = async () => {
+    setShowExportModal(false)
     setExportPdfLoading(true)
+
     try {
-      const planRes = await mealService.getWeeklyPlan()
-      const days = planRes.data?.day_meals || []
+      // Build array of all dates in range
+      const allDates = []
+      let current = new Date(exportStartDate + 'T00:00:00')
+      const end = new Date(exportEndDate + 'T00:00:00')
+      while (current <= end) {
+        allDates.push(current.toISOString().split('T')[0])
+        current = new Date(current)
+        current.setDate(current.getDate() + 1)
+      }
+
+      // Fetch each day — null if 404
+      const dayResults = await Promise.all(
+        allDates.map(async (dateStr) => {
+          try {
+            const res = await mealService.getDayMeal(dateStr)
+            return { date: dateStr, data: res.data }
+          } catch {
+            return { date: dateStr, data: null }
+          }
+        })
+      )
 
       const { jsPDF } = window.jspdf
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-
       const pageW = 210
       const pageH = 297
-      const M = 14                    // margin
-      const CW = pageW - M * 2        // content width = 182mm
+      const M = 14
+      const CW = pageW - M * 2
 
-      // ── Colour palette ──
       const GREEN = [34, 197, 94]
       const DARK = [17, 24, 39]
       const MUTED = [107, 114, 128]
@@ -565,6 +591,8 @@ export default function Nutrition() {
       const BLUE = [37, 99, 235]
       const PURPLE = [124, 58, 237]
       const RED = [220, 38, 38]
+      const EMPTY_BG = [254, 242, 242]
+      const EMPTY_BORDER = [252, 165, 165]
 
       const slotAccent = { breakfast: ORANGE, lunch: GREEN, dinner: BLUE }
 
@@ -574,7 +602,6 @@ export default function Nutrition() {
       const newPage = () => {
         if (pageNum > 0) doc.addPage()
         pageNum++
-        // Header bar
         doc.setFillColor(...GREEN)
         doc.rect(0, 0, pageW, 14, 'F')
         doc.setFont('helvetica', 'bold')
@@ -591,26 +618,25 @@ export default function Nutrition() {
 
       newPage()
 
-      // ── Cover block ──
+      // Cover block
       doc.setFillColor(...BG)
       doc.roundedRect(M, y, CW, 30, 3, 3, 'F')
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(20)
       doc.setTextColor(...DARK)
-      doc.text('Your Weekly Meal Plan', M + 6, y + 12)
+      doc.text('Your Meal Plan', M + 6, y + 12)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
       doc.setTextColor(...MUTED)
-      const d0 = days[0]?.date, dN = days[days.length - 1]?.date
-      const fmt = (s) => new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-      if (d0 && dN) doc.text(`${fmt(d0)}  -  ${fmt(dN)}`, M + 6, y + 19)
+      const fmt = s => new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+      doc.text(`${fmt(exportStartDate)} – ${fmt(exportEndDate)}`, M + 6, y + 19)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(8)
       doc.setTextColor(...GREEN)
-      doc.text(`${days.length} days   3 meals/day   Personalised by AI`, M + 6, y + 26)
+      doc.text(`${allDates.length} days · 3 meals/day · Personalised by AI`, M + 6, y + 26)
       y += 38
 
-      // ── Legend row ──
+      // Legend
       const legend = [
         { label: 'Calories', c: RED },
         { label: 'Protein', c: BLUE },
@@ -628,15 +654,14 @@ export default function Nutrition() {
       })
       y += 12
 
-      // ── Green divider ──
       doc.setDrawColor(...GREEN)
       doc.setLineWidth(0.6)
       doc.line(M, y, pageW - M, y)
       y += 10
 
-      // ── Days ──
-      for (const day of days) {
-        const dateLabel = new Date(day.date).toLocaleDateString('en-IN', {
+      // Each day
+      for (const { date: dateStr, data: day } of dayResults) {
+        const dateLabel = new Date(dateStr).toLocaleDateString('en-IN', {
           weekday: 'long', day: 'numeric', month: 'long'
         })
 
@@ -649,7 +674,7 @@ export default function Nutrition() {
         doc.setFontSize(10)
         doc.setTextColor(...WHITE)
         doc.text(dateLabel, M + 4, y + 7.5)
-        if (day.is_fasting_day) {
+        if (day?.is_fasting_day) {
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(8)
           doc.setTextColor(...GREEN)
@@ -657,73 +682,75 @@ export default function Nutrition() {
         }
         y += 15
 
-        // Day notes — plain helvetica, no italic monospace issues
+        // No plan state
+        if (!day) {
+          needsBreak(24)
+          doc.setFillColor(...EMPTY_BG)
+          doc.setDrawColor(...EMPTY_BORDER)
+          doc.setLineWidth(0.4)
+          doc.roundedRect(M, y, CW, 18, 3, 3, 'FD')
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9)
+          doc.setTextColor(185, 28, 28)
+          doc.text('No meal plan generated for this day.', M + CW / 2, y + 7, { align: 'center' })
+          doc.setFontSize(7.5)
+          doc.setTextColor(...MUTED)
+          doc.text('Open the app to generate a plan for this date.', M + CW / 2, y + 13, { align: 'center' })
+          y += 24
+          continue
+        }
+
+        // Day notes
         if (day.day_notes) {
           needsBreak(12)
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(8)
           doc.setTextColor(...MUTED)
           const noteLines = doc.splitTextToSize(`Note: ${day.day_notes}`, CW - 4)
-          noteLines.forEach(line => {
-            needsBreak(5)
-            doc.text(line, M + 2, y)
-            y += 4.5
-          })
+          noteLines.forEach(line => { needsBreak(5); doc.text(line, M + 2, y); y += 4.5 })
           y += 3
         }
 
-        // ── Meal slots ──
+        // Meal slots
         for (const slotKey of ['breakfast', 'lunch', 'dinner']) {
           const slot = day.meal_slots?.find(s => s.slot === slotKey)
           if (!slot) continue
 
           const accent = slotAccent[slotKey]
           const mealName = slot.food_item?.name || 'No meal'
-
-          // Measure how many lines the meal name needs
           const nameLines = doc.splitTextToSize(mealName, CW - 14)
-          const cardH = Math.max(38, 20 + nameLines.length * 6 + 10)
+          const cardH = Math.max(38, 20 + nameLines.length * 6)
 
           needsBreak(cardH + 4)
 
-          // Card background
           doc.setFillColor(...WHITE)
           doc.setDrawColor(...FAINT)
           doc.setLineWidth(0.3)
           doc.roundedRect(M, y, CW, cardH, 3, 3, 'FD')
-
-          // Left accent strip
           doc.setFillColor(...accent)
           doc.roundedRect(M, y, 3.5, cardH, 2, 2, 'F')
 
-          // Slot label
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(7)
           doc.setTextColor(...accent)
           doc.text(slotKey.toUpperCase(), M + 7, y + 7)
 
-          // Meal name — full width, no overlap with pills
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(11)
           doc.setTextColor(...DARK)
-          nameLines.forEach((line, li) => {
-            doc.text(line, M + 7, y + 14 + li * 6)
-          })
+          nameLines.forEach((line, li) => doc.text(line, M + 7, y + 14 + li * 6))
 
           const afterName = y + 14 + nameLines.length * 6
-
-          // Serving size
           if (slot.food_item?.serving_size) {
             doc.setFont('helvetica', 'normal')
             doc.setFontSize(7.5)
             doc.setTextColor(...MUTED)
             doc.text(
-              `${slot.quantity || 1} x ${slot.food_item.serving_size} ${slot.food_item.serving_unit || ''}`,
-              M + 7, afterName + 2
+              `${slot.quantity > 1 ? slot.quantity + ' x ' : ''}${slot.food_item.serving_size} ${slot.food_item.serving_unit}`,
+              M + 7, afterName + 4
             )
           }
 
-          // ── 4 Macro pills — BOTTOM RIGHT of card ──
           const pills = [
             { label: 'kcal', value: String(slot.calories || 0), c: RED },
             { label: 'P', value: `${slot.protein_g || 0}g`, c: BLUE },
@@ -736,19 +763,16 @@ export default function Nutrition() {
           const py = y + cardH - pillH - 4
 
           pills.forEach(p => {
-            // Pill background — tinted
             doc.setFillColor(
               Math.round(p.c[0] * 0.1 + 255 * 0.9),
               Math.round(p.c[1] * 0.1 + 255 * 0.9),
               Math.round(p.c[2] * 0.1 + 255 * 0.9)
             )
             doc.roundedRect(px, py, pillW, pillH, 2, 2, 'F')
-            // Value
             doc.setFont('helvetica', 'bold')
             doc.setFontSize(8.5)
             doc.setTextColor(...p.c)
             doc.text(p.value, px + pillW / 2, py + 6.5, { align: 'center' })
-            // Label
             doc.setFont('helvetica', 'normal')
             doc.setFontSize(6.5)
             doc.setTextColor(...MUTED)
@@ -769,31 +793,29 @@ export default function Nutrition() {
         doc.setDrawColor(...FAINT)
         doc.setLineWidth(0.3)
         doc.roundedRect(M, y, CW, 11, 2, 2, 'FD')
-
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(8.5)
         doc.setTextColor(...DARK)
-        doc.text(`Day Total: ${totalCal} kcal`, M + 4, y + 7.5)
-
+        doc.text(`Day Total  ${totalCal} kcal`, M + 4, y + 7.5)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(...MUTED)
-        doc.text(`P: ${totalPro}g`, M + 54, y + 7.5)
-        doc.text(`C: ${totalCarbs}g`, M + 78, y + 7.5)
-        doc.text(`F: ${totalFats}g`, M + 102, y + 7.5)
-
+        doc.text(`P ${totalPro}g`, M + 54, y + 7.5)
+        doc.text(`C ${totalCarbs}g`, M + 78, y + 7.5)
+        doc.text(`F ${totalFats}g`, M + 102, y + 7.5)
         y += 18
       }
 
-      // ── Footer ──
+      // Footer
       doc.setFontSize(7)
       doc.setTextColor(...FAINT)
       doc.text(
-        `Generated by NutriAI  |  ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+        `Generated by NutriAI · ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`,
         pageW / 2, pageH - 7, { align: 'center' }
       )
 
-      doc.save(`meal-plan-${new Date().toISOString().split('T')[0]}.pdf`)
-      toast.success('PDF exported! 📄')
+      doc.save(`meal-plan-${exportStartDate}-to-${exportEndDate}.pdf`)
+      toast.success('PDF exported!')
+
     } catch (err) {
       console.error(err)
       toast.error('Export failed. Please try again.')
@@ -1058,9 +1080,7 @@ export default function Nutrition() {
         <CheatMealButton onLog={() => navigate('/cheat-meal')} />
 
         {/* Export PDF */}
-        <button
-          onClick={handleExportPdf}
-          disabled={exportPdfLoading}
+        <button onClick={() => setShowExportModal(true)} disabled={exportPdfLoading}
           style={{
             width: '100%',
             ...GLASS_WHITE,
@@ -1093,6 +1113,128 @@ export default function Nutrition() {
       </div>
       <div style={{ height: '16px' }} />
 
+      {/* Export PDF Modal */}
+      {showExportModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 999,
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'flex-end',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          animation: 'fadeUp 0.3s ease-out',
+        }} onClick={() => setShowExportModal(false)}>
+          <div style={{
+            width: '100%',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
+            ...GLASS_WHITE,
+            background: 'rgba(255,255,255,0.95)',
+            borderRadius: '32px 32px 0 0',
+            padding: '24px',
+            boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
+          }} onClick={e => e.stopPropagation()}>
+
+            {/* Handle bar */}
+            <div style={{ width: 48, height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.15)', margin: '0 auto 20px' }} />
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>
+                  Export as PDF
+                </p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: 4 }}>
+                  Choose the date range to include
+                </p>
+              </div>
+              <button onClick={() => setShowExportModal(false)} style={{
+                background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%',
+                width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+              }}>
+                <X size={20} color="var(--color-text-muted)" />
+              </button>
+            </div>
+
+            {/* Date Pickers */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+              {/* Start Date */}
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-faint)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Start Date
+                </p>
+                <input
+                  type="date"
+                  value={exportStartDate}
+                  onChange={e => setExportStartDate(e.target.value)}
+                  style={{
+                    width: '100%', padding: '14px 16px',
+                    background: 'rgba(0,0,0,0.04)',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: 16, fontFamily: FONT,
+                    fontSize: '1rem', fontWeight: 600,
+                    color: 'var(--color-text)', outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-faint)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                  End Date
+                </p>
+                <input
+                  type="date"
+                  value={exportEndDate}
+                  min={exportStartDate}
+                  onChange={e => setExportEndDate(e.target.value)}
+                  style={{
+                    width: '100%', padding: '14px 16px',
+                    background: 'rgba(0,0,0,0.04)',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: 16, fontFamily: FONT,
+                    fontSize: '1rem', fontWeight: 600,
+                    color: 'var(--color-text)', outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Days count pill */}
+            {exportStartDate && exportEndDate && (
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <span style={{
+                  display: 'inline-block',
+                  background: 'rgba(34,197,94,0.12)',
+                  color: 'var(--color-accent)',
+                  fontFamily: FONT, fontWeight: 700,
+                  fontSize: '0.85rem', borderRadius: 999,
+                  padding: '6px 16px',
+                }}>
+                  {Math.max(0, Math.round((new Date(exportEndDate) - new Date(exportStartDate)) / (1000 * 60 * 60 * 24)) + 1)} days selected
+                </span>
+              </div>
+            )}
+
+            {/* Export Button */}
+            <button
+              onClick={handleExportPdf}
+              disabled={!exportStartDate || !exportEndDate || exportStartDate > exportEndDate}
+              style={{
+                width: '100%', padding: '16px',
+                background: exportStartDate > exportEndDate ? 'rgba(0,0,0,0.1)' : 'var(--color-accent)',
+                border: 'none', borderRadius: 16,
+                color: exportStartDate > exportEndDate ? 'var(--color-text-muted)' : '#ffffff',
+                fontFamily: FONT, fontWeight: 800, fontSize: '1rem',
+                cursor: exportStartDate > exportEndDate ? 'not-allowed' : 'pointer',
+                boxShadow: exportStartDate > exportEndDate ? 'none' : '0 8px 24px rgba(34,199,89,0.3)',
+                transition: 'all 180ms ease',
+              }}
+            >
+              Export PDF
+            </button>
+          </div>
+        </div>
+      )}
       {/* ── Grocery Modal ── */}
       {showGrocery && (
         <div style={{
