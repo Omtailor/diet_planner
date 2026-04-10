@@ -376,6 +376,45 @@ export default function Nutrition() {
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
   const [activeSlot, setActiveSlot] = useState(0)
+  const [displaySlot, setDisplaySlot] = useState(0)
+  const [cardVisible, setCardVisible] = useState(true)
+  const autoPlayRef = useRef(null)
+  const transitioningRef = useRef(false)
+
+  const switchSlot = (i) => {
+    if (transitioningRef.current || i === displaySlot) return
+    transitioningRef.current = true
+    setCardVisible(false) // fade out
+    setTimeout(() => {
+      setDisplaySlot(i)
+      setActiveSlot(i)
+      setCardVisible(true) // fade in
+      transitioningRef.current = false
+    }, 280) // matches transition duration
+  }
+
+  useEffect(() => {
+    autoPlayRef.current = setInterval(() => {
+      setActiveSlot(prev => {
+        const next = (prev + 1) % 3
+        switchSlot(next)
+        return prev // actual update happens inside switchSlot
+      })
+    }, 3000)
+    return () => clearInterval(autoPlayRef.current)
+  }, [displaySlot])
+
+  const handleSlotChange = (i) => {
+    clearInterval(autoPlayRef.current)
+    switchSlot(i)
+    autoPlayRef.current = setInterval(() => {
+      setActiveSlot(prev => {
+        const next = (prev + 1) % 3
+        switchSlot(next)
+        return prev
+      })
+    }, 3000)
+  }
   const [showGrocery, setShowGrocery] = useState(false)
   const [grocery, setGrocery] = useState(null)
   const [groceryLoading, setGroceryLoading] = useState(false)
@@ -848,7 +887,7 @@ export default function Nutrition() {
       <div style={S.slotTabs}>
         {slots.map((slot, i) => (
           <button key={slot}
-            onClick={() => setActiveSlot(i)}
+            onClick={() => handleSlotChange(i)}
             style={{
               flex: 1, padding: '12px 6px',
               background: activeSlot === i ? 'var(--color-accent)' : 'rgba(255,255,255,0.4)',
@@ -893,15 +932,19 @@ export default function Nutrition() {
           <Skeleton height="320px" radius="24px" />
         </div>
       ) : dayMeal ? (
-        <SwipeMealCard
-          key={`${selectedDate}-${activeSlot}`}
-          slot={slots[activeSlot]}
-          meal={getMealSlot(slots[activeSlot])}
-          onViewDetail={() => navigate(`/nutrition/${selectedDate}`, {
-            state: { slot: slots[activeSlot] }
-          })}
-          regenerating={regenerating}
-        />
+        <div style={{
+          opacity: cardVisible ? 1 : 0,
+          transform: cardVisible ? 'translateY(0px)' : 'translateY(12px)',
+          transition: 'opacity 280ms cubic-bezier(0.16,1,0.3,1), transform 280ms cubic-bezier(0.16,1,0.3,1)',
+        }}>
+          <SwipeMealCard
+            slot={slots[displaySlot]}
+            meal={getMealSlot(slots[displaySlot])}
+            onViewDetail={() => navigate(`/nutrition/${selectedDate}`, { state: { slot: slots[displaySlot] } })}
+            onRegenerate={handleRegenerate}
+            regenerating={regenerating}
+          />
+        </div>
       ) : (
         <div style={S.emptyState}>
           <span style={{ fontSize: '3.5rem' }}>🍽️</span>
@@ -923,10 +966,10 @@ export default function Nutrition() {
       {/* ── Slot Dots ── */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
         {slots.map((_, i) => (
-          <button key={i} onClick={() => setActiveSlot(i)} style={{
-            width: activeSlot === i ? '24px' : '8px',
+          <button key={i} onClick={() => handleSlotChange(i)} style={{
+            width: displaySlot === i ? '24px' : '8px',
             height: '8px',
-            background: activeSlot === i ? 'var(--color-accent)' : 'rgba(0,0,0,0.1)',
+            background: displaySlot === i ? 'var(--color-accent)' : 'rgba(0,0,0,0.1)',
             borderRadius: '999px', border: 'none', cursor: 'pointer',
             transition: 'all 200ms ease', padding: 0,
           }} />
@@ -1205,6 +1248,7 @@ export default function Nutrition() {
           0% { transform: translateX(-100%) }
           100% { transform: translateX(100%) }
         }
+
         .week-strip::-webkit-scrollbar { display: none; }
       `}</style>
     </div>

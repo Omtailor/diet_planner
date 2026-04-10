@@ -64,12 +64,12 @@ def generate_training_plan(user, profile, week_start=None):
 
     for day_index in range(7):
         current_date = week_start + timedelta(days=day_index)
-        actual_weekday = current_date.weekday()   # ← real weekday (0=Mon...6=Sun)
+        actual_weekday = current_date.weekday()  # ← real weekday (0=Mon...6=Sun)
         is_rest = day_index in rest_days
 
         day_training = DayTraining.objects.create(
             training_plan=plan,
-            day_of_week=actual_weekday,   # ← stores correct weekday
+            day_of_week=actual_weekday,  # ← stores correct weekday
             date=current_date,
             is_rest_day=is_rest,
         )
