@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, ChevronRight, RotateCcw } from 'lucide-react';
+import { Loader2, ChevronRight, RotateCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import API from '../../services/api';
@@ -71,6 +71,20 @@ export default function Training() {
   const [plan, setPlan] = useState(null);
   const weekStripRef = useRef(null);
   const [exportPdfLoading, setExportPdfLoading] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState(() => {
+    // Default to plan start date if available, else today
+    const d = plan?.day_trainings?.[0]?.date;
+    return d || new Date().toISOString().split('T')[0];
+  });
+  const [exportEndDate, setExportEndDate] = useState(() => {
+    const days = plan?.day_trainings;
+    const d = days?.[days.length - 1]?.date;
+    return d || (() => {
+      const e = new Date(); e.setDate(e.getDate() + 6);
+      return e.toISOString().split('T')[0];
+    })();
+  });
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -124,6 +138,7 @@ export default function Training() {
   };
 
   const handleExportPdf = async () => {
+    setShowExportModal(false);
     setExportPdfLoading(true);
     try {
       const { jsPDF } = window.jspdf;
@@ -131,7 +146,7 @@ export default function Training() {
 
       const pageW = 210, pageH = 297, M = 14, CW = pageW - M * 2;
 
-      const GREEN = [52, 199, 89];
+      const GREEN = [34, 197, 94];
       const DARK = [17, 24, 39];
       const MUTED = [107, 114, 128];
       const FAINT = [209, 213, 219];
@@ -168,7 +183,15 @@ export default function Training() {
 
       const needsBreak = (h) => { if (y + h > pageH - 16) newPage(); };
 
-      const days = plan.day_trainings || [];
+      const parseLocal = (s) => {
+        const [yr, mo, dy] = s.split('-').map(Number);
+        return new Date(yr, mo - 1, dy);
+      };
+      const days = (plan.day_trainings || []).filter(d => {
+        if (!d.date) return true;
+        const dt = parseLocal(d.date);
+        return dt >= parseLocal(exportStartDate) && dt <= parseLocal(exportEndDate);
+      });
       const totalWorkoutDays = days.filter(d => !d.is_rest_day).length;
       const totalCals = days.reduce((s, d) => s + (d.total_calories_burned || 0), 0);
       const totalMins = days.reduce((s, d) => s + (d.total_duration || 0), 0);
@@ -463,7 +486,7 @@ export default function Training() {
 
           {/* ── Export PDF ── */}
           <button
-            onClick={handleExportPdf}
+            onClick={() => setShowExportModal(true)}
             disabled={exportPdfLoading}
             style={{
               width: '100%',
@@ -484,7 +507,7 @@ export default function Training() {
             }}>📄</div>
             <div style={{ flex: 1, textAlign: 'left' }}>
               <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)', fontFamily: FONT }}>
-                Export Week as PDF
+                Export Training Plan as PDF
               </p>
               <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: '2px' }}>
                 Full training details — exercises, sets & calories
@@ -498,6 +521,109 @@ export default function Training() {
         </div>
 
       </div>
+
+      {/* ── Export PDF Modal ── */}
+      {showExportModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'flex-end',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            animation: 'fadeUp 0.3s ease-out',
+          }}
+          onClick={() => setShowExportModal(false)}
+        >
+          <div
+            style={{
+              width: '100%', maxHeight: '90dvh', overflowY: 'auto',
+              ...GLASS_WHITE,
+              background: 'rgba(255,255,255,0.95)',
+              borderRadius: '32px 32px 0 0',
+              padding: '24px',
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div style={{ width: 48, height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.15)', margin: '0 auto 20px' }} />
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>
+                  Export Training PDF
+                </p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: 4 }}>
+                  Choose the date range to include
+                </p>
+              </div>
+              <button
+                onClick={() => setShowExportModal(false)}
+                style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={20} color="var(--color-text-muted)" />
+              </button>
+            </div>
+
+            {/* Date Pickers */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-faint)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Start Date
+                </p>
+                <input
+                  type="date"
+                  value={exportStartDate}
+                  onChange={e => setExportStartDate(e.target.value)}
+                  style={{ width: '100%', padding: '14px 16px', background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 16, fontFamily: FONT, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text)', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-faint)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                  End Date
+                </p>
+                <input
+                  type="date"
+                  value={exportEndDate}
+                  min={exportStartDate}
+                  onChange={e => setExportEndDate(e.target.value)}
+                  style={{ width: '100%', padding: '14px 16px', background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 16, fontFamily: FONT, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text)', outline: 'none' }}
+                />
+              </div>
+            </div>
+
+            {/* Days count pill */}
+            {exportStartDate && exportEndDate && (
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <span style={{ display: 'inline-block', background: 'rgba(52,199,89,0.12)', color: 'var(--color-accent)', fontFamily: FONT, fontWeight: 700, fontSize: '0.85rem', borderRadius: 999, padding: '6px 16px' }}>
+                  {Math.max(0, Math.round((new Date(exportEndDate) - new Date(exportStartDate)) / (1000 * 60 * 60 * 24) + 1))} days selected
+                </span>
+              </div>
+            )}
+
+            {/* Export Button */}
+            <button
+              onClick={handleExportPdf}
+              disabled={!exportStartDate || !exportEndDate || exportStartDate > exportEndDate}
+              style={{
+                width: '100%', padding: '16px',
+                background: exportStartDate > exportEndDate ? 'rgba(0,0,0,0.1)' : 'var(--color-accent)',
+                border: 'none', borderRadius: 16,
+                color: exportStartDate > exportEndDate ? 'var(--color-text-muted)' : '#ffffff',
+                fontFamily: FONT, fontWeight: 800, fontSize: '1rem',
+                cursor: exportStartDate > exportEndDate ? 'not-allowed' : 'pointer',
+                boxShadow: exportStartDate > exportEndDate ? 'none' : '0 8px 24px rgba(52,199,89,0.3)',
+                transition: 'all 180ms ease',
+              }}
+            >
+              Export PDF 💪
+            </button>
+          </div>
+        </div>
+      )}
+
       <GlobalStyles />
     </div>
   );

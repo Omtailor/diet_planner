@@ -1114,7 +1114,7 @@ export default function Nutrition() {
           }}>📄</div>
           <div style={{ flex: 1, textAlign: 'left' }}>
             <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)', fontFamily: FONT }}>
-              Export Week as PDF
+              Export Meal Plan as PDF
             </p>
             <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: '2px' }}>
               Full meal details — calories, macros & ingredients
