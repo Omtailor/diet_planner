@@ -554,11 +554,17 @@ export default function Nutrition() {
     try {
       // Build array of all dates in range
       const allDates = []
-      let current = new Date(exportStartDate + 'T00:00:00')
-      const end = new Date(exportEndDate + 'T00:00:00')
+      const parseLocalDate = (s) => {
+        const [yyyy, mm, dd] = s.split('-').map(Number)
+        return new Date(yyyy, mm - 1, dd)
+      }
+      let current = parseLocalDate(exportStartDate)
+      const end = parseLocalDate(exportEndDate)
       while (current <= end) {
-        allDates.push(current.toISOString().split('T')[0])
-        current = new Date(current)
+        const yyyy = current.getFullYear()
+        const mm = String(current.getMonth() + 1).padStart(2, '0')
+        const dd = String(current.getDate()).padStart(2, '0')
+        allDates.push(`${yyyy}-${mm}-${dd}`)
         current.setDate(current.getDate() + 1)
       }
 
@@ -628,7 +634,12 @@ export default function Nutrition() {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
       doc.setTextColor(...MUTED)
-      const fmt = s => new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+      const fmt = s => {
+        const [yyyy, mm, dd] = s.split('-').map(Number)
+        return new Date(yyyy, mm - 1, dd).toLocaleDateString('en-IN', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        })
+      }
       doc.text(`${fmt(exportStartDate)} – ${fmt(exportEndDate)}`, M + 6, y + 19)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(8)
@@ -661,9 +672,12 @@ export default function Nutrition() {
 
       // Each day
       for (const { date: dateStr, data: day } of dayResults) {
-        const dateLabel = new Date(dateStr).toLocaleDateString('en-IN', {
-          weekday: 'long', day: 'numeric', month: 'long'
-        })
+        const dateLabel = (() => {
+          const [yyyy, mm, dd] = dateStr.split('-').map(Number)
+          return new Date(yyyy, mm - 1, dd).toLocaleDateString('en-IN', {
+            weekday: 'long', day: 'numeric', month: 'long'
+          })
+        })()
 
         needsBreak(14)
 

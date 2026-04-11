@@ -170,7 +170,6 @@ class RegenerateDayView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Get the day meal
         day_meal = DayMeal.objects.filter(
             weekly_plan__user=request.user,
             date=meal_date,
@@ -186,170 +185,18 @@ class RegenerateDayView(APIView):
             profile = request.user.profile
         except Exception:
             return Response(
-                {"detail": "Profile not found."}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Profile not found."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Get existing meal names to avoid repetition
-        weekly_plan = day_meal.weekly_plan
-        existing_names = list(
-            MealSlot.objects.filter(day_meal__weekly_plan=weekly_plan)
-            .exclude(day_meal=day_meal)
-            .values_list("food_item__name", flat=True)
-        )
+        generator = MealPlanGenerator(profile)
+        success = generator.regenerate_day(day_meal)
 
-        # Delete existing slots for this day
-        day_meal.meal_slots.all().delete()
-
-        # Regenerate using Gemini
-        from meals.meal_generator import MealPlanGenerator
-        from meals.schemas import DayMealSchema
-        import json
-        from google import genai
-        from google.genai import types
-        from django.conf import settings
-        from pydantic import ValidationError
-
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-
-        tdee = MealPlanGenerator(profile).calculate_tdee()
-        beverage_cal = MealPlanGenerator(profile).calculate_beverage_calories()
-        net_calories = tdee - beverage_cal
-
-        avoid_str = ", ".join(existing_names) if existing_names else "none"
-
-        prompt = f"""
-You are a certified Indian nutritionist.
-Regenerate meals for ONE day only.
-
-User goal      : {profile.goal}
-Diet           : {profile.diet_preference}
-Fasting day    : {day_meal.is_fasting_day}
-Meal budget    : {net_calories} kcal
-Breakdown      : Breakfast ~25% ({round(net_calories * 0.25)} kcal)
-                 Lunch     ~40% ({round(net_calories * 0.40)} kcal)
-                 Dinner    ~35% ({round(net_calories * 0.35)} kcal)
-
-AVOID these meals already used this week:
-{avoid_str}
-
-Return ONE day JSON only — no markdown, no explanation:
-{{
-  "day_number": {day_meal.day_of_week + 1},
-  "date_label": "{meal_date.strftime('%A, %d %b')}",
-  "is_fasting_day": {str(day_meal.is_fasting_day).lower()},
-  "breakfast": {{
-    "meal_type": "breakfast",
-    "name": "...",
-    "calories": 0,
-    "protein": 0.0,
-    "carbs": 0.0,
-    "fats": 0.0,
-    "fiber": 0.0,
-    "serving_size": 1.0,
-    "serving_unit": "plate",
-    "ingredients": ["..."],
-    "is_fasting_friendly": false,
-    "is_jain_friendly": false
-  }},
-  "lunch": {{ ...same structure... }},
-  "dinner": {{ ...same structure... }},
-  "day_notes": "..."
-}}
-"""
-
-        try:
-            import time
-
-            models_to_try = [
-                ("gemini-2.5-flash", 3),
-                ("gemini-2.5-flash-lite", 2),
-            ]
-            raw = None
-            for model_name, max_attempts in models_to_try:
-                for attempt in range(max_attempts):
-                    try:
-                        response = client.models.generate_content(
-                            model=model_name,
-                            contents=prompt,
-                            config=types.GenerateContentConfig(
-                                temperature=0.5,
-                                response_mime_type="application/json",
-                            ),
-                        )
-                        raw = response.text.strip()
-                        break
-                    except Exception as e:
-                        print(
-                            f"[RegenerateDay] {model_name} attempt {attempt+1} failed: {e}"
-                        )
-                        if attempt < max_attempts - 1:
-                            time.sleep((attempt + 1) * 10)
-                if raw:
-                    break
-
-            if not raw:
-                return Response(
-                    {
-                        "detail": "AI service unavailable. Please try again in a few minutes."
-                    },
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-            data = json.loads(raw)
-            validated = DayMealSchema(**data)
-
-        except (ValidationError, json.JSONDecodeError, Exception) as e:
+        if not success:
             return Response(
-                {"detail": f"Regeneration failed: {str(e)}"},
+                {"detail": "Regeneration failed. Please try again."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        # Save regenerated slots
-        for slot_type in ["breakfast", "lunch", "dinner"]:
-            slot_data = getattr(validated, slot_type)
-
-            # Parse ingredients safely
-            ingredients_list = []
-            for ing in slot_data.ingredients or []:
-                if isinstance(ing, str):
-                    ingredients_list.append({"name": ing, "quantity": None, "unit": ""})
-                elif hasattr(ing, "dict"):
-                    ingredients_list.append(ing.dict())
-                elif isinstance(ing, dict):
-                    ingredients_list.append(ing)
-
-            food_item, _ = FoodItem.objects.get_or_create(
-                name=slot_data.name,
-                defaults={
-                    "category": slot_type,
-                    "diet_type": profile.diet_preference,
-                    "calories": slot_data.calories,
-                    "protein_g": slot_data.protein,
-                    "carbs_g": slot_data.carbs,
-                    "fats_g": slot_data.fats,
-                    "fiber_g": getattr(slot_data, "fiber", 0),
-                    "serving_size_g": slot_data.serving_size,
-                    "serving_unit": slot_data.serving_unit,
-                    "ingredients": ingredients_list,
-                    "is_fasting_friendly": slot_data.is_fasting_friendly,
-                    "is_jain_friendly": slot_data.is_jain_friendly,
-                },
-            )
-
-            MealSlot.objects.create(
-                day_meal=day_meal,
-                slot=slot_type,
-                food_item=food_item,
-                quantity_g=slot_data.serving_size,
-                calories=slot_data.calories,
-                protein_g=slot_data.protein,
-                carbs_g=slot_data.carbs,
-                fats_g=slot_data.fats,
-            )
-
-        # Update day status
-        day_meal.status = "regenerated"
-        day_meal.day_notes = validated.day_notes
-        day_meal.save()
 
         serializer = DayMealSerializer(day_meal)
         return Response(serializer.data, status=status.HTTP_200_OK)
