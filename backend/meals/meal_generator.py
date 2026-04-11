@@ -176,18 +176,38 @@ class MealPlanGenerator:
         fat_ceiling = 55 if p.goal in ["weight_loss", "fat_loss"] else 85
         fat_per_meal_max = round(fat_ceiling / 3)
 
-        # Logic for high calorie profiles (like Yash)
-        high_cal_instruction = f"""
-        ⚠️ HIGH CALORIE TARGET ({net_meal_calories} kcal) — hit this through LARGER PORTIONS of real food:
-        - BREAKFAST: Use generous portions — 3 eggs or 200g paneer, 2–3 rotis or 1.5 cups oats,
-        full bowl of dal or curd (200g) as a side. NO protein shakes or smoothies.
-        - LUNCH: Serve 1.5 cups cooked rice or 3 rotis, 200g paneer/chicken, full bowl dal + raita.
-        Add a side of roasted chana or handful of mixed nuts (20g) for calorie density.
-        - DINNER: Keep it lighter but protein-rich — large bowl dal/sabzi, 150g paneer/tofu,
-        1–2 rotis allowed for muscle-building goal. Add 1 tbsp ghee for healthy calories.
-        - Prioritize PROTEIN + COMPLEX CARBS to fill the gap — NOT fats.
-        - Every meal must feel like a complete, satisfying Indian meal — not a supplement stack.
-    """
+        # Only inject high-cal strategy for muscle building / maintenance with TDEE > 2800
+        if net_meal_calories > 2800 and p.goal in ["muscle_building", "maintenance"]:
+            high_cal_instruction = f"""
+⚠️ HIGH CALORIE TARGET ({net_meal_calories} kcal) — MANDATORY STRATEGY:
+
+The ONLY acceptable way to hit this target is through LARGER PORTIONS, not more fat.
+
+BREAKFAST ({b_cal} kcal) — hit via:
+  • 3 whole eggs OR 200g paneer (not 100g)
+  • 3 rotis OR 1.5 cups oats (not 1 cup)
+  • 200g curd as a side
+  • 1 tsp ghee MAX — do not add more oil
+
+LUNCH ({l_cal} kcal) — hit via:
+  • 200g chicken/paneer (not 100g)
+  • 1.5 cups cooked brown rice OR 3 rotis
+  • Full bowl dal (300ml) + raita side
+  • 20g mixed nuts OR 1 tbsp peanut butter as side
+
+DINNER ({d_cal} kcal) — hit via:
+  • Large dal portion (300ml)
+  • 200g paneer/tofu/chicken
+  • 1–2 rotis (muscle building allows roti at dinner)
+  • 1 tsp ghee MAX
+
+FAT BUDGET MATH: {fat_per_meal_max}g fat/meal × 3 meals = {fat_ceiling}g/day MAX.
+  1 tsp ghee = 5g fat. 100g paneer = 20g fat. 100g chicken = 3g fat.
+  If your meal exceeds {fat_per_meal_max}g fat → REMOVE ghee/oil/cream, DO NOT reduce protein or carbs.
+  Fill remaining calories with MORE RICE, MORE ROTI, MORE DAL — never with more fat.
+"""
+        else:
+            high_cal_instruction = ""
 
         # Day-by-day schedule block
         day_schedule_lines = []
@@ -331,7 +351,11 @@ CALORIE RULES:
 - No single meal may exceed 45% of the daily calorie budget ({round(net_meal_calories * 0.45)} kcal max/meal).
 - NEVER go below {1200 if p.gender == 'female' else 1400} kcal/day total.
 - HARD FAT LIMIT: No single meal may exceed {fat_per_meal_max}g fat — NON-NEGOTIABLE.
+  Any meal exceeding this will be rejected. If you need more calories, use complex carbs or lean protein — NOT fat.
 - HARD FAT LIMIT: Daily fat total must stay under {fat_ceiling}g — NON-NEGOTIABLE.
+  Current meals are repeatedly exceeding this. 40–60g fat per meal is UNACCEPTABLE for this goal.
+- Each meal's fat content: Breakfast ≤{fat_per_meal_max}g | Lunch ≤{fat_per_meal_max}g | Dinner ≤{fat_per_meal_max}g
+- Use ghee sparingly — max 1 tsp (5g) per meal. Avoid cream, butter, coconut oil in large quantities.
 - DINNER HARD CAP: Dinner must be ≤ {d_cal} kcal. Soup, dal, or sabzi ONLY at dinner.
   {'No roti or rice at dinner.' if p.goal in ['weight_loss', 'fat_loss'] else 'Minimize rice at dinner.'}
 
@@ -360,7 +384,9 @@ Daily carb target        : {round((net_meal_calories * 0.42) / 4)}g
 - Prefer complex carbs ONLY: brown rice, millets (bajra/jowar/ragi), quinoa,
   whole wheat roti, oats, daliya. White rice only on special occasion meals.
 - Dinner carbs must be ≤ 50% of lunch carbs.
-- No meal should exceed 100g carbs.
+- No meal should exceed 150g carbs (muscle building requires higher carb volume).
+- Daily carb total should stay between 300–380g — not higher.
+- Do NOT exceed 380g total carbs/day even for high-calorie targets.
 - Include 25–35g total dietary fibre per day.
 - Include vegetables (min 100g) in EVERY meal — non-negotiable.
 
@@ -416,7 +442,7 @@ ANTI-HALLUCINATION — MACRO SANITY CHECKS
 ══════════════════════════════════════════
 Before finalizing each meal, verify:
 1. calories ≈ (protein × 4) + (carbs × 4) + (fats × 9) — tolerance ±30 kcal
-2. No single meal exceeds: 1,100 kcal | 60g protein | 100g carbs | 45g fat
+2. No single meal exceeds: 1,200 kcal | 65g protein | 150g carbs | 28g fat
 3. Realistic Indian portion benchmarks:
    - 1 medium roti (30g)        = 80–100 kcal
    - 1 cup cooked brown rice    = 200–220 kcal
@@ -453,6 +479,10 @@ FINAL VERIFICATION — MANDATORY BEFORE RETURNING JSON
 ══════════════════════════════════════════
 For EVERY meal, verify ALL of the following before outputting:
   ✓ calories ≈ (protein × 4) + (carbs × 4) + (fats × 9) — tolerance ±25 kcal only
+  ✓ Each meal fat: Breakfast={fat_per_meal_max}g max | Lunch={fat_per_meal_max}g max | Dinner={fat_per_meal_max}g max
+  If ANY meal exceeds this — remove ghee/cream/butter/coconut milk and recalculate.
+  ✓ Per-meal fat breakdown target: Breakfast={fat_per_meal_max}g | Lunch={fat_per_meal_max}g | Dinner={fat_per_meal_max}g
+    Meals hitting 40-60g fat = AUTOMATIC REJECT. Rebuild using lean protein + complex carbs.
   ✓ fats ≤ {fat_per_meal_max}g per meal (HARD LIMIT — fix if exceeded)
   ✓ Daily fat total ≤ {fat_ceiling}g (HARD LIMIT — fix if exceeded)
   ✓ Dinner ≤ {d_cal} kcal (HARD LIMIT — fix if exceeded)
@@ -517,7 +547,7 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
 
         # Primary model with retries, fallback to 2.0-flash on persistent 503
         models_to_try = [
-            ("gemini-2.5-flash", 3),  # Primary
+            ("gemini-2.5-flash", 1),  # Primary
             ("gemini-2.5-flash-lite", 2),  # Fallback
         ]
 
@@ -596,13 +626,16 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
 
             day_meal, _ = DayMeal.objects.update_or_create(
                 weekly_plan=plan,
-                day_of_week=actual_weekday,
+                date=actual_date,  # use date as the unique key — guaranteed unique
                 defaults={
-                    "date": actual_date,
+                    "day_of_week": actual_weekday,
                     "is_fasting_day": day_data.is_fasting_day,
                     "day_notes": day_data.day_notes or "",
                 },
             )
+
+            # Delete existing slots before recreating — prevents duplicate macro counting
+            day_meal.meal_slots.all().delete()
 
             for slot_name in ["breakfast", "lunch", "dinner"]:
                 meal_data = getattr(day_data, slot_name)
@@ -621,6 +654,7 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
 
                 food_item, _ = FoodItem.objects.update_or_create(
                     name=meal_data.name,
+                    diet_type=self.profile.diet_preference,  # scoped per diet
                     defaults={
                         "category": slot_name,
                         "diet_type": self.profile.diet_preference,
@@ -640,14 +674,12 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
                 MealSlot.objects.create(
                     day_meal=day_meal,
                     slot=slot_name,
-                    defaults={
-                        "food_item": food_item,
-                        "quantity_g": meal_data.serving_size,
-                        "calories": meal_data.calories,
-                        "protein_g": meal_data.protein,
-                        "carbs_g": meal_data.carbs,
-                        "fats_g": meal_data.fats,
-                    },
+                    food_item=food_item,
+                    quantity_g=meal_data.serving_size,
+                    calories=meal_data.calories,
+                    protein_g=meal_data.protein,
+                    carbs_g=meal_data.carbs,
+                    fats_g=meal_data.fats,
                 )
 
             day_meal.update_totals()
@@ -686,6 +718,19 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
         min_protein_per_meal = round(min_protein / 3)
         fat_ceiling = 55 if p.goal in ["weight_loss", "fat_loss"] else 85
         fat_per_meal_max = round(fat_ceiling / 3)
+
+        # Mirror the same conditional from build_prompt()
+        if net_calories > 2800 and p.goal in ["muscle_building", "maintenance"]:
+            high_cal_regen = f"""
+⚠️ HIGH CALORIE TARGET ({net_calories} kcal) — MANDATORY:
+  Fill calories via LARGER PORTIONS only — not more fat.
+  Breakfast {b_cal} kcal: 3 eggs or 200g paneer + 3 rotis + 200g curd
+  Lunch {l_cal} kcal: 200g chicken/paneer + 1.5 cups rice + full bowl dal
+  Dinner {d_cal} kcal: 200g protein + 1–2 rotis + dal — 1 tsp ghee MAX
+  Fat budget: {fat_per_meal_max}g/meal. Exceed it → remove ghee/cream, add more rice.
+"""
+        else:
+            high_cal_regen = ""
 
         avoid_str = ", ".join(existing_names) if existing_names else "none"
 
@@ -728,9 +773,14 @@ Dinner       : ~{d_cal} kcal (HARD CAP — do not exceed)
 
 CALORIE RULES:
 - HARD FAT LIMIT: No single meal may exceed {fat_per_meal_max}g fat — NON-NEGOTIABLE.
+  Any meal exceeding this will be rejected. If you need more calories, use complex carbs or lean protein — NOT fat.
 - HARD FAT LIMIT: Daily fat total must stay under {fat_ceiling}g — NON-NEGOTIABLE.
+  Current meals are repeatedly exceeding this. 40–60g fat per meal is UNACCEPTABLE for this goal.
+- Each meal's fat content: Breakfast ≤{fat_per_meal_max}g | Lunch ≤{fat_per_meal_max}g | Dinner ≤{fat_per_meal_max}g
+- Use ghee sparingly — max 1 tsp (5g) per meal. Avoid cream, butter, coconut oil in large quantities.
 - No meal should derive more than 45% of its calories from fats.
 - No single meal exceeds: 1,100 kcal | 100g carbs | {fat_per_meal_max}g fat
+{high_cal_regen}
 
 ══════════════════════════════════════════
 PROTEIN TARGETS
@@ -828,8 +878,8 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
         prompt = self.build_regen_prompt(day_meal, existing_names)
 
         models_to_try = [
-            ("gemini-2.0-flash", 3),
-            ("gemini-1.5-flash", 2),
+            ("gemini-2.5-flash", 1),
+            ("gemini-2.5-flash-lite", 2),
         ]
 
         raw = None
@@ -885,6 +935,7 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
 
             food_item, _ = FoodItem.objects.update_or_create(
                 name=meal_data.name,
+                diet_type=self.profile.diet_preference,
                 defaults={
                     "category": slot_name,
                     "diet_type": self.profile.diet_preference,
