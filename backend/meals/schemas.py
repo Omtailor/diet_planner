@@ -1,5 +1,8 @@
 from pydantic import BaseModel, field_validator
 from typing import List, Optional, Union
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class IngredientSchema(BaseModel):
@@ -58,7 +61,7 @@ class MealSchema(BaseModel):
             # Realistic ceiling for these dishes even with paneer/egg additions
             max_realistic = 22
             if protein_val > max_realistic:
-                print(
+                logger.warning(
                     f"[SchemaValidator] ⚠️ Clamping protein for '{data.get('name')}': "
                     f"{protein_val}g → {max_realistic}g"
                 )
@@ -67,7 +70,7 @@ class MealSchema(BaseModel):
         # ── Global hard cap: no single meal can exceed 65g protein ──
         # (only possible with 500g+ chicken which is unrealistic for one meal)
         if protein_val > 65:
-            print(
+            logger.warning(
                 f"[SchemaValidator] ⚠️ Clamping unrealistic protein for '{data.get('name')}': "
                 f"{protein_val}g → 65g"
             )
@@ -88,7 +91,7 @@ class MealSchema(BaseModel):
         if calories > 0 and (fats_val * 9) / calories > 0.50:
             # Clamp fats to 45% of calories
             max_fats = round((calories * 0.45) / 9, 1)
-            print(
+            logger.warning(
                 f"[SchemaValidator] ⚠️ Clamping fat density for '{data.get('name')}': "
                 f"{fats_val}g → {max_fats}g"
             )
@@ -98,7 +101,7 @@ class MealSchema(BaseModel):
         # muscle_building ceiling = 85g/day ÷ 3 meals = ~28g, but we allow
         # some flexibility here — hard rejection happens via prompt
         if fats_val > 45:
-            print(
+            logger.warning(
                 f"[SchemaValidator] ⚠️ Clamping absolute fat for '{data.get('name')}': "
                 f"{fats_val}g → 45g"
             )
@@ -120,7 +123,7 @@ class MealSchema(BaseModel):
 
         if expected > 0 and abs(cal_val - expected) > 50:
             # Correct the stated calories to match macro math
-            print(
+            logger.warning(
                 f"[SchemaValidator] ⚠️ Correcting calories for '{data.get('name', '?')}': "
                 f"stated={cal_val} → macro_math={round(expected)}"
             )
@@ -133,7 +136,7 @@ class MealSchema(BaseModel):
     def validate_calories(cls, cal_val, info):
         # ── Hard cap: no single meal exceeds 1200 kcal ──
         if cal_val > 1200:
-            print(f"[SchemaValidator] ⚠️ Clamping calories: {cal_val} → 1200")
+            logger.warning(f"[SchemaValidator] ⚠️ Clamping calories: {cal_val} → 1200")
             return 1200.0
         return cal_val
 
@@ -159,7 +162,7 @@ class WeeklyPlanSchema(BaseModel):
         if len(v) < 3:
             raise ValueError(f"Expected 3 days, got {len(v)} — too few to save.")
         if len(v) > 3:
-            print(f"[SchemaValidator] ⚠️ Got {len(v)} days, trimming to 3.")
+            logger.warning(f"[SchemaValidator] ⚠️ Got {len(v)} days, trimming to 3.")
             return v[:3]
         return v
 

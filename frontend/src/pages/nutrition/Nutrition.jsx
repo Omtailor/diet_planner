@@ -34,17 +34,22 @@ function formatFullDate(dateStr) {
     weekday: 'long', day: 'numeric', month: 'long'
   })
 }
-
 function getWeekDays(centerDate) {
   const center = new Date(centerDate)
   const days = []
   for (let i = -15; i <= 29; i++) {
-    const d = new Date(center)
-    d.setDate(center.getDate() + i)
-    days.push(d.toISOString().split('T')[0])
+    const d = new Date(center.getTime())
+    d.setDate(d.getDate() + i)
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    days.push(`${yyyy}-${mm}-${dd}`)
   }
   return days
 }
+
+
+
 
 // ─── Generation Steps Component ───────────────────────────────────
 
@@ -479,6 +484,7 @@ export default function Nutrition() {
   const [showGroceryRangeModal, setShowGroceryRangeModal] = useState(false);
   const [groceryStartDate, setGroceryStartDate] = useState(getDateStr(0));
   const [groceryEndDate, setGroceryEndDate] = useState(getDateStr(6));
+  const [showOnboardingBlocker, setShowOnboardingBlocker] = useState(false)
   const slots = ['breakfast', 'lunch', 'dinner']
 
   useEffect(() => {
@@ -523,18 +529,19 @@ export default function Nutrition() {
   }
 
   const handleDateChange = (dir) => {
-    const newOffset = dateOffset + dir;
-    setDateOffset(newOffset);
-    setSelectedDate(getDateStr(newOffset));
-    switchSlot(0);
+    const newOffset = dateOffset + dir
+    setDateOffset(newOffset)
+    setSelectedDate(getDateStr(newOffset))
+    switchSlot(0)
+    clearInterval(autoPlayRef.current)  // ← ADD THIS before creating new one
     autoPlayRef.current = setInterval(() => {
       setActiveSlot(prev => {
-        const next = (prev + 1) % 3;
-        switchSlot(next);
-        return prev;
-      });
-    }, 3000);  // ← triggers fade-out → fade-in animation back to Breakfast
-  };
+        const next = (prev + 1) % 3
+        switchSlot(next)
+        return prev
+      })
+    }, 3000)
+  }
 
   const handleRegenerate = async () => {
     setRegenerating(true)
@@ -566,13 +573,13 @@ export default function Nutrition() {
         res?.data?.week_start_date ||
         (latestPlanEndDate
           ? (() => {
-              const nextStart = new Date(latestPlanEndDate);
-              nextStart.setDate(nextStart.getDate() + 1);
-              const yyyy = nextStart.getFullYear();
-              const mm = String(nextStart.getMonth() + 1).padStart(2, '0');
-              const dd = String(nextStart.getDate()).padStart(2, '0');
-              return `${yyyy}-${mm}-${dd}`;
-            })()
+            const nextStart = new Date(latestPlanEndDate);
+            nextStart.setDate(nextStart.getDate() + 1);
+            const yyyy = nextStart.getFullYear();
+            const mm = String(nextStart.getMonth() + 1).padStart(2, '0');
+            const dd = String(nextStart.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+          })()
           : null);
 
       if (nextStartStr) {
@@ -583,11 +590,14 @@ export default function Nutrition() {
         switchSlot(0);
       }
     } catch (err) {
-      const msg = err?.response?.data?.detail || 'Failed to generate next plan';
-      if (msg === 'Next plan already exists.') {
+      const detail = err?.response?.data?.detail
+      if (detail === 'PROFILE_INCOMPLETE') {
+        setShowOnboardingBlocker(true)
+      } else if (detail === 'Next plan already exists.') {
         setNextWeekExists(true);
         toast.success('Next plan already exists! 🗓️');
       } else {
+        const msg = err?.response?.data?.message || 'Failed to generate next plan'
         toast.error(msg);
       }
     } finally {
@@ -667,6 +677,11 @@ export default function Nutrition() {
         })
       )
 
+      if (!window.jspdf) {
+        toast.error('PDF library not loaded. Please refresh and try again.')
+        setExportPdfLoading(false)
+        return
+      }
       const { jsPDF } = window.jspdf
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
       const pageW = 210
@@ -927,8 +942,103 @@ export default function Nutrition() {
 
   const weekDays = getWeekDays(selectedDate)
 
-  const canGenerateNext = !!latestPlanEndDate
+  // Show button when: no plan exists yet (fresh state) OR plan exists and not yet generated next
+  const canGenerateNext = true
   const nextWeekButtonActive = !nextWeekExists && canGenerateNext
+
+  // ── Onboarding Blocker UI (full-page overlay) ─────────────────────────────
+  if (showOnboardingBlocker) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(255,255,255,0.97)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '32px', gap: '0',
+        animation: 'fadeUp 0.3s ease-out',
+      }}>
+        {/* Illustration */}
+        <div style={{ fontSize: '4rem', marginBottom: '16px' }}>📋</div>
+
+        {/* Heading */}
+        <h2 style={{
+          fontFamily: FONT, fontSize: '1.5rem', fontWeight: 800,
+          color: 'var(--color-text)', textAlign: 'center',
+          letterSpacing: '-0.3px', marginBottom: '10px',
+        }}>
+          Complete Your Profile First
+        </h2>
+
+        {/* Subtext */}
+        <p style={{
+          fontFamily: FONT, fontSize: '0.95rem', fontWeight: 500,
+          color: 'var(--color-text-muted)', textAlign: 'center',
+          maxWidth: '260px', lineHeight: 1.6, marginBottom: '32px',
+        }}>
+          We need a few details about you — age, weight, goal, and diet preference — to build a personalised meal plan.
+        </p>
+
+        {/* Steps hint */}
+        <div style={{
+          width: '100%', maxWidth: '300px',
+          background: 'rgba(52,199,89,0.06)',
+          border: '1px solid rgba(52,199,89,0.2)',
+          borderRadius: '16px', padding: '16px 20px',
+          marginBottom: '28px', display: 'flex',
+          flexDirection: 'column', gap: '10px',
+        }}>
+          {[
+            { emoji: '👤', text: 'Basic info — age, gender, city' },
+            { emoji: '⚖️', text: 'Body stats — height & weight' },
+            { emoji: '🎯', text: 'Your goal — fat loss, muscle gain...' },
+            { emoji: '🥗', text: 'Diet preference — veg, non-veg, jain' },
+          ].map(({ emoji, text }) => (
+            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.2rem' }}>{emoji}</span>
+              <span style={{
+                fontFamily: FONT, fontSize: '0.85rem',
+                fontWeight: 600, color: 'var(--color-text)',
+              }}>{text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Primary CTA */}
+        <button
+          onClick={() => navigate('/onboarding')}
+          style={{
+            width: '100%', maxWidth: '300px',
+            padding: '16px', background: 'var(--color-accent)',
+            border: 'none', borderRadius: '16px',
+            color: '#ffffff', fontFamily: FONT,
+            fontWeight: 800, fontSize: '1rem',
+            cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(52,199,89,0.35)',
+            marginBottom: '12px',
+          }}
+        >
+          Complete Onboarding →
+        </button>
+
+        {/* Dismiss */}
+        <button
+          onClick={() => setShowOnboardingBlocker(false)}
+          style={{
+            width: '100%', maxWidth: '300px',
+            padding: '12px', background: 'transparent',
+            border: '1px solid rgba(0,0,0,0.08)',
+            borderRadius: '16px', color: 'var(--color-text-muted)',
+            fontFamily: FONT, fontWeight: 600,
+            fontSize: '0.9rem', cursor: 'pointer',
+          }}
+        >
+          Maybe Later
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div style={S.pageWrap}>
@@ -1132,58 +1242,59 @@ export default function Nutrition() {
 
       {/* ── Next Week Plan ── */}
       <div style={{ height: '8px' }} />
-      {latestPlanEndDate && (
-        nextWeekExists ? (
-          <div style={{
-            ...GLASS_WHITE,
-            borderRadius: '20px', padding: '14px 16px',
-            display: 'flex', alignItems: 'center', gap: '12px',
-            border: '1px solid rgba(52,199,89,0.2)',
+      {nextWeekExists ? (
+        <div style={{
+          ...GLASS_WHITE,
+          borderRadius: '20px', padding: '14px 16px',
+          display: 'flex', alignItems: 'center', gap: '12px',
+          border: '1px solid rgba(52,199,89,0.2)',
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>✅</span>
+          <p style={{
+            fontSize: '0.9rem', fontWeight: 600,
+            color: 'var(--color-text-muted)', fontFamily: FONT,
           }}>
-            <span style={{ fontSize: '1.2rem' }}>✅</span>
-            <p style={{
-              fontSize: '0.9rem', fontWeight: 600,
-              color: 'var(--color-text-muted)', fontFamily: FONT,
-            }}>
-              Next plan is ready
-            </p>
+            Next plan is ready
+          </p>
+        </div>
+      ) : (
+        <button
+          onClick={nextWeekButtonActive ? handleGenerateNextWeek : undefined}
+          disabled={!nextWeekButtonActive || generatingNextWeek}
+          style={{
+            width: '100%', ...GLASS_WHITE,
+            borderRadius: '20px', padding: '16px',
+            display: 'flex', alignItems: 'center', gap: '14px',
+            cursor: nextWeekButtonActive && !generatingNextWeek ? 'pointer' : 'not-allowed',
+            border: `1px solid ${nextWeekButtonActive ? 'rgba(52,199,89,0.25)' : 'rgba(0,0,0,0.06)'}`,
+            opacity: nextWeekButtonActive ? 1 : 0.55,
+            transition: 'all 180ms ease',
+          }}
+        >
+          <div style={{
+            width: '48px', height: '48px',
+            background: nextWeekButtonActive ? 'rgba(52,199,89,0.15)' : 'rgba(0,0,0,0.05)',
+            borderRadius: '14px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.4rem', flexShrink: 0,
+          }}>
+            🗓️
           </div>
-        ) : (
-          <button
-            onClick={nextWeekButtonActive ? handleGenerateNextWeek : undefined}
-            disabled={!nextWeekButtonActive || generatingNextWeek}
-            style={{
-              width: '100%', ...GLASS_WHITE,
-              borderRadius: '20px', padding: '16px',
-              display: 'flex', alignItems: 'center', gap: '14px',
-              cursor: nextWeekButtonActive && !generatingNextWeek ? 'pointer' : 'not-allowed',
-              border: `1px solid ${nextWeekButtonActive ? 'rgba(52,199,89,0.25)' : 'rgba(0,0,0,0.06)'}`,
-              opacity: nextWeekButtonActive ? 1 : 0.55,
-              transition: 'all 180ms ease',
-            }}
-          >
-            <div style={{
-              width: '48px', height: '48px',
-              background: nextWeekButtonActive ? 'rgba(52,199,89,0.15)' : 'rgba(0,0,0,0.05)',
-              borderRadius: '14px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.4rem', flexShrink: 0,
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={{
+              fontSize: '1rem', fontWeight: 700,
+              color: 'var(--color-text)', fontFamily: FONT,
             }}>
-              🗓️
-            </div>
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <p style={{
-                fontSize: '1rem', fontWeight: 700,
-                color: 'var(--color-text)', fontFamily: FONT,
-              }}>
-                Generate Next 3 days Plan
-              </p>
-              <p style={{
-                fontSize: '0.8rem', fontWeight: 500,
-                fontFamily: FONT, marginTop: '2px',
-                color: nextWeekButtonActive ? 'var(--color-text-muted)' : '#FF9500',
-              }}>
-                {nextWeekButtonActive
+              Generate Next 3 days Plan
+            </p>
+            <p style={{
+              fontSize: '0.8rem', fontWeight: 500,
+              fontFamily: FONT, marginTop: '2px',
+              color: nextWeekButtonActive ? 'var(--color-text-muted)' : '#FF9500',
+            }}>
+              {!latestPlanEndDate
+                ? 'No plan yet — generate your first plan!'
+                : nextWeekButtonActive
                   ? `Starts ${(() => {
                     if (!latestPlanEndDate) return 'today'
                     const d = new Date(latestPlanEndDate)
@@ -1193,18 +1304,18 @@ export default function Nutrition() {
                     return start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                   })()} · 3 day meal + training plan`
                   : 'Next plan already generated'}
-              </p>
-            </div>
-            {generatingNextWeek
-              ? <Loader2 size={20} color="var(--color-accent)"
-                style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-              : <ChevronRight size={20}
-                color={nextWeekButtonActive ? 'var(--color-accent)' : 'var(--color-text-faint)'}
-                style={{ flexShrink: 0 }} />
-            }
-          </button>
-        )
-      )}
+            </p>
+          </div>
+          {generatingNextWeek
+            ? <Loader2 size={20} color="var(--color-accent)"
+              style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            : <ChevronRight size={20}
+              color={nextWeekButtonActive ? 'var(--color-accent)' : 'var(--color-text-faint)'}
+              style={{ flexShrink: 0 }} />
+          }
+        </button>
+      )
+      }
 
       {/* ── Bottom Action Buttons ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

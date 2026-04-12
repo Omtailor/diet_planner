@@ -17,22 +17,23 @@ class SecurityHeadersMiddleware:
         # ── Content Security Policy ───────────────────────────────────────────
         # Locks down what scripts/resources the browser will execute.
         # Even if XSS is injected, CSP prevents exfiltrating localStorage tokens.
-        frontend_origin = getattr(settings, '_FRONTEND_ORIGIN', '')
+        frontend_origin = getattr(settings, "_FRONTEND_ORIGIN", "")
 
         csp_directives = [
             "default-src 'self'",
-            "script-src 'self'",                    # No inline scripts, no eval
-            "style-src 'self' 'unsafe-inline'",     # Allow inline styles (common in React)
-            "img-src 'self' data: blob:",            # Allow data URIs for images
+            "script-src 'self'",  # No inline scripts, no eval
+            "style-src 'self' 'unsafe-inline'",  # Allow inline styles (common in React)
+            "img-src 'self' data: blob:",  # Allow data URIs for images
             "font-src 'self' data:",
-            "connect-src 'self'" + (
+            "connect-src 'self'"
+            + (
                 f" {frontend_origin}" if frontend_origin else ""
-            ),                                      # API calls only to self + frontend
+            ),  # API calls only to self + frontend
             "media-src 'self'",
-            "object-src 'none'",                    # Block Flash/plugins entirely
-            "base-uri 'self'",                      # Prevent base tag hijacking
-            "frame-ancestors 'none'",               # Clickjacking — same as X-Frame-Options
-            "form-action 'self'",                   # Forms can only submit to self
+            "object-src 'none'",  # Block Flash/plugins entirely
+            "base-uri 'self'",  # Prevent base tag hijacking
+            "frame-ancestors 'none'",  # Clickjacking — same as X-Frame-Options
+            "form-action 'self'",  # Forms can only submit to self
         ]
 
         response["Content-Security-Policy"] = "; ".join(csp_directives)

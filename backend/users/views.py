@@ -8,6 +8,9 @@ from django.contrib.auth import authenticate
 from .models import UserProfile, WeightLog
 from .serializers import UserProfileSerializer, RegisterSerializer, LoginSerializer
 from meals.meal_generator import MealPlanGenerator
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_tokens_for_user(user):
@@ -108,10 +111,10 @@ class OnboardingView(APIView):
 
                     generate_grocery_list(profile.user)
                 except Exception as e:
-                    print(f"[Onboarding] Grocery list generation failed: {e}")
+                    logger.warning(f"[Onboarding] Grocery list generation failed: {e}")
 
             except Exception as e:
-                print(f"[Onboarding] Meal plan generation failed: {e}")
+                logger.warning(f"[Onboarding] Meal plan generation failed: {e}")
                 plan_generated = False
             # ────────────────────────────────────────────────
 

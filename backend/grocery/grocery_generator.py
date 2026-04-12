@@ -1,7 +1,7 @@
 """
 grocery_generator.py
 Builds/rebuilds a GroceryList by aggregating real ingredients
-from all 21 MealSlots in the current week's meal plan.
+from all 9 MealSlots in the current week's meal plan.
 Merges similar ingredients (e.g. Tomato + Tomato Puree → Tomato).
 """
 from datetime import date, timedelta
@@ -142,7 +142,7 @@ def generate_grocery_list(user, week_start=None):
 
         serving_size = slot.food_item.serving_size_g
         quantity_g   = slot.quantity_g or 0
-        scale = (quantity_g / serving_size) if (serving_size and serving_size > 0) else 1.0
+        scale = (quantity_g / serving_size) if (serving_size is not None and serving_size > 0) else 1.0
 
         for item in ingredients:
             if not isinstance(item, dict):

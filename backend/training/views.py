@@ -64,11 +64,23 @@ class GenerateTrainingPlanView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        try:
-            profile = request.user.profile
-        except Exception:
+        user = request.user
+        profile = getattr(user, 'profile', None)
+
+        # ── Guard: no profile at all
+        if not profile:
             return Response(
-                {"error": "Profile not found. Complete onboarding first."}, status=400
+                {'detail': 'PROFILE_INCOMPLETE', 'message': 'Please complete your profile first.'},
+                status=400
+            )
+
+        # ── Guard: incomplete onboarding (check required fields)
+        required_fields = ['age', 'weight_kg', 'height_cm', 'goal', 'gender']
+        missing = [f for f in required_fields if not getattr(profile, f, None)]
+        if missing:
+            return Response(
+                {'detail': 'PROFILE_INCOMPLETE', 'message': 'Please complete your onboarding first.'},
+                status=400
             )
 
         # Support optional week_start from request body (for next-week generation)

@@ -7,4 +7,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // ✅ Restrict dev server to localhost only — prevents HMR exposure on LAN
+  server: {
+    host: '127.0.0.1',
+    strictPort: true,
+    port: 5173,
+  },
 })

@@ -37,6 +37,15 @@ const API = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// ── JWT refresh queue (prevents race condition) ─────────────────────────
+let isRefreshing = false
+let failedQueue = []
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(p => error ? p.reject(error) : p.resolve(token))
+  failedQueue = []
+}
+
 // ── Request interceptor — attach JWT ──────────────────────────────────────
 API.interceptors.request.use((config) => {
   const token = safeStorage.get('access_token')
@@ -50,17 +59,34 @@ API.interceptors.response.use(
   async (error) => {
     const original = error.config
     if (error.response?.status === 401 && !original._retry) {
+      if (isRefreshing) {
+        // Queue this request until refresh completes
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        }).then(token => {
+          original.headers.Authorization = `Bearer ${token}`
+          return API(original)
+        }).catch(err => Promise.reject(err))
+      }
+
       original._retry = true
+      isRefreshing = true
+
       try {
         const refresh = safeStorage.get('refresh_token')
-        // ✅ Uses env var — not hardcoded URL
         const res = await axios.post(`${BASE_URL}/token/refresh/`, { refresh })
-        safeStorage.set('access_token', res.data.access)
-        original.headers.Authorization = `Bearer ${res.data.access}`
+        const newToken = res.data.access
+        safeStorage.set('access_token', newToken)
+        original.headers.Authorization = `Bearer ${newToken}`
+        processQueue(null, newToken)
         return API(original)
-      } catch {
+      } catch (err) {
+        processQueue(err, null)
         safeStorage.clear()
         window.location.href = '/login'
+        return Promise.reject(err)
+      } finally {
+        isRefreshing = false
       }
     }
     return Promise.reject(error)

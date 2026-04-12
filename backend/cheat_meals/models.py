@@ -1,9 +1,18 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import FileExtensionValidator
+from django.core.exceptions import ValidationError
+
+
+def validate_image_size(image):
+    """Reject images larger than 5MB."""
+    max_bytes = 5 * 1024 * 1024  # 5MB
+    if image.size > max_bytes:
+        raise ValidationError(f"Image too large. Maximum size is 5MB.")
 
 
 class CheatMeal(models.Model):
-
+    # ... everything unchanged ...
     ENTRY_METHOD_CHOICES = [
         ('image', 'Image Upload'),
         ('manual', 'Manual Text Entry'),
@@ -58,13 +67,22 @@ class CheatMeal(models.Model):
                 self.adjustment_days = 4
             else:
                 self.size = 'large'
-                self.adjustment_days = 6
+                self.adjustment_days = 7
         super().save(*args, **kwargs)
 
 
 class CheatMealImage(models.Model):
-    cheat_meal = models.ForeignKey(CheatMeal, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='cheat_meals/%Y/%m/%d/')
+    cheat_meal = models.ForeignKey(
+        CheatMeal, on_delete=models.CASCADE, related_name='images'
+    )
+    # ✅ Added: extension allowlist + 5MB size cap
+    image = models.ImageField(
+        upload_to='cheat_meals/%Y/%m/%d/',
+        validators=[
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            validate_image_size,
+        ],
+    )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -1,10 +1,13 @@
 import json
+import logging
 import threading
-from datetime import date
+from datetime import date, timedelta
 
 from google import genai
 from google.genai import types
 from pydantic import ValidationError
+
+logger = logging.getLogger(__name__)
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -24,7 +27,6 @@ from meals.meal_generator import MealPlanGenerator
 
 
 def run_background_tasks(user, profile, week_start=None):
-    # ✅ MANDATORY: Close stale DB connections inherited from parent thread
     from django.db import close_old_connections
     close_old_connections()
 
@@ -32,16 +34,17 @@ def run_background_tasks(user, profile, week_start=None):
         from grocery.grocery_generator import generate_grocery_list
         generate_grocery_list(user)
     except Exception as e:
-        print(f"[BG] Grocery failed: {e}")
+        logger.error("[BG] Grocery generation failed for user %s: %s",
+                     user.id, e, exc_info=True)
 
     try:
         from training.training_generator import generate_training_plan
         if week_start:
             generate_training_plan(user, profile, week_start=week_start)
     except Exception as e:
-        print(f"[BG] Training failed: {e}")
+        logger.error("[BG] Training generation failed for user %s: %s",
+                     user.id, e, exc_info=True)
 
-   
     close_old_connections()
 
 class WeeklyPlanView(APIView):
@@ -233,67 +236,72 @@ class GenerateNextWeekView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        try:
-            profile = request.user.profile
-        except Exception:
+        user = request.user
+        profile = getattr(user, 'profile', None)
+
+        # ── Guard: no profile at all
+        if not profile:
             return Response(
-                {"detail": "Profile not found."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {'detail': 'PROFILE_INCOMPLETE', 'message': 'Please complete your profile first.'},
+                status=400
             )
 
-        if not all([profile.age, profile.height_cm, profile.weight_kg, profile.gender]):
+        # ── Guard: incomplete onboarding (check required fields)
+        required_fields = ['age', 'weight_kg', 'height_cm', 'goal', 'diet_preference', 'gender']
+        missing = [f for f in required_fields if not getattr(profile, f, None)]
+        if missing:
             return Response(
-                {"detail": "Profile incomplete."}, status=status.HTTP_400_BAD_REQUEST
+                {'detail': 'PROFILE_INCOMPLETE', 'message': 'Please complete your onboarding first.'},
+                status=400
             )
 
-        today = date.today()
-        from datetime import timedelta
-
+        # ── Determine next week_start ──────────────────────────────────────────
         latest_plan = (
             WeeklyPlan.objects.filter(user=request.user)
-            .order_by("-week_start_date")
+            .order_by("-week_end_date")
             .first()
         )
 
-        if not latest_plan:
-            return Response(
-                {"detail": "No meal plan found. Generate your first plan first."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        if latest_plan:
+            week_start = latest_plan.week_end_date + timedelta(days=1)
+            # Don't generate in the past — clamp to today if needed
+            if week_start < date.today():
+                week_start = date.today()
+        else:
+            # No plan at all → start fresh from today
+            week_start = date.today()
 
-        day_after_latest = latest_plan.week_end_date + timedelta(days=1)
-        next_start = max(today, day_after_latest)
-
-        already_exists = WeeklyPlan.objects.filter(
+        # ── Check if plan for this period already exists ───────────────────────
+        existing = WeeklyPlan.objects.filter(
             user=request.user,
-            week_start_date=next_start,
-        ).exists()
+            week_start_date=week_start
+        ).first()
+        if existing:
+            return Response({'detail': 'Next plan already exists.'}, status=400)
 
-        if already_exists:
-            return Response(
-                {"detail": "Next plan already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        generator = MealPlanGenerator(profile)
-        plan = generator.generate(week_start=next_start)
-
-        if not plan:
-            return Response(
-                {"detail": "Meal plan generation failed."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        # ── Generate ───────────────────────────────────────────────────────────
+        try:
+            generator = MealPlanGenerator(profile)
+            plan = generator.generate(week_start=week_start)
+            if not plan:
+                return Response({'detail': 'Generation failed. Please try again.'}, status=500)
+        except Exception as e:
+            logger.error(f"[generate_next_week] Failed: {e}")
+            return Response({'detail': 'Generation failed. Please try again.'}, status=500)
 
         thread = threading.Thread(
             target=run_background_tasks,
             args=(request.user, profile),
-            kwargs={"week_start": next_start},
+            kwargs={"week_start": week_start},
         )
         thread.daemon = True
         thread.start()
 
-        serializer = WeeklyPlanSerializer(plan)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({
+            'detail': 'Plan generated successfully.',
+            'week_start_date': str(plan.week_start_date),
+            'week_end_date':   str(plan.week_end_date),
+        }, status=status.HTTP_201_CREATED)
 
 
 class LatestPlanView(APIView):

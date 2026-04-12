@@ -1,5 +1,6 @@
 import json
 import time
+import logging
 from datetime import date, timedelta
 
 from google import genai
@@ -9,6 +10,8 @@ from pydantic import ValidationError
 
 from meals.schemas import WeeklyPlanSchema
 from meals.models import WeeklyPlan, DayMeal, MealSlot, FoodItem
+
+logger = logging.getLogger(__name__)
 
 
 class MealPlanGenerator:
@@ -107,10 +110,14 @@ class MealPlanGenerator:
     # ──────────────────────────────────────────────────────
 
     def get_fasting_day_indices(self, week_start: date) -> set:
+        """
+        Returns a set of day indices (0, 1, 2) within the 3-day plan
+        that fall on the user's fasting day.
+        """
         if not self.profile.is_fasting:
             return set()
 
-        day_name_to_weekday = {
+        DAY_NAME_TO_WEEKDAY = {
             "monday": 0,
             "tuesday": 1,
             "wednesday": 2,
@@ -120,14 +127,15 @@ class MealPlanGenerator:
             "sunday": 6,
         }
 
-        fasting_raw = (self.profile.fasting_days or "").lower()
-        fasting_indices = set()
+        fasting_raw = (self.profile.fasting_days or '').lower()
+        # Handle comma-separated AND strip whitespace
+        fasting_day_names = [d.strip() for d in fasting_raw.split(',') if d.strip()]
+        fasting_weekdays = {DAY_NAME_TO_WEEKDAY[d] for d in fasting_day_names if d in DAY_NAME_TO_WEEKDAY}
 
-        for day_name, weekday in day_name_to_weekday.items():
-            if day_name in fasting_raw:
-                loop_index = (weekday - week_start.weekday()) % 3
-                if 0 <= loop_index < 3:
-                    fasting_indices.add(loop_index)
+        fasting_indices = set()
+        for i in range(3):
+            if (week_start + timedelta(days=i)).weekday() in fasting_weekdays:
+                fasting_indices.add(i)
 
         return fasting_indices
 
@@ -566,7 +574,7 @@ OMIT these fields entirely - backend will compute them: fiber, serving_size, ser
             else 1.8 if p.goal == "muscle_building" else 1.2
         )
         if p.age > 40:
-            protein_multiplier -= 0.1
+            protein_multiplier += 0.1
         min_protein = round(weight * protein_multiplier)
         min_protein_per_meal = round(min_protein / 3)
         fat_ceiling = 55 if p.goal in ["weight_loss", "fat_loss"] else 85
@@ -640,7 +648,7 @@ RETURN VALID JSON ONLY:
                     raw = response.text.strip()
                     break
                 except Exception as e:
-                    print(f"Day fetch failed ({model_name} attempt {attempt+1}): {e}")
+                    logger.warning(f"Day fetch failed ({model_name} attempt {attempt+1}): {e}")
                     if attempt < max_attempts - 1:
                         time.sleep((attempt + 1) * 5)
             if raw:
@@ -651,7 +659,7 @@ RETURN VALID JSON ONLY:
             data = json.loads(raw)
             return DayMealSchema(data)
         except Exception as e:
-            print(f"Day parse failed: {e}")
+            logger.error(f"Day parse failed: {e}")
             return None
 
     # ──────────────────────────────────────────────────────
@@ -670,7 +678,7 @@ RETURN VALID JSON ONLY:
         raw = None
 
         for model_name, max_attempts in models_to_try:
-            print(f"[MealGenerator] Trying model: {model_name}")
+            logger.info(f"[MealGenerator] Trying model: {model_name}")
             for attempt in range(max_attempts):
                 try:
                     response = self.client.models.generate_content(
@@ -687,37 +695,37 @@ RETURN VALID JSON ONLY:
                         ),
                     )
                     raw = response.text.strip()
-                    print(f"[MealGenerator] ✓ Got response from {model_name}")
+                    logger.info(f"[MealGenerator] ✓ Got response from {model_name}")
                     break  # Success — exit attempt loop
 
                 except Exception as e:
-                    print(
+                    logger.warning(
                         f"[MealGenerator] {model_name} attempt {attempt+1} failed: {e}"
                     )
                     if attempt < max_attempts - 1:
                         wait = (attempt + 1) * 10
-                        print(f"[MealGenerator] Retrying in {wait}s...")
+                        logger.info(f"[MealGenerator] Retrying in {wait}s...")
                         time.sleep(wait)
 
             if raw:
                 break  # Got a response — exit model loop
 
         if not raw:
-            print("[MealGenerator] All models and attempts failed.")
+            logger.error("[MealGenerator] All models and attempts failed.")
             return None
 
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as e:
-            print(f"[MealGenerator] JSON parse failed: {e}")
-            print(f"[MealGenerator] Raw response: {raw[:500]}")
+            logger.error(f"[MealGenerator] JSON parse failed: {e}")
+            logger.error(f"[MealGenerator] Raw response: {raw[:500]}")
             return None
 
         try:
             validated = WeeklyPlanSchema(**data)
             return validated
         except ValidationError as e:
-            print(f"[MealGenerator] Pydantic validation failed:\n{e}")
+            logger.error(f"[MealGenerator] Pydantic validation failed:\n{e}")
             return None
 
     # ──────────────────────────────────────────────────────
@@ -1171,10 +1179,10 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
                         ),
                     )
                     raw = response.text.strip()
-                    print(f"[RegenerateDay] ✓ Got response from {model_name}")
+                    logger.info(f"[RegenerateDay] ✓ Got response from {model_name}")
                     break
                 except Exception as e:
-                    print(
+                    logger.warning(
                         f"[RegenerateDay] {model_name} attempt {attempt+1} failed: {e}"
                     )
                     if attempt < max_attempts - 1:
@@ -1183,14 +1191,14 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
                 break
 
         if not raw:
-            print("[RegenerateDay] All models failed.")
+            logger.error("[RegenerateDay] All models failed.")
             return False
 
         try:
             data = json.loads(raw)
             validated = DayMealSchema(**data)
         except (json.JSONDecodeError, ValidationError) as e:
-            print(f"[RegenerateDay] Parse/validation failed: {e}")
+            logger.error(f"[RegenerateDay] Parse/validation failed: {e}")
             return False
 
         # Delete old slots
@@ -1274,10 +1282,10 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
             .values_list("food_item__name", flat=True)
             .distinct()
         )
-        print(
+        logger.info(
             f"MealGenerator: TDEE={tdee} BevCal={beverage_cal} FastingDays={fasting_indices}"
         )
-        print(f"MealGenerator: {len(prev_names)} previous meals to avoid")
+        logger.info(f"MealGenerator: {len(prev_names)} previous meals to avoid")
 
         prompt = self.build_prompt(
             tdee, beverage_cal, week_start, fasting_indices, prev_week_names=prev_names
@@ -1285,9 +1293,9 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
         validated = self.fetch_from_gemini(prompt)
 
         if validated is None:
-            print("MealGenerator: Generation failed — no plan saved.")
+            logger.error("MealGenerator: Generation failed — no plan saved.")
             return None
 
         plan = self.save_to_db(validated, week_start, tdee)
-        print(f"MealGenerator: Plan ID={plan.id} saved successfully.")
+        logger.info(f"MealGenerator: Plan ID={plan.id} saved successfully.")
         return plan
