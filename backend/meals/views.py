@@ -1,4 +1,5 @@
 import json
+import threading
 from datetime import date
 
 from google import genai
@@ -21,6 +22,27 @@ from meals.serializers import (
 from meals.schemas import DayMealSchema
 from meals.meal_generator import MealPlanGenerator
 
+
+def run_background_tasks(user, profile, week_start=None):
+    # ✅ MANDATORY: Close stale DB connections inherited from parent thread
+    from django.db import close_old_connections
+    close_old_connections()
+
+    try:
+        from grocery.grocery_generator import generate_grocery_list
+        generate_grocery_list(user)
+    except Exception as e:
+        print(f"[BG] Grocery failed: {e}")
+
+    try:
+        from training.training_generator import generate_training_plan
+        if week_start:
+            generate_training_plan(user, profile, week_start=week_start)
+    except Exception as e:
+        print(f"[BG] Training failed: {e}")
+
+   
+    close_old_connections()
 
 class WeeklyPlanView(APIView):
     """
@@ -89,7 +111,7 @@ class DayMealView(APIView):
 class GeneratePlanView(APIView):
     """
     POST /api/meals/generate/
-    Manually trigger 7-day meal plan generation.
+    Manually trigger 3-day meal plan generation.
     Deletes existing plan for this week and generates fresh.
     """
 
@@ -129,12 +151,12 @@ class GeneratePlanView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        try:
-            from grocery.grocery_generator import generate_grocery_list
-
-            generate_grocery_list(request.user)
-        except Exception as e:
-            print(f"[GeneratePlan] Grocery list generation failed: {e}")
+        thread = threading.Thread(
+            target=run_background_tasks,
+            args=(request.user, profile),
+        )
+        thread.daemon = True
+        thread.start()
 
         serializer = WeeklyPlanSerializer(plan)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -205,8 +227,7 @@ class RegenerateDayView(APIView):
 class GenerateNextWeekView(APIView):
     """
     POST /api/meals/generate-next-week/
-    Generates meal plan for next 7 days.
-    Starts from max(today, latest_plan_end + 1) — never generates backwards.
+    Generates meal plan for next 3 days from last plan end date + 1.
     """
 
     permission_classes = [IsAuthenticated]
@@ -216,7 +237,7 @@ class GenerateNextWeekView(APIView):
             profile = request.user.profile
         except Exception:
             return Response(
-                {"detail": "Profile not found. Complete onboarding first."},
+                {"detail": "Profile not found."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -228,7 +249,6 @@ class GenerateNextWeekView(APIView):
         today = date.today()
         from datetime import timedelta
 
-        # ✅ FIXED: Get LATEST plan, not strictly "current week"
         latest_plan = (
             WeeklyPlan.objects.filter(user=request.user)
             .order_by("-week_start_date")
@@ -241,52 +261,36 @@ class GenerateNextWeekView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # ✅ Never generate backwards — start from max(today, plan_end + 1)
         day_after_latest = latest_plan.week_end_date + timedelta(days=1)
-        next_week_start = max(today, day_after_latest)
+        next_start = max(today, day_after_latest)
 
-        # Check if a plan already exists starting on that date
         already_exists = WeeklyPlan.objects.filter(
             user=request.user,
-            week_start_date=next_week_start,
+            week_start_date=next_start,
         ).exists()
 
         if already_exists:
             return Response(
-                {"detail": "Next week plan already exists."},
+                {"detail": "Next plan already exists."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Generate meal plan
         generator = MealPlanGenerator(profile)
-        try:
-            plan = generator.generate(week_start=next_week_start)
-            print(f"[DEBUG] Plan generated: {plan}")
-        except Exception as e:
-            print(f"[DEBUG] generate() threw: {e}")
-            return Response({"detail": f"Debug: {str(e)}"}, status=500)
+        plan = generator.generate(week_start=next_start)
 
         if not plan:
             return Response(
-                {"detail": "Next week meal plan generation failed."},
+                {"detail": "Meal plan generation failed."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # Generate training plan
-        try:
-            from training.training_generator import generate_training_plan
-
-            generate_training_plan(request.user, profile, week_start=next_week_start)
-        except Exception as e:
-            print(f"[GenerateNextWeek] Training plan failed: {e}")
-
-        # Generate grocery list
-        try:
-            from grocery.grocery_generator import generate_grocery_list
-
-            generate_grocery_list(request.user)
-        except Exception as e:
-            print(f"[GenerateNextWeek] Grocery generation failed: {e}")
+        thread = threading.Thread(
+            target=run_background_tasks,
+            args=(request.user, profile),
+            kwargs={"week_start": next_start},
+        )
+        thread.daemon = True
+        thread.start()
 
         serializer = WeeklyPlanSerializer(plan)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

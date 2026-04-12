@@ -125,9 +125,9 @@ class MealPlanGenerator:
 
         for day_name, weekday in day_name_to_weekday.items():
             if day_name in fasting_raw:
-                # Convert absolute weekday → loop index relative to week_start
-                loop_index = (weekday - week_start.weekday()) % 7
-                fasting_indices.add(loop_index)
+                loop_index = (weekday - week_start.weekday()) % 3
+                if 0 <= loop_index < 3:
+                    fasting_indices.add(loop_index)
 
         return fasting_indices
 
@@ -136,7 +136,12 @@ class MealPlanGenerator:
     # ──────────────────────────────────────────────────────
 
     def build_prompt(
-        self, tdee: int, beverage_cal: int, week_start: date, fasting_indices: set
+        self,
+        tdee: int,
+        beverage_cal: int,
+        week_start: date,
+        fasting_indices: set,
+        prev_week_names: list | None = None,
     ) -> str:
         p = self.profile
         net_meal_calories = tdee - beverage_cal
@@ -211,7 +216,7 @@ FAT BUDGET MATH: {fat_per_meal_max}g fat/meal × 3 meals = {fat_ceiling}g/day MA
 
         # Day-by-day schedule block
         day_schedule_lines = []
-        for i in range(7):
+        for i in range(3):
             day_date = week_start + timedelta(days=i)
             is_fasting = i in fasting_indices
             day_label = day_date.strftime("%A, %d %b")
@@ -309,9 +314,17 @@ FAT BUDGET MATH: {fat_per_meal_max}g fat/meal × 3 meals = {fat_ceiling}g/day MA
             "non_veg": "chicken breast, eggs, fish, paneer, dal, Greek yogurt",
         }.get(p.diet_preference, "paneer, dal, curd, chana, rajma, tofu")
 
+        avoid_prev_block = ""
+        if prev_week_names:
+            avoid_prev_block = f"""
+AVOID LAST PERIOD'S MEALS (already served — do NOT repeat these names):
+{", ".join(prev_week_names)}
+All 9 meal names this period must be completely different from the above list.
+"""
+
         return f"""
 You are a certified Indian nutritionist and professional meal planner.
-Generate a complete, highly personalized 7-day Indian meal plan for this user.
+Generate a complete, highly personalized 3-day Indian meal plan for this user.
 
 ══════════════════════════════════════════
 USER PROFILE
@@ -403,10 +416,11 @@ Breakfast must be filling and protein-anchored — not starch-first.
 Lunch is the largest meal — must include dal OR legume OR paneer + salad/raita side.
 Dinner is the lightest meal — soup, dal, or sabzi-based. Minimize rice at dinner.
 
+{avoid_prev_block}
 ══════════════════════════════════════════
 VARIETY RULES
 ══════════════════════════════════════════
-- 21 UNIQUE meal names across the 7 days — zero repeats.
+- 9 UNIQUE meal names across the 3 days — zero repeats.
 - Rotate protein source daily: rajma → chana → moong → paneer → tofu → dal makhani → lobia
 - Rotate grain/carb daily: brown rice → bajra roti → quinoa → jowar roti → daliya → oats → ragi
 - Include at least 3 regional styles across the week (e.g. Maharashtrian, South Indian, Punjabi, Gujarati)
@@ -452,15 +466,15 @@ Before finalizing each meal, verify:
    If your numbers deviate significantly, recalculate before returning.
 
 ══════════════════════════════════════════
-7-DAY PLAN STARTING ({week_start.strftime("%A, %d %b %Y")})
+3-DAY PLAN STARTING ({week_start.strftime("%A, %d %b %Y")})
 ══════════════════════════════════════════
 {day_schedule}
 
 ══════════════════════════════════════════
 STRICT RULES
 ══════════════════════════════════════════
-1. Return ALL 7 days — no skipping
-2. NO meal name repeats across 7 days (21 unique meals total)
+1. Return ALL 3 days — no skipping
+2. NO meal name repeats across 3 days (9 unique meals total)
 3. Use authentic Indian dish names only
 4. Fasting days: ALL 3 meals must use ONLY fasting-safe ingredients listed above
 5. ingredients: 5-10 items per meal. Each item MUST be an object with "name" (string), "quantity" (number), "unit" (g/ml/pcs/tsp/tbsp/cup)
@@ -486,7 +500,7 @@ For EVERY meal, verify ALL of the following before outputting:
   ✓ fats ≤ {fat_per_meal_max}g per meal (HARD LIMIT — fix if exceeded)
   ✓ Daily fat total ≤ {fat_ceiling}g (HARD LIMIT — fix if exceeded)
   ✓ Dinner ≤ {d_cal} kcal (HARD LIMIT — fix if exceeded)
-  ✓ No meal name appears more than once across all 7 days (21 unique names)
+  ✓ No meal name appears more than once across all 3 days (9 unique names)
   ✓ Protein per meal calculated from ACTUAL ingredients — not rounded to 45g
     Example: 100g paneer=18g, 1 cup rajma=15g, 100g tofu=8g, 200ml dal=10g
   ✓ No single meal exceeds 90g carbs
@@ -494,7 +508,8 @@ If any check fails — FIX that meal before returning. Do not skip this step.
 
 
 ══════════════════════════════════════════
-RESPONSE — VALID JSON ONLY, NO MARKDOWN
+RESPONSE - COMPACT VALID JSON ONLY, NO MARKDOWN.
+OMIT these fields entirely - backend will compute them: fiber, serving_size, serving_unit, is_fasting_friendly, is_jain_friendly.
 ══════════════════════════════════════════
 {{
   "days": [
@@ -504,39 +519,140 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
       "is_fasting_day": false,
       "breakfast": {{
         "meal_type": "breakfast",
-        "name": "Poha",
-        "calories": 250,
-        "protein": 5.0,
-        "carbs": 45.0,
-        "fats": 6.0,
-        "fiber": 2.0,
-        "serving_size": 1.0,
-        "serving_unit": "plate",
+        "name": "Poha with Peanuts",
+        "calories": 350,
+        "protein": 12.0,
+        "carbs": 52.0,
+        "fats": 8.0,
         "ingredients": [
           {{"name": "flattened rice", "quantity": 80, "unit": "g"}},
-          {{"name": "mustard seeds", "quantity": 5, "unit": "g"}},
-          {{"name": "onion", "quantity": 30, "unit": "g"}},
-          {{"name": "turmeric", "quantity": 2, "unit": "g"}},
           {{"name": "peanuts", "quantity": 20, "unit": "g"}}
-        ],
-        "is_fasting_friendly": false,
-        "is_jain_friendly": false
+        ]
       }},
-      "lunch": {{ ...same structure, meal_type: "lunch" }},
-      "dinner": {{ ...same structure, meal_type: "dinner" }},
-      "day_notes": "Specific educational note explaining nutrient benefits for this user's goal"
+      "lunch": {{...same structure, meal_type "lunch"...}},
+      "dinner": {{...same structure, meal_type "dinner"...}},
+      "day_notes": "Specific educational note explaining nutrient benefits for this user's goal."
     }},
-    {{ ...day 2... }},
-    {{ ...day 3... }},
-    {{ ...day 4... }},
-    {{ ...day 5... }},
-    {{ ...day 6... }},
-    {{ ...day 7... }}
+    {{ ...day 2 through day 3... }}
   ],
-  "total_weekly_calories": {net_meal_calories * 7},
-  "plan_notes": "Brief summary of the overall plan approach for this user"
+  "total_weekly_calories": {net_meal_calories * 3},
+  "plan_notes": "Brief summary of overall plan approach."
 }}
 """
+
+    def build_day_prompt(
+        self,
+        tdee: int,
+        beverage_cal: int,
+        weekstart: date,
+        day_index: int,
+        fasting_indices: set,
+        used_names: list = None,
+    ) -> str:
+        p = self.profile
+        net = tdee - beverage_cal
+        day_date = weekstart + timedelta(days=day_index)
+        is_fasting = day_index in fasting_indices
+
+        if p.goal in ["weight_loss", "fat_loss"]:
+            bcal, lcal, dcal = round(net * 0.30), round(net * 0.40), round(net * 0.30)
+        else:
+            bcal, lcal, dcal = round(net * 0.28), round(net * 0.38), round(net * 0.34)
+
+        weight = float(p.weight_kg)
+        protein_multiplier = (
+            1.4
+            if p.goal in ["weight_loss", "fat_loss"]
+            else 1.8 if p.goal == "muscle_building" else 1.2
+        )
+        if p.age > 40:
+            protein_multiplier -= 0.1
+        min_protein = round(weight * protein_multiplier)
+        min_protein_per_meal = round(min_protein / 3)
+        fat_ceiling = 55 if p.goal in ["weight_loss", "fat_loss"] else 85
+        fat_per_meal_max = round(fat_ceiling / 3)
+
+        fasting_note = (
+            f"FASTING DAY ({p.fasting_type}): ALL 3 meals ONLY use sabudana, makhana, kuttu atta, rajgira, singhara, sendha namak, fruits, curd, milk, nuts, ghee."
+            if is_fasting
+            else ""
+        )
+        avoid_str = ", ".join(used_names) if used_names else "none"
+
+        diet_map = {
+            "jain": "Strict Jain: NO onion, garlic, potato, root vegetables.",
+            "veg": "Vegetarian. Dairy allowed.",
+            "non_veg": "Non-vegetarian. Include chicken/eggs/fish on at least 4 days.",
+        }
+
+        return f"""You are a certified Indian nutritionist. Generate ONE day of meals only.
+
+USER: Age {p.age}, Weight {p.weight_kg}kg, Goal {p.goal}, Diet {p.diet_preference}, City {p.city}
+DATE: {day_date.strftime('%A, %d %b %Y')} (Day {day_index + 1} of 3)
+{fasting_note}
+
+DIET: {diet_map.get(p.diet_preference, 'Vegetarian')}
+CALORIES: {net} kcal/day | Breakfast {bcal} | Lunch {lcal} | Dinner {dcal}
+PROTEIN: min {min_protein_per_meal}g/meal | FAT LIMIT: max {fat_per_meal_max}g/meal
+
+AVOID THESE MEAL NAMES (already used): {avoid_str}
+Generate 3 completely NEW meal names not in the avoid list.
+
+RULES:
+- Macro check: calories ≈ protein×4 + carbs×4 + fats×9 (±25 kcal)
+- No meal > {fat_per_meal_max}g fat. Use complex carbs to fill calories, NOT fat.
+- Dinner = lightest meal, soup/dal/sabzi only, no rice at dinner (weight loss/fat loss)
+- ingredients: 5-10 items, each with name, quantity (number), unit (g/ml/pcs/tsp/tbsp/cup)
+- isfasting_friendly: {'true' if is_fasting else 'false'} for all 3 meals
+- isjain_friendly: {'true' if p.diet_preference == 'jain' else 'false'} for all 3 meals
+
+RETURN VALID JSON ONLY:
+{{
+  "day_number": {day_index + 1},
+  "date_label": "{day_date.strftime('%A, %d %b')}",
+  "is_fasting_day": {'true' if is_fasting else 'false'},
+  "breakfast": {{"meal_type": "breakfast", "name": "...", "calories": 0, "protein": 0.0, "carbs": 0.0, "fats": 0.0, "fiber": 0.0, "serving_size": 1.0, "serving_unit": "plate", "ingredients": [{{"name": "...", "quantity": 100, "unit": "g"}}], "is_fasting_friendly": false, "is_jain_friendly": false}},
+  "lunch": {{...same structure, meal_type "lunch"...}},
+  "dinner": {{...same structure, meal_type "dinner"...}},
+  "day_notes": "Specific educational note explaining nutrient benefits for this user's goal."
+}}"""
+
+    def fetch_day_from_gemini(self, prompt: str):
+        """Fetch a single day from Gemini synchronously."""
+        from meals.schemas import DayMealSchema
+
+        models_to_try = [("gemini-2.5-flash", 1), ("gemini-2.5-flash-lite", 2)]
+        raw = None
+        for model_name, max_attempts in models_to_try:
+            for attempt in range(max_attempts):
+                try:
+                    response = self.client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.1,
+                            response_mime_type="application/json",
+                            thinking_config=types.ThinkingConfig(
+                                thinking_budget=1024  # ✅ ADD THIS
+                            ),
+                        ),
+                    )
+                    raw = response.text.strip()
+                    break
+                except Exception as e:
+                    print(f"Day fetch failed ({model_name} attempt {attempt+1}): {e}")
+                    if attempt < max_attempts - 1:
+                        time.sleep((attempt + 1) * 5)
+            if raw:
+                break
+        if not raw:
+            return None
+        try:
+            data = json.loads(raw)
+            return DayMealSchema(data)
+        except Exception as e:
+            print(f"Day parse failed: {e}")
+            return None
 
     # ──────────────────────────────────────────────────────
     # 5. CALL GEMINI + PYDANTIC VALIDATION
@@ -564,6 +680,10 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
                             # ✅ FIXED: Lower temperature for mathematical accuracy
                             temperature=0.1,
                             response_mime_type="application/json",
+                            # ✅ Cap thinking tokens — reduces latency ~20-30s for structured output
+                            thinking_config=types.ThinkingConfig(
+                                thinking_budget=1024  # default is ~8000, cap at 1024 for JSON tasks
+                            ),
                         ),
                     )
                     raw = response.text.strip()
@@ -608,7 +728,11 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
         from .models import WeeklyPlan, DayMeal, FoodItem, MealSlot
         import datetime
 
-        week_end = week_start + datetime.timedelta(days=6)
+        # ✅ Get context for computed fields
+        fasting_indices = self.get_fasting_day_indices(week_start)
+        is_jain = self.profile.diet_preference == "jain"
+
+        week_end = week_start + datetime.timedelta(days=2)
 
         plan, _ = WeeklyPlan.objects.get_or_create(
             user=self.user,
@@ -620,9 +744,16 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
             },
         )
 
+        # ✅ Collect slots for bulk create
+        slots_to_create = []
+
         for day_data in validated.days:
             actual_date = week_start + datetime.timedelta(days=day_data.day_number - 1)
             actual_weekday = actual_date.weekday()  # 0=Monday ... 6=Sunday
+
+            # ✅ Get day index for fasting check
+            day_index = day_data.day_number - 1
+            is_fasting_day = day_index in fasting_indices
 
             day_meal, _ = DayMeal.objects.update_or_create(
                 weekly_plan=plan,
@@ -652,7 +783,7 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
                     elif isinstance(ing, dict):
                         ingredients_list.append(ing)
 
-                food_item, _ = FoodItem.objects.update_or_create(
+                food_item, created = FoodItem.objects.get_or_create(
                     name=meal_data.name,
                     diet_type=self.profile.diet_preference,  # scoped per diet
                     defaults={
@@ -662,31 +793,175 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
                         "protein_g": meal_data.protein,
                         "carbs_g": meal_data.carbs,
                         "fats_g": meal_data.fats,
-                        "fiber_g": meal_data.fiber,
-                        "serving_size_g": meal_data.serving_size,
-                        "serving_unit": meal_data.serving_unit,
+                        # ✅ Computed on backend — not from Gemini anymore
+                        "fiber_g": (
+                            meal_data.fiber
+                            if meal_data.fiber
+                            else round(meal_data.carbs * 0.12)
+                        ),
+                        "serving_size_g": meal_data.serving_size or 1.0,
+                        "serving_unit": meal_data.serving_unit or "plate",
                         "ingredients": ingredients_list,
-                        "is_fasting_friendly": meal_data.is_fasting_friendly,
-                        "is_jain_friendly": meal_data.is_jain_friendly,
+                        "is_fasting_friendly": is_fasting_day,  # from context
+                        "is_jain_friendly": is_jain,  # from profile
                     },
                 )
+                if not created:
+                    food_item.calories = meal_data.calories
+                    food_item.protein_g = meal_data.protein
+                    food_item.carbs_g = meal_data.carbs
+                    food_item.fats_g = meal_data.fats
+                    food_item.ingredients = ingredients_list
+                    food_item.is_fasting_friendly = is_fasting_day
+                    food_item.save(
+                        update_fields=[
+                            "calories",
+                            "protein_g",
+                            "carbs_g",
+                            "fats_g",
+                            "ingredients",
+                            "is_fasting_friendly",
+                        ]
+                    )
 
-                MealSlot.objects.create(
-                    day_meal=day_meal,
-                    slot=slot_name,
-                    food_item=food_item,
-                    quantity_g=meal_data.serving_size,
-                    calories=meal_data.calories,
-                    protein_g=meal_data.protein,
-                    carbs_g=meal_data.carbs,
-                    fats_g=meal_data.fats,
+                # ✅ Collect slots instead of creating one by one
+                slots_to_create.append(
+                    MealSlot(
+                        day_meal=day_meal,
+                        slot=slot_name,
+                        food_item=food_item,
+                        quantity_g=meal_data.serving_size or 1.0,
+                        calories=meal_data.calories,
+                        protein_g=meal_data.protein,
+                        carbs_g=meal_data.carbs,
+                        fats_g=meal_data.fats,
+                    )
                 )
 
+        # ✅ Single bulk insert instead of 21 individual creates
+        MealSlot.objects.bulk_create(slots_to_create)
+
+        # Update totals for all day meals
+        for day_meal in DayMeal.objects.filter(weekly_plan=plan):
             day_meal.update_totals()
 
         return plan
 
-    # ──────────────────────────────────────────────────────
+    def save_parallel_days(self, day_results, week_start: date, tdee: int):
+        from meals.models import WeeklyPlan, DayMeal, FoodItem, MealSlot
+        import datetime
+
+        # ✅ Get context for computed fields
+        fasting_indices = self.get_fasting_day_indices(week_start)
+        is_jain = self.profile.diet_preference == "jain"
+
+        week_end = week_start + datetime.timedelta(days=2)
+        plan, _ = WeeklyPlan.objects.get_or_create(
+            user=self.user,
+            week_start_date=week_start,
+            defaults={
+                "week_end_date": week_end,
+                "target_calories": tdee,
+                "plan_notes": "",
+            },
+        )
+
+        # ✅ Collect slots for bulk create
+        slots_to_create = []
+
+        for i, day_data in enumerate(day_results):
+            actual_date = week_start + datetime.timedelta(days=i)
+            actual_weekday = actual_date.weekday()
+
+            # ✅ Get fasting status from context
+            is_fasting_day = i in fasting_indices
+
+            day_meal, _ = DayMeal.objects.update_or_create(
+                weekly_plan=plan,
+                date=actual_date,
+                defaults={
+                    "day_of_week": actual_weekday,
+                    "is_fasting_day": is_fasting_day,
+                    "day_notes": day_data.day_notes or "",
+                },
+            )
+            day_meal.meal_slots.all().delete()
+
+            for slot_name in ["breakfast", "lunch", "dinner"]:
+                meal_data = getattr(day_data, slot_name)
+                ingredients_list = []
+                for ing in meal_data.ingredients or []:
+                    if isinstance(ing, str):
+                        ingredients_list.append(
+                            {"name": ing, "quantity": None, "unit": ""}
+                        )
+                    elif hasattr(ing, "dict"):
+                        ingredients_list.append(ing.dict())
+                    elif isinstance(ing, dict):
+                        ingredients_list.append(ing)
+
+                food_item, created = FoodItem.objects.get_or_create(
+                    name=meal_data.name,
+                    diet_type=self.profile.diet_preference,
+                    defaults={
+                        "category": slot_name,
+                        "calories": meal_data.calories,
+                        "protein_g": meal_data.protein,
+                        "carbs_g": meal_data.carbs,
+                        "fats_g": meal_data.fats,
+                        # ✅ Computed on backend — not from Gemini anymore
+                        "fiber_g": (
+                            meal_data.fiber
+                            if meal_data.fiber
+                            else round(meal_data.carbs * 0.12)
+                        ),
+                        "serving_size_g": meal_data.serving_size or 1.0,
+                        "serving_unit": meal_data.serving_unit or "plate",
+                        "ingredients": ingredients_list,
+                        "is_fasting_friendly": is_fasting_day,
+                        "is_jain_friendly": is_jain,
+                    },
+                )
+                if not created:
+                    food_item.calories = meal_data.calories
+                    food_item.protein_g = meal_data.protein
+                    food_item.carbs_g = meal_data.carbs
+                    food_item.fats_g = meal_data.fats
+                    food_item.ingredients = ingredients_list
+                    food_item.is_fasting_friendly = is_fasting_day
+                    food_item.save(
+                        update_fields=[
+                            "calories",
+                            "protein_g",
+                            "carbs_g",
+                            "fats_g",
+                            "ingredients",
+                            "is_fasting_friendly",
+                        ]
+                    )
+                # ✅ Collect slots instead of creating one by one
+                slots_to_create.append(
+                    MealSlot(
+                        day_meal=day_meal,
+                        slot=slot_name,
+                        food_item=food_item,
+                        quantity_g=meal_data.serving_size or 1.0,
+                        calories=meal_data.calories,
+                        protein_g=meal_data.protein,
+                        carbs_g=meal_data.carbs,
+                        fats_g=meal_data.fats,
+                    )
+                )
+
+        # ✅ Single bulk insert instead of 21 individual creates
+        MealSlot.objects.bulk_create(slots_to_create)
+
+        # Update totals for all day meals
+        for day_meal in DayMeal.objects.filter(weekly_plan=plan):
+            day_meal.update_totals()
+
+        return plan
+
     # 7A. BUILD SINGLE-DAY REGENERATION PROMPT
     # ──────────────────────────────────────────────────────
 
@@ -828,7 +1103,7 @@ Before finalizing each meal, verify:
 3. Protein per meal calculated from ACTUAL ingredients — not rounded to 45g.
 
 ══════════════════════════════════════════
-RESPONSE — VALID JSON ONLY, NO MARKDOWN
+RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_fasting_friendly, is_jain_friendly.
 ══════════════════════════════════════════
 {{
   "day_number": {day_meal.day_of_week + 1},
@@ -841,17 +1116,10 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
     "protein": 0.0,
     "carbs": 0.0,
     "fats": 0.0,
-    "fiber": 0.0,
-    "serving_size": 1.0,
-    "serving_unit": "plate",
-    "ingredients": [
-      {{"name": "ingredient name", "quantity": 100, "unit": "g"}}
-    ],
-    "is_fasting_friendly": false,
-    "is_jain_friendly": false
+    "ingredients": [{{"name": "...", "quantity": 100, "unit": "g"}}]
   }},
-  "lunch": {{ ...same structure... }},
-  "dinner": {{ ...same structure... }},
+  "lunch": {{...}},
+  "dinner": {{...}},
   "day_notes": "Specific note explaining nutrient benefits for this user's goal."
 }}
 """
@@ -867,6 +1135,10 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
         """
         from meals.models import FoodItem, MealSlot
         from meals.schemas import DayMealSchema
+
+        # ✅ Get context for computed fields
+        is_jain = self.profile.diet_preference == "jain"
+        is_fasting = day_meal.is_fasting_day
 
         # Collect existing meal names from the rest of the week to avoid repeats
         existing_names = list(
@@ -892,6 +1164,10 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
                         config=types.GenerateContentConfig(
                             temperature=0.1,
                             response_mime_type="application/json",
+                            # ✅ Cap thinking tokens — reduces latency ~20-30s for structured output
+                            thinking_config=types.ThinkingConfig(
+                                thinking_budget=512  # default is ~8000, cap at 1024 for JSON tasks
+                            ),
                         ),
                     )
                     raw = response.text.strip()
@@ -943,12 +1219,17 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
                     "protein_g": meal_data.protein,
                     "carbs_g": meal_data.carbs,
                     "fats_g": meal_data.fats,
-                    "fiber_g": meal_data.fiber,
-                    "serving_size_g": meal_data.serving_size,
-                    "serving_unit": meal_data.serving_unit,
+                    # ✅ Computed on backend — not from Gemini anymore
+                    "fiber_g": (
+                        meal_data.fiber
+                        if meal_data.fiber
+                        else round(meal_data.carbs * 0.12)
+                    ),
+                    "serving_size_g": meal_data.serving_size or 1.0,
+                    "serving_unit": meal_data.serving_unit or "plate",
                     "ingredients": ingredients_list,
-                    "is_fasting_friendly": meal_data.is_fasting_friendly,
-                    "is_jain_friendly": meal_data.is_jain_friendly,
+                    "is_fasting_friendly": is_fasting,
+                    "is_jain_friendly": is_jain,
                 },
             )
 
@@ -956,7 +1237,7 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
                 day_meal=day_meal,
                 slot=slot_name,
                 food_item=food_item,
-                quantity_g=meal_data.serving_size,
+                quantity_g=meal_data.serving_size or 1.0,
                 calories=meal_data.calories,
                 protein_g=meal_data.protein,
                 carbs_g=meal_data.carbs,
@@ -975,32 +1256,38 @@ RESPONSE — VALID JSON ONLY, NO MARKDOWN
     # 7. PUBLIC ENTRY POINT
     # ──────────────────────────────────────────────────────
 
-    def generate(self, week_start: date = None) -> WeeklyPlan | None:
-        """
-        Call this from:
-        - OnboardingView (auto after profile save)
-        - POST /api/meals/generate/
-        - End of week (next week generation)
-        """
+    def generate(self, week_start: date = None) -> "WeeklyPlan | None":
         if week_start is None:
-            today = date.today()
-            week_start = today  # Start from TODAY, not last Monday
+            week_start = date.today()
 
         tdee = self.calculate_tdee()
         beverage_cal = self.calculate_beverage_calories()
         fasting_indices = self.get_fasting_day_indices(week_start)
 
-        print(
-            f"[MealGenerator] TDEE={tdee} | BevCal={beverage_cal} | FastingDays={fasting_indices}"
+        prev_period_start = week_start - timedelta(days=3)
+        prev_names = list(
+            MealSlot.objects.filter(
+                day_meal__weekly_plan__user=self.user,
+                day_meal__date__gte=prev_period_start,
+                day_meal__date__lt=week_start,
+            )
+            .values_list("food_item__name", flat=True)
+            .distinct()
         )
+        print(
+            f"MealGenerator: TDEE={tdee} BevCal={beverage_cal} FastingDays={fasting_indices}"
+        )
+        print(f"MealGenerator: {len(prev_names)} previous meals to avoid")
 
-        prompt = self.build_prompt(tdee, beverage_cal, week_start, fasting_indices)
+        prompt = self.build_prompt(
+            tdee, beverage_cal, week_start, fasting_indices, prev_week_names=prev_names
+        )
         validated = self.fetch_from_gemini(prompt)
 
         if validated is None:
-            print("[MealGenerator] ✗ Generation failed — no plan saved.")
+            print("MealGenerator: Generation failed — no plan saved.")
             return None
 
         plan = self.save_to_db(validated, week_start, tdee)
-        print(f"[MealGenerator] ✓ WeeklyPlan ID={plan.id} saved successfully.")
+        print(f"MealGenerator: Plan ID={plan.id} saved successfully.")
         return plan

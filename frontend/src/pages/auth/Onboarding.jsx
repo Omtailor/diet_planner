@@ -290,7 +290,7 @@ function Step6({ data }) {
       <div style={s.aiNote}>
         <span style={{ fontSize: '1.25rem' }}>🤖</span>
         <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
-          Our AI will generate your personalized 7-day Indian meal plan and training schedule instantly!
+          Our AI will generate your personalized 3-day Indian meal plan and training schedule instantly!
         </p>
       </div>
     </div>
@@ -388,7 +388,7 @@ function LoadingOverlay() {
         }}>
           {LOADING_SENTENCES[sentenceIdx]}
         </p>
-        <p style={s.loadingHint}>This may take a few seconds</p>
+        <p style={s.loadingHint}>This may take a upto 1 minute, Please have patience while the magic happens!</p>
       </div>
     </div>
   )

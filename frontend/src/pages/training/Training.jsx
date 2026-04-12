@@ -1,8 +1,47 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, ChevronRight, RotateCcw, X } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, RotateCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import API from '../../services/api';
+
+// ── Date helpers (same as Nutrition.jsx) ──
+function getDateStr(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatDisplayDate(dateStr) {
+  const d = new Date(dateStr);
+  const today = new Date();
+  const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
+  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function formatFullDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function getWeekDays(centerDate) {
+  const center = new Date(centerDate);
+  const days = [];
+  for (let i = -15; i < 29; i++) {
+    const d = new Date(center);
+    d.setDate(center.getDate() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    days.push(`${yyyy}-${mm}-${dd}`);
+  }
+  return days;
+}
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -91,6 +130,10 @@ export default function Training() {
   const [expandedEx, setExpandedEx] = useState(null);
   const [regenPulse, setRegenPulse] = useState(false);
 
+  // ── Date strip state ──
+  const [selectedDate, setSelectedDate] = useState(getDateStr(0));
+  const [dateOffset, setDateOffset] = useState(0);
+
   const today = new Date();
   const todayDow = today.getDay() === 0 ? 6 : today.getDay() - 1;
 
@@ -104,13 +147,39 @@ export default function Training() {
     }
   }, [selectedDay]);
 
+  useEffect(() => {
+    if (!weekStripRef.current) return;
+    // Small delay ensures DOM has rendered before scrolling
+    const t = setTimeout(() => {
+      const selected = weekStripRef.current?.querySelector('[data-selected="true"]');
+      if (selected) selected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [selectedDate]);
+
+  // Sync selectedDay with selectedDate
+  useEffect(() => {
+    if (!plan || !plan.day_trainings) return;
+    const matchingDay = plan.day_trainings.find(d => d.date === selectedDate);
+    if (matchingDay) {
+      setSelectedDay(matchingDay);
+      setExpandedEx(null);
+    }
+  }, [selectedDate, plan]);
+
   const fetchPlan = async () => {
     setLoading(true);
     try {
       const res = await API.get('/training/weekly/');
       setPlan(res.data);
       const todayDay = res.data.day_trainings?.find(d => d.day_of_week === todayDow);
-      setSelectedDay(todayDay || res.data.day_trainings?.[0] || null);
+      const initialDay = todayDay || res.data.day_trainings?.[0] || null;
+      setSelectedDay(initialDay);
+
+      // ✅ Sync date strip to today's actual date from the plan
+      if (initialDay?.date) {
+        setSelectedDate(initialDay.date);
+      }
     } catch (e) {
       if (e?.response?.status === 404) setPlan(null);
       else toast.error('Failed to load training plan');
@@ -127,7 +196,13 @@ export default function Training() {
       const res = await API.post('/training/generate/');
       setPlan(res.data);
       const todayDay = res.data.day_trainings?.find(d => d.day_of_week === todayDow);
-      setSelectedDay(todayDay || res.data.day_trainings?.[0] || null);
+      const initialDay = todayDay || res.data.day_trainings?.[0] || null;
+      setSelectedDay(initialDay);
+
+      // ✅ Sync date strip after generation too
+      if (initialDay?.date) {
+        setSelectedDate(initialDay.date);
+      }
       toast.success('Training plan generated! 💪');
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     } catch {
@@ -135,6 +210,12 @@ export default function Training() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleDateChange = (dir) => {
+    const newOffset = dateOffset + dir;
+    setDateOffset(newOffset);
+    setSelectedDate(getDateStr(newOffset));
   };
 
   const handleExportPdf = async () => {
@@ -462,17 +543,85 @@ export default function Training() {
 
         {/* Body */}
         <div style={S.body}>
+
+          {/* ── Week Date Strip ── */}
+          <div
+            ref={weekStripRef}
+            style={{
+              ...GLASS_WHITE,
+              display: 'flex',
+              borderRadius: 24,
+              padding: 10,
+              overflowX: 'auto',
+              gap: 4,
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              scrollSnapType: 'x mandatory',
+            }}
+            className="week-strip"
+          >
+            {getWeekDays(getDateStr(0)).map(d => {
+              const isSelected = d === selectedDate;
+              const isToday = d === getDateStr(0);
+              const dayLabel = new Date(d).toLocaleDateString('en-IN', { weekday: 'short' });
+              const dayNum = new Date(d).getDate();
+              return (
+                <button
+                  key={d}
+                  data-selected={isSelected}
+                  onClick={() => { setSelectedDate(d); setDateOffset(0); }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: 6, padding: '10px 8px', borderRadius: 16, border: 'none',
+                    cursor: 'pointer', minWidth: 44, flexShrink: 0, scrollSnapAlign: 'center',
+                    background: isSelected ? 'var(--color-accent)' : 'transparent',
+                    boxShadow: isSelected ? '0 4px 12px rgba(52,199,89,0.3)' : 'none',
+                    transition: 'all 200ms ease',
+                  }}
+                >
+                  <span style={{
+                    fontSize: '0.65rem', fontWeight: 700, fontFamily: FONT,
+                    color: isSelected ? '#ffffff' : 'var(--color-text-faint)',
+                    textTransform: 'uppercase', letterSpacing: '0.5px'
+                  }}>
+                    {dayLabel}
+                  </span>
+                  <span style={{
+                    fontSize: '1rem', fontWeight: 800, fontFamily: FONT,
+                    color: isSelected ? '#ffffff' : isToday ? 'var(--color-accent)' : 'var(--color-text)'
+                  }}>
+                    {dayNum}
+                  </span>
+                  {isToday && !isSelected && (
+                    <div style={{ width: 5, height: 5, marginTop: 2, background: 'var(--color-accent)', borderRadius: '50%' }} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ── Date Header ── */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px' }}>
+            <button onClick={() => handleDateChange(-1)} style={S.navBtn}>
+              <ChevronLeft size={20} color="var(--color-text)" />
+            </button>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontFamily: FONT, fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-text)', letterSpacing: '-0.2px' }}>
+                {formatDisplayDate(selectedDate)}
+              </p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: 2 }}>
+                {formatFullDate(selectedDate)}
+              </p>
+            </div>
+            <button onClick={() => handleDateChange(1)} style={S.navBtn}>
+              <ChevronRight size={20} color="var(--color-text)" />
+            </button>
+          </div>
+
           <StatsRow
             totalWorkoutDays={totalWorkoutDays}
             totalCalsBurned={totalCalsBurned}
             totalMinutes={totalMinutes}
-          />
-          <DayStrip
-            days={days}
-            selectedDay={selectedDay}
-            todayDow={todayDow}
-            onSelect={(day) => { setSelectedDay(day); setExpandedEx(null); }}
-            stripRef={weekStripRef}
           />
           {selectedDay && (
             <DayDetail
@@ -1095,5 +1244,15 @@ const S = {
     display: 'flex', alignItems: 'center', width: '100%',
     cursor: 'default',
     boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+  },
+
+  navBtn: {
+    width: 44, height: 44,
+    background: 'rgba(255,255,255,0.6)',
+    border: '1px solid rgba(0,0,0,0.04)',
+    borderRadius: 14,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
   },
 };

@@ -15,12 +15,13 @@ class MealSchema(BaseModel):
     protein: float
     carbs: float
     fats: float
-    fiber: float = 0.0
-    serving_size: float = 100.0
-    serving_unit: str = "g"
     ingredients: list[Union[IngredientSchema, str]] = []
-    is_fasting_friendly: bool = False
-    is_jain_friendly: bool = False
+    # ✅ All these are now optional — Gemini won't return them
+    fiber: Optional[float] = 0.0
+    serving_size: Optional[float] = 1.0
+    serving_unit: Optional[str] = "plate"
+    is_fasting_friendly: Optional[bool] = False
+    is_jain_friendly: Optional[bool] = False
 
     @field_validator("protein")
     @classmethod
@@ -45,9 +46,12 @@ class MealSchema(BaseModel):
         is_solo_low_protein = any(
             name.startswith(t) or name == t for t in low_protein_solo
         )
-        is_light_dish = any(
-            t in name for t in low_protein_with_check
-        ) and "chicken" not in name and "egg" not in name and "paneer" not in name
+        is_light_dish = (
+            any(t in name for t in low_protein_with_check)
+            and "chicken" not in name
+            and "egg" not in name
+            and "paneer" not in name
+        )
 
         # Only clamp if it's clearly a standalone light dish
         if (is_solo_low_protein or is_light_dish) and not has_supplement:
@@ -151,12 +155,12 @@ class WeeklyPlanSchema(BaseModel):
 
     @field_validator("days")
     @classmethod
-    def must_have_7_days(cls, v):
-        if len(v) < 7:
-            raise ValueError(f"Expected 7 days, got {len(v)} — too few to save.")
-        if len(v) > 7:
-            print(f"[SchemaValidator] ⚠️ Got {len(v)} days, trimming to 7.")
-            return v[:7]
+    def must_have_3_days(cls, v):  # ← rename this too for clarity
+        if len(v) < 3:
+            raise ValueError(f"Expected 3 days, got {len(v)} — too few to save.")
+        if len(v) > 3:
+            print(f"[SchemaValidator] ⚠️ Got {len(v)} days, trimming to 3.")
+            return v[:3]
         return v
 
     @field_validator("plan_notes")

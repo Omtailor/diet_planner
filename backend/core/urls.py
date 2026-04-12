@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
-from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
+from core.media_serve import protected_media
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # ✅ Admin URL read from env — not hardcoded /admin/
+    path(f'{settings.ADMIN_URL}/', admin.site.urls),
 
     # Auth
     path('api/auth/', include('users.urls')),
@@ -23,4 +24,6 @@ urlpatterns = [
     # Grocery
     path('api/grocery/', include('grocery.urls')),
 
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Authenticated media
+    path('media/<path:file_path>', protected_media, name='protected_media'),
+]

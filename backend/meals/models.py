@@ -99,7 +99,7 @@ class DayMeal(models.Model):
 
     class Meta:
         ordering = ["date"]
-        unique_together = ["weekly_plan", "day_of_week"]
+        unique_together = ["weekly_plan", "date"]
 
     def __str__(self):
         return f"{self.weekly_plan.user.username} - {self.get_day_of_week_display()} ({self.date})"

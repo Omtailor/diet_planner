@@ -9,6 +9,7 @@ from .models import UserProfile, WeightLog
 from .serializers import UserProfileSerializer, RegisterSerializer, LoginSerializer
 from meals.meal_generator import MealPlanGenerator
 
+
 def get_tokens_for_user(user):
     """Generate JWT access + refresh tokens for a user"""
     refresh = RefreshToken.for_user(user)
@@ -108,6 +109,7 @@ class OnboardingView(APIView):
                     generate_grocery_list(profile.user)
                 except Exception as e:
                     print(f"[Onboarding] Grocery list generation failed: {e}")
+
             except Exception as e:
                 print(f"[Onboarding] Meal plan generation failed: {e}")
                 plan_generated = False
@@ -118,7 +120,7 @@ class OnboardingView(APIView):
                     "message": "Profile setup complete",
                     "profile": serializer.data,
                     "onboarding_complete": True,
-                    "meal_plan_generated": plan_generated,   # ← tells frontend if plan is ready
+                    "meal_plan_generated": plan_generated,  # ← tells frontend if plan is ready
                 },
                 status=status.HTTP_201_CREATED,
             )
