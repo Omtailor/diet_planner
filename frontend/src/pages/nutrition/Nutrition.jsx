@@ -545,6 +545,8 @@ export default function Nutrition() {
 
   const handleRegenerate = async () => {
     setRegenerating(true)
+    setLoading(true)
+    setDayMeal(null)
     try {
       await mealService.regenerateDay(selectedDate)
       await fetchDayMeal(selectedDate)
@@ -588,6 +590,7 @@ export default function Nutrition() {
         setSelectedDate(nextStartStr);
         setDateOffset(0);
         switchSlot(0);
+        await fetchDayMeal(nextStartStr);
       }
     } catch (err) {
       const detail = err?.response?.data?.detail
@@ -1191,7 +1194,7 @@ export default function Nutrition() {
       </div>
 
       {/* ── Meal Swipe Card ── */}
-      {loading ? (
+      {loading || (regenerating && !dayMeal) ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <Skeleton height="320px" radius="24px" />
         </div>

@@ -34,29 +34,48 @@ function SplashScreen() {
   return (
     <div style={{
       minHeight: '100dvh',
-      background: 'var(--bg-primary)',
+      background: '#f0f7f2',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       gap: '16px'
     }}>
-      <h1 style={{
-        fontFamily: 'Clash Display, sans-serif',
+      {/* Logo / App Name */}
+      <div style={{
+        width: '64px',
+        height: '64px',
+        background: 'rgba(52, 199, 89, 0.12)',
+        borderRadius: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         fontSize: '2rem',
-        color: 'var(--accent)',
+        marginBottom: '4px',
+      }}>
+        🥗
+      </div>
+
+      <h1 style={{
+        fontFamily: "'General Sans', 'Satoshi', sans-serif",
+        fontSize: '1.8rem',
+        fontWeight: 800,
+        color: '#1C1C1E',
         letterSpacing: '-0.5px'
       }}>
         NutriAI
       </h1>
+
+      {/* Green spinner matching your app theme */}
       <div style={{
-        width: '32px',
-        height: '32px',
-        border: '3px solid var(--bg-surface-3)',
-        borderTop: '3px solid var(--accent)',
+        width: '28px',
+        height: '28px',
+        border: '3px solid rgba(52, 199, 89, 0.2)',
+        borderTop: '3px solid #34C759',
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite'
       }} />
+
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
