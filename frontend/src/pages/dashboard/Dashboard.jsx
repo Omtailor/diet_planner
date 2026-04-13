@@ -22,6 +22,26 @@ const QUOTES = [
   "Your future self is watching you right now. 👁️",
   "Progress, not perfection. 🏆",
   "Every rep, every meal, every step counts. ✅",
+  "Fuel your body like the champion you are. 🥗",
+  "Consistency beats intensity every single time. ⏱️",
+  "One healthy choice leads to another. 🍎",
+  "You are one workout away from a good mood. 😊",
+  "The pain of discipline is far less than the pain of regret. 🧠",
+  "Strong is the new healthy. 💚",
+  "Make your health your hobby. 🏃",
+  "Today's effort is tomorrow's result. 🌅",
+  "Don't wish for a good body. Work for it. 🏋️",
+  "What you eat in private, you wear in public. 👀",
+  "Your health is an investment, not an expense. 💰",
+  "A little progress each day adds up to big results. 📊",
+  "Be stronger than your excuses. 🚫",
+  "Success starts with self-discipline. 🔑",
+  "Hydrate. Nourish. Move. Rest. Repeat. 💧",
+  "You didn't come this far to only come this far. 🚀",
+  "Take care of your body. It's the only place you have to live. 🏡",
+  "Rome wasn't built in a day, but they were consistent. 🏛️",
+  "Sweat now, shine later. ✨",
+  "Your only competition is who you were yesterday. 🪞",
 ]
 
 function getGreeting() {
@@ -487,7 +507,7 @@ function QuoteCard() {
   }
 
   useEffect(() => {
-    const t = setInterval(nextQuote, 8000)
+    const t = setInterval(nextQuote, 4000)
     return () => clearInterval(t)
   }, [])
 
@@ -1003,7 +1023,7 @@ function Dashboard() {
 
 const pageWrapper = {
   display: 'flex', flexDirection: 'column',
-  gap: '14px', padding: '16px',
+  gap: '14px', padding: '0 16px 100px',
   paddingBottom: '100px',
   position: 'relative',
   fontFamily: "'General Sans', sans-serif",
@@ -1034,7 +1054,7 @@ const grainOverlay = {
 }
 
 const greetingSection = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0',
 }
 
 const greetingTime = {
