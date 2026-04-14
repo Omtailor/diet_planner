@@ -10,6 +10,16 @@ import API from '../../services/api'
 // ─── Style Tokens ──────────────────────────────────────────────
 const FONT = "'General Sans', sans-serif";
 
+// ─── Date Helper ───────────────────────────────────────────────
+function getDateStr(offset = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 const GLASS_WHITE = {
   background: 'rgba(255, 255, 255, 0.65)',
   backdropFilter: 'blur(24px) saturate(180%)',
@@ -145,6 +155,10 @@ export default function Account() {
   const [grocery, setGrocery] = useState(null)
   const [groceryLoading, setGroceryLoading] = useState(false)
   const [groceryRefreshing, setGroceryRefreshing] = useState(false)
+  const [showGroceryRangeModal, setShowGroceryRangeModal] = useState(false)
+  const [groceryStartDate, setGroceryStartDate] = useState(getDateStr(0))
+  const [groceryEndDate, setGroceryEndDate] = useState(getDateStr(6))
+  const [showGrocerySheet, setShowGrocerySheet] = useState(false)
 
   const menuItems = [
     { icon: '👤', label: 'Personal Info', sub: 'Name, age, city', key: 'personal' },
@@ -212,25 +226,24 @@ export default function Account() {
   }, [activeSection, profile, user])
 
   useEffect(() => {
-    if (activeSection !== 'grocery') return
-
+    if (!showGrocerySheet) return
     let isMounted = true
     const load = async () => {
       setGroceryLoading(true)
       try {
-        const res = await groceryService.getList()
+        const url = `grocery?start_date=${groceryStartDate}&end_date=${groceryEndDate}`
+        const res = await API.get(url)
         if (isMounted) setGrocery(res.data)
-      } catch (e) {
+      } catch {
         if (isMounted) setGrocery(null)
         toast.error('Failed to load grocery list')
       } finally {
         if (isMounted) setGroceryLoading(false)
       }
     }
-
     load()
     return () => { isMounted = false }
-  }, [activeSection])
+  }, [showGrocerySheet])
 
   const closeModal = () => {
     setActiveSection(null)
@@ -238,7 +251,16 @@ export default function Account() {
   }
 
   const handleMenuClick = (key) => {
+    if (key === 'grocery') {
+      setShowGroceryRangeModal(true)
+      return
+    }
     setActiveSection(key)
+  }
+
+  const handleGroceryRangeConfirm = () => {
+    setShowGroceryRangeModal(false)
+    setShowGrocerySheet(true)
   }
 
   const handleLogout = () => {
@@ -581,90 +603,223 @@ export default function Account() {
               />
             )}
 
-            {activeSection === 'grocery' && (
+
+          </div>
+        </div>
+      )}
+
+      {/* ── Grocery Date Range Modal ── */}
+      {showGroceryRangeModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'flex-end',
+            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            animation: 'fadeUp 0.3s ease-out',
+          }}
+          onClick={() => setShowGroceryRangeModal(false)}
+        >
+          <div
+            style={{
+              width: '100%', maxHeight: '90dvh', overflowY: 'auto',
+              ...GLASS_WHITE, background: 'rgba(255,255,255,0.95)',
+              borderRadius: '32px 32px 0 0', padding: '24px',
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div style={{ width: 48, height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.15)', margin: '0 auto 20px' }} />
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
               <div>
-                <h3 style={S.modalTitle}>Grocery List</h3>
-                <p style={S.modalDesc}>
-                  Check off items as you use them. ({grocery?.checked_items ?? 0}/{grocery?.total_items ?? 0})
+                <p style={{ fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>
+                  Weekly Grocery List
                 </p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: 4 }}>
+                  Choose the date range to view ingredients
+                </p>
+              </div>
+              <button
+                onClick={() => setShowGroceryRangeModal(false)}
+                style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
 
-                {groceryLoading && (
-                  <p style={{ ...S.modalDesc, marginTop: '20px' }}>Loading your grocery list...</p>
-                )}
+            {/* Date Pickers */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-faint)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Start Date
+                </p>
+                <input
+                  type="date"
+                  value={groceryStartDate}
+                  onChange={e => setGroceryStartDate(e.target.value)}
+                  style={{ width: '100%', padding: '14px 16px', background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 16, fontFamily: FONT, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text)', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-faint)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                  End Date
+                </p>
+                <input
+                  type="date"
+                  value={groceryEndDate}
+                  min={groceryStartDate}
+                  onChange={e => setGroceryEndDate(e.target.value)}
+                  style={{ width: '100%', padding: '14px 16px', background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 16, fontFamily: FONT, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text)', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
 
-                {!groceryLoading && grocery?.items?.length ? (
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', gap: '10px',
-                    marginTop: '16px', overflowY: 'auto',
-                    maxHeight: '48dvh', paddingRight: '4px',
-                  }}>
-                    {grocery.items.map((it) => (
-                      <label key={it.id} style={S.groceryRow}>
-                        <input
-                          type="checkbox"
-                          checked={!!it.is_checked}
-                          style={{ width: '18px', height: '18px' }}
-                          onChange={async (e) => {
-                            try {
-                              await groceryService.checkItem(it.id, { is_checked: e.target.checked })
-                              const res = await groceryService.getList()
-                              setGrocery(res.data)
-                            } catch {
-                              toast.error('Failed to update item')
-                            }
-                          }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div style={{
-                            ...S.groceryName,
-                            color: it.is_checked ? 'var(--color-text-faint)' : 'var(--color-text)',
-                            textDecoration: it.is_checked ? 'line-through' : 'none'
-                          }}>{it.ingredient_name}</div>
-                          <div style={S.grocerySub}>
-                            {it.quantity} {it.unit}
-                          </div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                ) : (!groceryLoading && (
-                  <p style={{ ...S.modalDesc, marginTop: '20px' }}>
-                    No grocery list found yet. Generate a meal plan to create your list.
-                  </p>
-                ))}
-
-                <div style={{
-                  display: 'flex', gap: '10px',
-                  marginTop: '16px', paddingTop: '16px',
-                  borderTop: '1px solid rgba(0,0,0,0.05)',
-                  flexShrink: 0,
-                }}>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setGroceryRefreshing(true)
-                      try {
-                        await groceryService.refreshList()
-                        const res = await groceryService.getList()
-                        setGrocery(res.data)
-                        toast.success('Grocery list refreshed')
-                      } catch {
-                        toast.error('Failed to refresh grocery list')
-                      } finally {
-                        setGroceryRefreshing(false)
-                      }
-                    }}
-                    disabled={groceryRefreshing}
-                    style={{ ...S.modalSecondaryBtn, padding: '14px' }}
-                  >
-                    {groceryRefreshing ? 'Refreshing...' : 'Refresh List'}
-                  </button>
-                  <button type="button" onClick={closeModal} style={S.modalPrimaryBtn}>
-                    Done
-                  </button>
-                </div>
+            {/* Days count pill */}
+            {groceryStartDate && groceryEndDate && groceryStartDate <= groceryEndDate && (
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <span style={{ display: 'inline-block', background: 'rgba(52,199,89,0.12)', color: 'var(--color-accent)', fontFamily: FONT, fontWeight: 700, fontSize: '0.85rem', borderRadius: 999, padding: '6px 16px' }}>
+                  {Math.round((new Date(groceryEndDate) - new Date(groceryStartDate)) / (1000 * 60 * 60 * 24) + 1)} days selected
+                </span>
               </div>
             )}
+
+            <button
+              onClick={handleGroceryRangeConfirm}
+              disabled={!groceryStartDate || !groceryEndDate || groceryStartDate > groceryEndDate}
+              style={{
+                width: '100%', padding: '16px',
+                background: groceryStartDate > groceryEndDate ? 'rgba(0,0,0,0.1)' : 'var(--color-accent)',
+                border: 'none', borderRadius: 16,
+                color: groceryStartDate > groceryEndDate ? 'var(--color-text-muted)' : '#ffffff',
+                fontFamily: FONT, fontWeight: 800, fontSize: '1rem',
+                cursor: groceryStartDate > groceryEndDate ? 'not-allowed' : 'pointer',
+                boxShadow: groceryStartDate > groceryEndDate ? 'none' : '0 8px 24px rgba(52,199,89,0.3)',
+                transition: 'all 180ms ease',
+              }}
+            >
+              🛒 View Grocery List
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Grocery Sheet ── */}
+      {showGrocerySheet && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'flex-end',
+            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            animation: 'fadeUp 0.3s ease-out',
+          }}
+          onClick={() => setShowGrocerySheet(false)}
+        >
+          <div
+            style={{
+              width: '100%', maxHeight: '85dvh',
+              ...GLASS_WHITE, background: 'rgba(255,255,255,0.92)',
+              borderRadius: '32px 32px 0 0', padding: '24px',
+              display: 'flex', flexDirection: 'column',
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div style={{ width: 48, height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.15)', margin: '0 auto 20px', flexShrink: 0 }} />
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexShrink: 0 }}>
+              <div>
+                <p style={{ fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>
+                  🛒 Grocery List
+                </p>
+                {grocery && (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: 4 }}>
+                    {grocery.checked_items}/{grocery.total_items} items checked ·{' '}
+                    <span style={{ color: 'var(--color-text-faint)' }}>
+                      {new Date(groceryStartDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      {' – '}
+                      {new Date(groceryEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowGrocerySheet(false)}
+                style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            {groceryLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0', flex: 1 }}>
+                <p style={{ fontFamily: FONT, color: 'var(--color-text-faint)', fontWeight: 600 }}>Loading...</p>
+              </div>
+            ) : !grocery?.items?.length ? (
+              <p style={{ textAlign: 'center', padding: '60px 40px', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT }}>
+                No grocery list found for this date range.
+              </p>
+            ) : (
+              <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
+                {grocery.items.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={async () => {
+                      try {
+                        await groceryService.checkItem(item.id, { is_checked: !item.is_checked })
+                        const url = `grocery?start_date=${groceryStartDate}&end_date=${groceryEndDate}`
+                        const res = await API.get(url)
+                        setGrocery(res.data)
+                      } catch {
+                        toast.error('Failed to update item')
+                      }
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: 16,
+                      background: item.is_checked ? 'rgba(52,199,89,0.08)' : 'rgba(255,255,255,0.6)',
+                      border: `1px solid ${item.is_checked ? 'rgba(52,199,89,0.3)' : 'rgba(0,0,0,0.05)'}`,
+                      borderRadius: 16, cursor: 'pointer',
+                      transition: 'all 180ms ease', textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.2rem' }}>{item.is_checked ? '✅' : '⬜'}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{
+                        fontFamily: FONT, fontWeight: 700, fontSize: '1rem',
+                        color: item.is_checked ? 'var(--color-text-muted)' : 'var(--color-text)',
+                        textDecoration: item.is_checked ? 'line-through' : 'none',
+                      }}>{item.ingredient_name}</p>
+                    </div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600, fontFamily: FONT, flexShrink: 0 }}>
+                      {item.quantity} {item.unit}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 20, flexShrink: 0 }}>
+              <button
+                onClick={() => { setShowGrocerySheet(false); setShowGroceryRangeModal(true) }}
+                style={{ ...S.modalSecondaryBtn, flex: 1 }}
+              >
+                Change Dates
+              </button>
+              <button
+                onClick={() => setShowGrocerySheet(false)}
+                style={{ ...S.modalPrimaryBtn, flex: 1 }}
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

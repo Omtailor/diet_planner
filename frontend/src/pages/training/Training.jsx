@@ -836,7 +836,7 @@ export default function Training() {
             Crafting 3 personalised workout days for you
           </p>
           <p style={{ fontFamily: FONT, fontSize: '0.75rem', color: 'var(--color-text-faint)', marginTop: 8, textAlign: 'center' }}>
-            This only takes a few seconds ⚡
+            This may take upto 1 minute, Please be patient while magic happens⚡
           </p>
         </div>
       )}
