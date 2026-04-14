@@ -4,6 +4,8 @@ from .views import (
     DayTrainingView,
     GenerateTrainingPlanView,
     LatestTrainingPlanView,
+    DayRangeView,
+    AllDayTrainingsView,
 )
 
 urlpatterns = [
@@ -11,4 +13,6 @@ urlpatterns = [
     path("latest/", LatestTrainingPlanView.as_view(), name="training-latest"),
     path("day/<str:training_date>/", DayTrainingView.as_view(), name="training-day"),
     path("generate/", GenerateTrainingPlanView.as_view(), name="training-generate"),
+    path("days-range/", DayRangeView.as_view(), name="training-days-range"),
+    path("all-days/", AllDayTrainingsView.as_view(), name="training-all-days"),
 ]

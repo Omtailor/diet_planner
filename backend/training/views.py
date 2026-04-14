@@ -9,26 +9,95 @@ from .serializers import TrainingPlanSerializer, DayTrainingSerializer
 from .training_generator import generate_training_plan
 
 
+class DayRangeView(APIView):
+    """GET /api/training/days-range/?start=YYYY-MM-DD&end=YYYY-MM-DD"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start_str = request.query_params.get("start")
+        end_str = request.query_params.get("end")
+
+        try:
+            start = date.fromisoformat(start_str)
+            end = date.fromisoformat(end_str)
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD."}, status=400
+            )
+
+        days = DayTraining.objects.filter(
+            training_plan__user=request.user,
+            date__gte=start,
+            date__lte=end,
+        ).order_by("date")
+
+        if not days.exists():
+            return Response([], status=200)
+
+        return Response(DayTrainingSerializer(days, many=True).data)
+
+
 class WeeklyTrainingView(APIView):
     """GET /api/training/weekly/ — Get current week's training plan."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # We must return the latest plan chronologically. 
-        # If we prioritize a plan covering 'today', the newly generated
-        # future plans (e.g. Apr 17-19) would be hidden while the old plan
-        # (Apr 14-16) is still active.
+        today = date.today()
+
+        # First: find the plan whose date range contains today
         plan = (
-            TrainingPlan.objects.filter(user=request.user)
+            TrainingPlan.objects.filter(
+                user=request.user,
+                week_start_date__lte=today,
+                week_end_date__gte=today,
+            )
             .order_by("-week_start_date")
             .first()
         )
+
+        # Fallback: latest plan by start date
+        if not plan:
+            plan = (
+                TrainingPlan.objects.filter(user=request.user)
+                .order_by("-week_start_date")
+                .first()
+            )
 
         if not plan:
             return Response({"error": "No training plan found."}, status=404)
 
         return Response(TrainingPlanSerializer(plan).data)
+
+
+class AllDayTrainingsView(APIView):
+    """GET /api/training/all-days/ — All day trainings across all plans, merged and sorted."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        days = (
+            DayTraining.objects.filter(training_plan__user=request.user)
+            .order_by("date")
+            .select_related("training_plan")
+        )
+
+        if not days.exists():
+            return Response({"error": "No training plans found."}, status=404)
+
+        # Return merged metadata too so frontend knows overall date range
+        plans = TrainingPlan.objects.filter(user=request.user).order_by(
+            "-week_start_date"
+        )
+        latest = plans.first()
+
+        return Response(
+            {
+                "week_end_date": latest.week_end_date if latest else None,
+                "day_trainings": DayTrainingSerializer(days, many=True).data,
+            }
+        )
 
 
 class DayTrainingView(APIView):
@@ -62,32 +131,38 @@ class GenerateTrainingPlanView(APIView):
 
     def post(self, request):
         user = request.user
-        profile = getattr(user, 'profile', None)
+        profile = getattr(user, "profile", None)
 
         # ── Guard: no profile at all
         if not profile:
             return Response(
-                {'detail': 'PROFILE_INCOMPLETE', 'message': 'Please complete your profile first.'},
-                status=400
+                {
+                    "detail": "PROFILE_INCOMPLETE",
+                    "message": "Please complete your profile first.",
+                },
+                status=400,
             )
 
         # ── Guard: incomplete onboarding (check required fields)
-        required_fields = ['age', 'weight_kg', 'height_cm', 'goal', 'gender']
+        required_fields = ["age", "weight_kg", "height_cm", "goal", "gender"]
         missing = [f for f in required_fields if not getattr(profile, f, None)]
         if missing:
             return Response(
-                {'detail': 'PROFILE_INCOMPLETE', 'message': 'Please complete your onboarding first.'},
-                status=400
+                {
+                    "detail": "PROFILE_INCOMPLETE",
+                    "message": "Please complete your onboarding first.",
+                },
+                status=400,
             )
 
         # ── Guard: health_time_minutes is 0 (user has no time set)
-        if getattr(profile, 'health_time_minutes', 0) == 0:
+        if getattr(profile, "health_time_minutes", 0) == 0:
             return Response(
                 {
-                    'detail': 'HEALTH_TIME_ZERO',
-                    'message': 'Please set your daily health time before generating a training plan.'
+                    "detail": "HEALTH_TIME_ZERO",
+                    "message": "Please set your daily health time before generating a training plan.",
                 },
-                status=400
+                status=400,
             )
 
         # Support optional week_start from request body (for next-week generation)
@@ -103,8 +178,7 @@ class GenerateTrainingPlanView(APIView):
             week_start = date.today()  # ← start from today, not Monday
 
         existing = TrainingPlan.objects.filter(
-            user=request.user,
-            week_start_date=week_start
+            user=request.user, week_start_date=week_start
         ).first()
         if existing:
             return Response(TrainingPlanSerializer(existing).data, status=200)
@@ -135,5 +209,32 @@ class LatestTrainingPlanView(APIView):
             {
                 "week_start_date": plan.week_start_date,
                 "week_end_date": plan.week_end_date,
+            }
+        )
+
+
+class AllDayTrainingsView(APIView):
+    """GET /api/training/all-days/ — Get all training days across all plans."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        latest_plan = (
+            TrainingPlan.objects.filter(user=request.user)
+            .order_by("-week_start_date")
+            .first()
+        )
+
+        if not latest_plan:
+            return Response({"error": "No training plan found."}, status=404)
+
+        all_days = DayTraining.objects.filter(
+            training_plan__user=request.user
+        ).order_by("date")
+
+        return Response(
+            {
+                "week_end_date": latest_plan.week_end_date,
+                "day_trainings": DayTrainingSerializer(all_days, many=True).data,
             }
         )

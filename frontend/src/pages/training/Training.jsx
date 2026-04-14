@@ -147,61 +147,47 @@ export default function Training() {
   const [dateOffset, setDateOffset] = useState(0);
 
   const today = new Date();
-  const todayDow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayDow = today.getDay(); // 0=Sun, 1=Mon...
 
   useEffect(() => { fetchPlan(); checkNextPlan(); }, []);
 
   useEffect(() => {
-    if (!weekStripRef.current || !selectedDay) return;
-    const selected = weekStripRef.current.querySelector('[data-selected="true"]');
-    if (selected) {
-      selected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-  }, [selectedDay]);
-
-  useEffect(() => {
     if (!weekStripRef.current) return;
-    // Small delay ensures DOM has rendered before scrolling
     const t = setTimeout(() => {
       const selected = weekStripRef.current?.querySelector('[data-selected="true"]');
       if (selected) selected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }, 100);
     return () => clearTimeout(t);
-  }, [selectedDate]);
+  }, [selectedDate, plan]);
+
+
 
   // Sync selectedDay with selectedDate
   useEffect(() => {
     if (!plan?.day_trainings) return;
-    const matchingDay = plan.day_trainings.find(d => d.date === selectedDate);
-    setSelectedDay(matchingDay || null);
+    const match = plan.day_trainings.find(d => d.date === selectedDate) || null;
+    setSelectedDay(match);  // always set — null shows "No Plan for This Day"
     setExpandedEx(null);
   }, [selectedDate, plan]);
 
   const fetchPlan = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/training/weekly/');
+      const res = await API.get('/training/all-days/');
       setPlan(res.data);
-      const todayDay = res.data.day_trainings?.find(d => d.day_of_week === todayDow);
+
+      // On reload, prefer today's day, else first day
+      const todayDay = res.data.day_trainings?.find(d => d.date === todayStr);
       const initialDay = todayDay || res.data.day_trainings?.[0] || null;
       setSelectedDay(initialDay);
+      if (initialDay?.date) setSelectedDate(initialDay.date);
 
-      // ✅ Sync date strip to today's actual date from the plan
-      if (initialDay?.date) {
-        setSelectedDate(initialDay.date);
-      }
+      if (res.data?.week_end_date) setLatestPlanEndDate(res.data.week_end_date);
 
-      // ── ADD THIS — set end date directly from weekly plan response
-      if (res.data?.week_end_date) {
-        setLatestPlanEndDate(res.data.week_end_date);
-      }
-
-      // ── NEW: check profile health_time_minutes
       try {
         const profileRes = await API.get('/auth/profile/');
-        if (parseInt(profileRes.data.health_time_minutes) === 0) {
-          setHealthTimeZero(true);
-        }
+        if (parseInt(profileRes.data.health_time_minutes) === 0) setHealthTimeZero(true);
       } catch (_) { }
     } catch (e) {
       if (e?.response?.status === 404) setPlan(null);
@@ -210,7 +196,6 @@ export default function Training() {
       setLoading(false);
     }
   };
-
   const checkNextPlan = async () => {
     try {
       const res = await API.get('/training/latest/');
@@ -225,16 +210,9 @@ export default function Training() {
   const generatePlan = async () => {
     setGenerating(true);
     try {
-      const res = await API.post('/training/generate/');
-      setPlan(res.data);
-      const todayDay = res.data.day_trainings?.find(d => d.day_of_week === todayDow);
-      const initialDay = todayDay || res.data.day_trainings?.[0] || null;
-      setSelectedDay(initialDay);
-
-      // ✅ Sync date strip after generation too
-      if (initialDay?.date) {
-        setSelectedDate(initialDay.date);
-      }
+      await API.post('/training/generate/');
+      // Re-fetch all days so plan state is always from the merged endpoint
+      await fetchPlan();
       toast.success('Training plan generated! 🏋️‍♂️');
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     } catch (err) {
@@ -243,7 +221,6 @@ export default function Training() {
         setShowOnboardingBlocker(true)
       } else if (detail === 'HEALTH_TIME_ZERO') {
         setHealthTimeZero(true)
-        // Banner UI handles the feedback — no toast needed
       } else {
         toast.error('Failed to generate training plan')
       }
@@ -252,10 +229,26 @@ export default function Training() {
     }
   };
 
-  const handleDateChange = (dir) => {
-    const newOffset = dateOffset + dir;
-    setDateOffset(newOffset);
-    setSelectedDate(getDateStr(newOffset));
+  const allPlanDays = plan?.day_trainings || [];
+
+  const handlePrevDay = () => {
+    const idx = allPlanDays.findIndex(d => d.date === selectedDate);
+    if (idx > 0) {
+      const prev = allPlanDays[idx - 1];
+      setSelectedDay(prev);
+      setSelectedDate(prev.date);
+      setExpandedEx(null);
+    }
+  };
+
+  const handleNextDay = () => {
+    const idx = allPlanDays.findIndex(d => d.date === selectedDate);
+    if (idx < allPlanDays.length - 1) {
+      const next = allPlanDays[idx + 1];
+      setSelectedDay(next);
+      setSelectedDate(next.date);
+      setExpandedEx(null);
+    }
   };
 
   const handleGenerateNextPlan = async () => {
@@ -273,13 +266,20 @@ export default function Training() {
         : getDateStr(0);
 
       const res = await API.post('/training/generate/', { week_start: nextStart });
+      const firstDateOfNewPlan = res.data?.day_trainings?.[0]?.date;
 
-      await fetchPlan();
+      // Re-fetch ALL days (merges old + new plan days into one list)
+      await fetchPlan();          // ← this sets plan to merged all-days response
       await checkNextPlan();
       await fetchProfile();
 
-      setNextPlanExists(false);
+      // After fetchPlan sets the merged plan, jump to first day of new plan
+      if (firstDateOfNewPlan) {
+        setSelectedDate(firstDateOfNewPlan);   // useEffect sync will set selectedDay
+        setExpandedEx(null);
+      }
 
+      setNextPlanExists(false);
       toast.success('Next 3 days plan ready! 💪', {
         duration: 3500,
         style: { fontFamily: FONT, fontWeight: 700 },
@@ -322,7 +322,39 @@ export default function Training() {
     setShowExportModal(false);
     setExportPdfLoading(true);
     try {
-      const { jsPDF } = window.jspdf;
+      // ── Fetch ALL day trainings across ALL plans in the date range ──
+      let allDays = [];
+      try {
+        const res = await API.get(
+          `/training/days-range/?start=${exportStartDate}&end=${exportEndDate}`
+        );
+        allDays = res.data;
+      } catch {
+        // Fallback: use current plan's days filtered by date
+        const parseLocal = (s) => {
+          const [yr, mo, dy] = s.split('-').map(Number);
+          return new Date(yr, mo - 1, dy);
+        };
+        allDays = (plan?.day_trainings || []).filter(d => {
+          if (!d.date) return true;
+          const dt = parseLocal(d.date);
+          return dt >= parseLocal(exportStartDate) && dt <= parseLocal(exportEndDate);
+        });
+      }
+
+      if (!allDays.length) {
+        toast.error('No training data found for selected dates');
+        setExportPdfLoading(false);
+        return;
+      }
+
+      const { jsPDF } = window.jspdf || {};
+      if (!jsPDF) {
+        toast.error('PDF library not loaded. Please refresh and try again.');
+        setExportPdfLoading(false);
+        return;
+      }
+
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
       const pageW = 210, pageH = 297, M = 14, CW = pageW - M * 2;
@@ -364,18 +396,9 @@ export default function Training() {
 
       const needsBreak = (h) => { if (y + h > pageH - 16) newPage(); };
 
-      const parseLocal = (s) => {
-        const [yr, mo, dy] = s.split('-').map(Number);
-        return new Date(yr, mo - 1, dy);
-      };
-      const days = (plan.day_trainings || []).filter(d => {
-        if (!d.date) return true;
-        const dt = parseLocal(d.date);
-        return dt >= parseLocal(exportStartDate) && dt <= parseLocal(exportEndDate);
-      });
-      const totalWorkoutDays = days.filter(d => !d.is_rest_day).length;
-      const totalCals = days.reduce((s, d) => s + (d.total_calories_burned || 0), 0);
-      const totalMins = days.reduce((s, d) => s + (d.total_duration || 0), 0);
+      const totalWorkoutDays = allDays.filter(d => !d.is_rest_day).length;
+      const totalCals = allDays.reduce((s, d) => s + (d.total_calories_burned || 0), 0);
+      const totalMins = allDays.reduce((s, d) => s + (d.total_duration || 0), 0);
 
       newPage();
 
@@ -389,7 +412,7 @@ export default function Training() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(...MUTED);
-      const d0 = days[0]?.date, dN = days[days.length - 1]?.date;
+      const d0 = allDays[0]?.date, dN = allDays[allDays.length - 1]?.date;
       const fmt = (s) => new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
       if (d0 && dN) doc.text(`${fmt(d0)}  -  ${fmt(dN)}`, M + 6, y + 20);
       doc.setFont('helvetica', 'bold');
@@ -405,7 +428,7 @@ export default function Training() {
       y += 10;
 
       // ── Days loop ──
-      for (const day of days) {
+      for (const day of allDays) {
         const dateLabel = new Date(day.date).toLocaleDateString('en-IN', {
           weekday: 'long', day: 'numeric', month: 'long'
         });
@@ -849,7 +872,11 @@ export default function Training() {
                 <button
                   key={d}
                   data-selected={isSelected}
-                  onClick={() => { setSelectedDate(d); setDateOffset(0); }}
+                  onClick={() => {
+                    setSelectedDate(d);   // useEffect sync handles selectedDay
+                    setDateOffset(0);
+                    setExpandedEx(null);
+                  }}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                     gap: 6, padding: '10px 8px', borderRadius: 16, border: 'none',
@@ -882,7 +909,7 @@ export default function Training() {
 
           {/* ── Date Header ── */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px' }}>
-            <button onClick={() => handleDateChange(-1)} style={S.navBtn}>
+            <button onClick={handlePrevDay} style={S.navBtn}>
               <ChevronLeft size={20} color="var(--color-text)" />
             </button>
             <div style={{ textAlign: 'center' }}>
@@ -893,7 +920,7 @@ export default function Training() {
                 {formatFullDate(selectedDate)}
               </p>
             </div>
-            <button onClick={() => handleDateChange(1)} style={S.navBtn}>
+            <button onClick={handleNextDay} style={S.navBtn}>
               <ChevronRight size={20} color="var(--color-text)" />
             </button>
           </div>
