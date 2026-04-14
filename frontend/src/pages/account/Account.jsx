@@ -150,7 +150,14 @@ export default function Account() {
     { icon: '👤', label: 'Personal Info', sub: 'Name, age, city', key: 'personal' },
     { icon: '📊', label: 'Body Stats', sub: 'Weight, height, BMI', key: 'body' },
     { icon: '🎯', label: 'Goals & Diet', sub: 'Goal, diet preference', key: 'goals' },
-    { icon: '🏋️', label: 'Gym & Activity', sub: 'Gym, health time', key: 'gym' },
+    {
+      icon: '🏋️',
+      label: 'Gym & Activity',
+      sub: profile?.health_time_minutes === 0
+        ? '⚠️ Health time is 0 — tap to fix'
+        : `${profile?.health_time_minutes ?? 60} min/day · ${profile?.has_gym ? 'Gym' : 'No gym'}`,
+      key: 'gym'
+    },
     { icon: '🍔', label: 'Cheat Meal History', sub: 'Past cheat meals', key: 'cheat' },
     { icon: '🛒', label: 'Grocery List', sub: 'Weekly ingredients', key: 'grocery' },
   ]
@@ -490,7 +497,14 @@ export default function Account() {
 
             {activeSection === 'gym' && (
               <div>
-                <p style={S.modalDesc}>Update your gym schedule preference.</p>
+                <p style={S.modalDesc}>
+                  Update your gym schedule and daily health time.
+                  {profile?.health_time_minutes === 0 && (
+                    <span style={{ color: 'rgba(255,149,0,0.9)', fontWeight: 700 }}>
+                      {' '}Your health time is currently 0 — training plans won't generate until this is set.
+                    </span>
+                  )}
+                </p>
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
                   <input
@@ -503,16 +517,23 @@ export default function Account() {
                   </span>
                 </label>
 
-                <label style={{ ...S.fieldLabel, marginTop: '16px' }}>Health time (minutes)</label>
+                <label style={{ ...S.fieldLabel, marginTop: '16px' }}>Health Time (Minutes)</label>
                 <input
                   type="number"
                   inputMode="numeric"
-                  placeholder="e.g. 60"
-                  value={draft?.health_time_minutes ?? 60}
+                  placeholder="e.g. 30"
+                  value={draft?.health_time_minutes ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, health_time_minutes: e.target.value }))}
-                  disabled={!draft?.has_gym}
-                  style={{ ...S.modalInput, opacity: draft?.has_gym ? 1 : 0.6, cursor: draft?.has_gym ? 'text' : 'not-allowed' }}
+                  style={S.modalInput}
                 />
+                {(draft?.health_time_minutes === 0 || draft?.health_time_minutes === '0') && (
+                  <p style={{
+                    fontSize: '0.78rem', color: 'rgba(255,149,0,0.9)', fontWeight: 600,
+                    fontFamily: FONT, marginTop: '6px',
+                  }}>
+                    ⚠️ Setting this to 0 will disable training plan generation
+                  </p>
+                )}
 
                 <div style={S.modalActions}>
                   <button type="button" onClick={closeModal} style={S.modalSecondaryBtn}>
@@ -521,9 +542,13 @@ export default function Account() {
                   <button
                     type="button"
                     onClick={async () => {
-                      const minutesNum = draft?.health_time_minutes === '' ? 60 : Number(draft?.health_time_minutes)
+                      const minutesNum = draft?.health_time_minutes === '' ? 0 : Number(draft?.health_time_minutes)
                       if (Number.isNaN(minutesNum)) {
                         toast.error('Enter valid minutes')
+                        return
+                      }
+                      if (minutesNum < 0 || minutesNum > 300) {
+                        toast.error('Health time must be between 0 and 300 minutes')
                         return
                       }
                       setModalSaving(true)

@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
 
 from .models import TrainingPlan, DayTraining
 from .serializers import TrainingPlanSerializer, DayTrainingSerializer
@@ -14,23 +15,19 @@ class WeeklyTrainingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        today = date.today()
+        # We must return the latest plan chronologically. 
+        # If we prioritize a plan covering 'today', the newly generated
+        # future plans (e.g. Apr 17-19) would be hidden while the old plan
+        # (Apr 14-16) is still active.
         plan = (
-            TrainingPlan.objects.filter(
-                user=request.user,
-                week_start_date__lte=today,
-                week_end_date__gte=today,
-            )
+            TrainingPlan.objects.filter(user=request.user)
             .order_by("-week_start_date")
             .first()
         )
 
         if not plan:
-            return Response(
-                {"error": "No training plan found for this week."}, status=404
-            )
+            return Response({"error": "No training plan found."}, status=404)
 
-        # Added the missing return for the successful scenario
         return Response(TrainingPlanSerializer(plan).data)
 
 
@@ -83,6 +80,16 @@ class GenerateTrainingPlanView(APIView):
                 status=400
             )
 
+        # ── Guard: health_time_minutes is 0 (user has no time set)
+        if getattr(profile, 'health_time_minutes', 0) == 0:
+            return Response(
+                {
+                    'detail': 'HEALTH_TIME_ZERO',
+                    'message': 'Please set your daily health time before generating a training plan.'
+                },
+                status=400
+            )
+
         # Support optional week_start from request body (for next-week generation)
         week_start_str = request.data.get("week_start")
         if week_start_str:
@@ -95,8 +102,38 @@ class GenerateTrainingPlanView(APIView):
         else:
             week_start = date.today()  # ← start from today, not Monday
 
+        existing = TrainingPlan.objects.filter(
+            user=request.user,
+            week_start_date=week_start
+        ).first()
+        if existing:
+            return Response(TrainingPlanSerializer(existing).data, status=200)
+
         plan = generate_training_plan(request.user, profile, week_start=week_start)
         if not plan:
             return Response({"error": "Training plan generation failed."}, status=500)
 
         return Response(TrainingPlanSerializer(plan).data, status=201)
+
+
+class LatestTrainingPlanView(APIView):
+    """GET /api/training/latest/ metadata — end date for next plan calculation."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        plan = (
+            TrainingPlan.objects.filter(user=request.user)
+            .order_by("-week_start_date")
+            .first()
+        )
+
+        if not plan:
+            return Response({"detail": "No training plan found."}, status=404)
+
+        return Response(
+            {
+                "week_start_date": plan.week_start_date,
+                "week_end_date": plan.week_end_date,
+            }
+        )

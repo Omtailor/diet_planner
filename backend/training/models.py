@@ -18,13 +18,15 @@ class Exercise(models.Model):
     ]
 
     name = models.CharField(max_length=200)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     equipment = models.CharField(
         max_length=10, choices=EQUIPMENT_CHOICES, default="none"
     )
     duration_minutes = models.PositiveIntegerField(default=20)
     instructions = models.TextField(blank=True)
     calories_burned_per_min = models.FloatField(default=5.0)
+    sets = models.PositiveIntegerField(null=True, blank=True)
+    reps = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.category})"
@@ -69,6 +71,7 @@ class DayTraining(models.Model):
     date = models.DateField()
     exercises = models.ManyToManyField(Exercise, blank=True)
     is_rest_day = models.BooleanField(default=False)
+    day_notes = models.TextField(blank=True, default='')
 
     class Meta:
         ordering = ["date"]

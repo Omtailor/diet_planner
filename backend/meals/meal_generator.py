@@ -127,10 +127,14 @@ class MealPlanGenerator:
             "sunday": 6,
         }
 
-        fasting_raw = (self.profile.fasting_days or '').lower()
+        fasting_raw = (self.profile.fasting_days or "").lower()
         # Handle comma-separated AND strip whitespace
-        fasting_day_names = [d.strip() for d in fasting_raw.split(',') if d.strip()]
-        fasting_weekdays = {DAY_NAME_TO_WEEKDAY[d] for d in fasting_day_names if d in DAY_NAME_TO_WEEKDAY}
+        fasting_day_names = [d.strip() for d in fasting_raw.split(",") if d.strip()]
+        fasting_weekdays = {
+            DAY_NAME_TO_WEEKDAY[d]
+            for d in fasting_day_names
+            if d in DAY_NAME_TO_WEEKDAY
+        }
 
         fasting_indices = set()
         for i in range(3):
@@ -648,7 +652,9 @@ RETURN VALID JSON ONLY:
                     raw = response.text.strip()
                     break
                 except Exception as e:
-                    logger.warning(f"Day fetch failed ({model_name} attempt {attempt+1}): {e}")
+                    logger.warning(
+                        f"Day fetch failed ({model_name} attempt {attempt+1}): {e}"
+                    )
                     if attempt < max_attempts - 1:
                         time.sleep((attempt + 1) * 5)
             if raw:

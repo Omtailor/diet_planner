@@ -37,14 +37,6 @@ def run_background_tasks(user, profile, week_start=None):
         logger.error("[BG] Grocery generation failed for user %s: %s",
                      user.id, e, exc_info=True)
 
-    try:
-        from training.training_generator import generate_training_plan
-        if week_start:
-            generate_training_plan(user, profile, week_start=week_start)
-    except Exception as e:
-        logger.error("[BG] Training generation failed for user %s: %s",
-                     user.id, e, exc_info=True)
-
     close_old_connections()
 
 class WeeklyPlanView(APIView):

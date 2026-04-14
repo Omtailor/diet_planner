@@ -11,6 +11,8 @@ class ExerciseSerializer(serializers.ModelSerializer):
             "category",
             "equipment",
             "duration_minutes",
+            "sets",
+            "reps",
             "instructions",
             "calories_burned_per_min",
         ]
@@ -30,6 +32,7 @@ class DayTrainingSerializer(serializers.ModelSerializer):
             "day_name",
             "date",
             "is_rest_day",
+            "day_notes",
             "exercises",
             "total_duration",
             "total_calories_burned",
@@ -59,6 +62,7 @@ class TrainingPlanSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "week_start_date",
+            "week_end_date",
             "is_active",
             "created_at",
             "day_trainings",

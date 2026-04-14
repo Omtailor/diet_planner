@@ -4,6 +4,7 @@ import { Loader2, ChevronLeft, ChevronRight, RotateCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import API from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 // ── Date helpers (same as Nutrition.jsx) ──
 function getDateStr(offset = 0) {
@@ -47,9 +48,9 @@ function getWeekDays(centerDate) {
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const CATEGORY_META = {
-  strength: { icon: '🏋️', color: '#34C759', glow: 'rgba(52,199,89,0.4)', bg: 'rgba(52,199,89,0.1)' },
+  strength: { icon: '🏋️‍♂️', color: '#34C759', glow: 'rgba(52,199,89,0.4)', bg: 'rgba(52,199,89,0.1)' },
   cardio: { icon: '🏃', color: '#FF9500', glow: 'rgba(255,149,0,0.4)', bg: 'rgba(255,149,0,0.1)' },
-  flexibility: { icon: '🧘', color: '#AF52DE', glow: 'rgba(175,82,222,0.4)', bg: 'rgba(175,82,222,0.1)' },
+  flexibility: { icon: '🤸‍♂️', color: '#AF52DE', glow: 'rgba(175,82,222,0.4)', bg: 'rgba(175,82,222,0.1)' },
   bodyweight: { icon: '💪', color: '#007AFF', glow: 'rgba(0,122,255,0.4)', bg: 'rgba(0,122,255,0.1)' },
 };
 
@@ -109,6 +110,7 @@ function NeedleBar({ value, max, color, glow }) {
 // ─── Main Export ───────────────────────────────────────────────
 export default function Training() {
   const navigate = useNavigate()
+  const { fetchProfile } = useAuth()
   const [plan, setPlan] = useState(null);
   const weekStripRef = useRef(null);
   const [exportPdfLoading, setExportPdfLoading] = useState(false);
@@ -129,9 +131,16 @@ export default function Training() {
   });
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [regenPulse, setRegenPulse] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [expandedEx, setExpandedEx] = useState(null);
-  const [regenPulse, setRegenPulse] = useState(false);
+  const [generatingNextPlan, setGeneratingNextPlan] = useState(false);
+  const [nextPlanExists, setNextPlanExists] = useState(false);
+  const [latestPlanEndDate, setLatestPlanEndDate] = useState(null);
+  const [healthTimeZero, setHealthTimeZero] = useState(false);
+  const [showTimeEditor, setShowTimeEditor] = useState(false);
+  const [newHealthTime, setNewHealthTime] = useState('');
+  const [savingHealthTime, setSavingHealthTime] = useState(false);
 
   // ── Date strip state ──
   const [selectedDate, setSelectedDate] = useState(getDateStr(0));
@@ -140,7 +149,7 @@ export default function Training() {
   const today = new Date();
   const todayDow = today.getDay() === 0 ? 6 : today.getDay() - 1;
 
-  useEffect(() => { fetchPlan(); }, []);
+  useEffect(() => { fetchPlan(); checkNextPlan(); }, []);
 
   useEffect(() => {
     if (!weekStripRef.current || !selectedDay) return;
@@ -162,12 +171,10 @@ export default function Training() {
 
   // Sync selectedDay with selectedDate
   useEffect(() => {
-    if (!plan || !plan.day_trainings) return;
+    if (!plan?.day_trainings) return;
     const matchingDay = plan.day_trainings.find(d => d.date === selectedDate);
-    if (matchingDay) {
-      setSelectedDay(matchingDay);
-      setExpandedEx(null);
-    }
+    setSelectedDay(matchingDay || null);
+    setExpandedEx(null);
   }, [selectedDate, plan]);
 
   const fetchPlan = async () => {
@@ -183,6 +190,19 @@ export default function Training() {
       if (initialDay?.date) {
         setSelectedDate(initialDay.date);
       }
+
+      // ── ADD THIS — set end date directly from weekly plan response
+      if (res.data?.week_end_date) {
+        setLatestPlanEndDate(res.data.week_end_date);
+      }
+
+      // ── NEW: check profile health_time_minutes
+      try {
+        const profileRes = await API.get('/auth/profile/');
+        if (parseInt(profileRes.data.health_time_minutes) === 0) {
+          setHealthTimeZero(true);
+        }
+      } catch (_) { }
     } catch (e) {
       if (e?.response?.status === 404) setPlan(null);
       else toast.error('Failed to load training plan');
@@ -191,10 +211,19 @@ export default function Training() {
     }
   };
 
+  const checkNextPlan = async () => {
+    try {
+      const res = await API.get('/training/latest/');
+      setLatestPlanEndDate(res.data?.week_end_date || null);
+      setNextPlanExists(false);
+    } catch {
+      setLatestPlanEndDate(null);
+      setNextPlanExists(false);
+    }
+  };
+
   const generatePlan = async () => {
     setGenerating(true);
-    setRegenPulse(true);
-    setTimeout(() => setRegenPulse(false), 600);
     try {
       const res = await API.post('/training/generate/');
       setPlan(res.data);
@@ -206,12 +235,15 @@ export default function Training() {
       if (initialDay?.date) {
         setSelectedDate(initialDay.date);
       }
-      toast.success('Training plan generated! 💪');
+      toast.success('Training plan generated! 🏋️‍♂️');
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     } catch (err) {
       const detail = err?.response?.data?.detail
       if (detail === 'PROFILE_INCOMPLETE') {
         setShowOnboardingBlocker(true)
+      } else if (detail === 'HEALTH_TIME_ZERO') {
+        setHealthTimeZero(true)
+        // Banner UI handles the feedback — no toast needed
       } else {
         toast.error('Failed to generate training plan')
       }
@@ -224,6 +256,66 @@ export default function Training() {
     const newOffset = dateOffset + dir;
     setDateOffset(newOffset);
     setSelectedDate(getDateStr(newOffset));
+  };
+
+  const handleGenerateNextPlan = async () => {
+    setGeneratingNextPlan(true);
+    try {
+      const nextStart = latestPlanEndDate
+        ? (() => {
+          const d = new Date(latestPlanEndDate);
+          d.setDate(d.getDate() + 1);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}`;
+        })()
+        : getDateStr(0);
+
+      const res = await API.post('/training/generate/', { week_start: nextStart });
+
+      await fetchPlan();
+      await checkNextPlan();
+      await fetchProfile();
+
+      setNextPlanExists(false);
+
+      toast.success('Next 3 days plan ready! 💪', {
+        duration: 3500,
+        style: { fontFamily: FONT, fontWeight: 700 },
+      });
+    } catch (e) {
+      if (e?.response?.status === 400) {
+        toast.error(e.response.data?.message || 'Cannot generate plan.')
+      } else {
+        toast.error('Failed to generate next plan. Try again.')
+      }
+    } finally {
+      setGeneratingNextPlan(false);
+    }
+  };
+
+  const handleSaveHealthTime = async () => {
+    const val = parseInt(newHealthTime)
+    if (!val || val < 1 || val > 300) {
+      toast.error('Please enter a valid time between 1–300 minutes')
+      return
+    }
+    setSavingHealthTime(true)
+    try {
+      await API.patch('/auth/profile/', { health_time_minutes: val })
+      await fetchProfile()
+      setHealthTimeZero(false)
+      setShowTimeEditor(false)
+      toast.success('Updated! Now generate your training plan', {
+        duration: 3500,
+        style: { fontFamily: FONT, fontWeight: 700 },
+      })
+    } catch {
+      toast.error('Failed to save. Please try again.')
+    } finally {
+      setSavingHealthTime(false)
+    }
   };
 
   const handleExportPdf = async () => {
@@ -478,7 +570,7 @@ export default function Training() {
 
   const isRestDay = selectedDay?.is_rest_day ?? false;
 
-  // ── Loading ────────────────────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────────
   if (loading) return (
     <div style={S.page}>
       <div style={S.centeredContent}>
@@ -489,7 +581,7 @@ export default function Training() {
     </div>
   );
 
-  // ── Onboarding Blocker ──────────────────────────────────────────────
+  // ── Onboarding Blocker ─────────────────────────────────────────
   if (showOnboardingBlocker) {
     return (
       <div style={{
@@ -577,31 +669,123 @@ export default function Training() {
     )
   }
 
-  // ── No Plan ────────────────────────────────────────────────
+  // ── No Plan ────────────────────────────────────────────────────
   if (!plan) return (
     <div style={S.page}>
-      <div style={{ position: 'relative', zIndex: 2, padding: '24px 16px' }}>
-        <div style={S.glassCard}>
-          <span style={{ fontSize: '3.5rem' }}>🏋️</span>
-          <p style={S.noPlanTitle}>No Training Plan Yet</p>
-          <p style={S.noPlanSub}>
-            Generate your personalized weekly workout plan based on your profile and goals.
-          </p>
+      <div style={{ position: 'relative', zIndex: 2, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* ── Zero Health Time Banner (shown instead of generate button when time is 0) ── */}
+        {healthTimeZero && !showTimeEditor && (
           <button
-            onClick={generatePlan}
-            disabled={generating}
-            style={{ ...S.generateBtn, opacity: generating ? 0.8 : 1 }}
-            className={regenPulse ? 'regen-pulse' : ''}
+            onClick={() => setShowTimeEditor(true)}
+            style={{
+              width: '100%', ...GLASS_WHITE, borderRadius: 20,
+              padding: '18px 18px', display: 'flex', alignItems: 'center', gap: 14,
+              border: '1.5px solid rgba(255,149,0,0.35)',
+              background: 'rgba(255,149,0,0.06)', cursor: 'pointer', textAlign: 'left',
+            }}
           >
-            {generating
-              ? <><Loader2 size={16} className="spin" style={{ marginRight: 6 }} /> Generating...</>
-              : '⚡ Generate Training Plan'}
+            <div style={{
+              width: 50, height: 50, borderRadius: 14, background: 'rgba(255,149,0,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.5rem', flexShrink: 0,
+            }}>⏱️</div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '1rem', color: 'var(--color-text)' }}>
+                Your daily health time is set to 0
+              </p>
+              <p style={{ fontFamily: FONT, fontSize: '0.82rem', color: 'rgba(255,149,0,0.95)', fontWeight: 600, marginTop: 4 }}>
+                Tap here to set it and unlock your training plan ✨
+              </p>
+            </div>
+            <ChevronRight size={20} color="rgba(255,149,0,0.8)" style={{ flexShrink: 0 }} />
           </button>
-        </div>
+        )}
+
+        {/* ── Inline Time Editor ── */}
+        {healthTimeZero && showTimeEditor && (
+          <div style={{
+            ...GLASS_WHITE, borderRadius: 20, padding: '20px 18px',
+            border: '1.5px solid rgba(255,149,0,0.3)', background: 'rgba(255,149,0,0.05)',
+            display: 'flex', flexDirection: 'column', gap: 14,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1.3rem' }}>⏱️</span>
+              <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '1rem', color: 'var(--color-text)' }}>
+                How many minutes can you spare daily?
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {[20, 30, 45, 60].map(t => (
+                <button key={t} onClick={() => setNewHealthTime(String(t))} style={{
+                  flex: 1, padding: '10px 0', borderRadius: 12,
+                  border: `1.5px solid ${newHealthTime === String(t) ? 'var(--color-accent)' : 'rgba(0,0,0,0.08)'}`,
+                  background: newHealthTime === String(t) ? 'rgba(52,199,89,0.12)' : 'rgba(255,255,255,0.7)',
+                  fontFamily: FONT, fontWeight: 700, fontSize: '0.9rem',
+                  color: newHealthTime === String(t) ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                  cursor: 'pointer',
+                }}>
+                  {t}m
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <input
+                type="number" placeholder="Or type custom (1–300)"
+                value={newHealthTime} onChange={e => setNewHealthTime(e.target.value)}
+                min={1} max={300}
+                style={{
+                  flex: 1, padding: '12px 14px', borderRadius: 12,
+                  border: '1px solid rgba(0,0,0,0.1)', fontFamily: FONT, fontSize: '1rem',
+                  background: 'rgba(255,255,255,0.8)', outline: 'none', color: 'var(--color-text)',
+                }}
+              />
+              <button
+                onClick={handleSaveHealthTime}
+                disabled={savingHealthTime || !newHealthTime}
+                style={{
+                  padding: '12px 20px', borderRadius: 12,
+                  background: !newHealthTime ? 'rgba(0,0,0,0.08)' : 'var(--color-accent)',
+                  border: 'none',
+                  color: !newHealthTime ? 'var(--color-text-muted)' : '#fff',
+                  fontFamily: FONT, fontWeight: 700, fontSize: '0.9rem',
+                  cursor: !newHealthTime ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                }}
+              >
+                {savingHealthTime ? <Loader2 size={16} className="spin" /> : 'Save ✓'}
+              </button>
+            </div>
+            <button onClick={() => setShowTimeEditor(false)} style={{
+              background: 'none', border: 'none', fontFamily: FONT, fontSize: '0.8rem',
+              color: 'var(--color-text-faint)', cursor: 'pointer', textAlign: 'center',
+            }}>
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* ── Normal No Plan card (only shown when health time is valid) ── */}
+        {!healthTimeZero && (
+          <div style={S.glassCard}>
+            <span style={{ fontSize: '3.5rem' }}>🏋️</span>
+            <p style={S.noPlanTitle}>No Training Plan Yet</p>
+            <p style={S.noPlanSub}>Generate your personalized weekly workout plan based on your profile and goals.</p>
+            <button onClick={generatePlan} disabled={generating}
+              style={{ ...S.generateBtn, opacity: generating ? 0.8 : 1 }}
+              className={regenPulse ? 'regen-pulse' : ''}>
+              {generating
+                ? <><Loader2 size={16} className="spin" style={{ marginRight: 6 }} />Generating...</>
+                : 'Generate Training Plan'
+              }
+            </button>
+          </div>
+        )}
+
       </div>
       <GlobalStyles />
     </div>
-  );
+  )
 
   const days = plan.day_trainings || [];
   const totalWorkoutDays = days.filter(d => !d.is_rest_day).length;
@@ -610,32 +794,32 @@ export default function Training() {
 
   return (
     <div style={S.page}>
+      {/* ── Next Plan Generation Overlay ── */}
+      {generatingNextPlan && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(255,255,255,0.97)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 12, padding: 32,
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+        }}>
+          <div style={{ fontSize: '3.5rem', animation: 'pulse 1.5s ease-in-out infinite' }}>🏋️</div>
+          <p style={{ fontFamily: FONT, fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-text)', textAlign: 'center' }}>
+            Building your next training plan...
+          </p>
+          <p style={{ fontFamily: FONT, fontSize: '0.9rem', color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: 260 }}>
+            Crafting 3 personalised workout days for you
+          </p>
+          <p style={{ fontFamily: FONT, fontSize: '0.75rem', color: 'var(--color-text-faint)', marginTop: 8, textAlign: 'center' }}>
+            This only takes a few seconds ⚡
+          </p>
+        </div>
+      )}
+
       {/* ── Content ── */}
       <div style={{ position: 'relative', zIndex: 2 }}>
-
-        {/* Hero Header (Clean Glass Top Bar) */}
-        <div style={S.heroHeader}>
-          <div style={S.heroOverlay}>
-            <div style={{ flex: 1 }}>
-              <p style={S.heroLabel}>THIS WEEK'S PLAN</p>
-              <h1 style={S.heroTitle}>{totalWorkoutDays} Workout Days 💪</h1>
-              <p style={S.heroSub}>
-                {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m total
-              </p>
-            </div>
-            <button
-              onClick={generatePlan}
-              disabled={generating}
-              style={S.regenBtn}
-              className={regenPulse ? 'regen-pulse' : ''}
-              title="Regenerate plan"
-            >
-              {generating
-                ? <Loader2 size={18} className="spin" color="var(--color-text)" />
-                : <RotateCcw size={18} color="var(--color-text)" />}
-            </button>
-          </div>
-        </div>
 
         {/* Body */}
         <div style={S.body}>
@@ -713,12 +897,13 @@ export default function Training() {
               <ChevronRight size={20} color="var(--color-text)" />
             </button>
           </div>
-
-          <StatsRow
-            totalWorkoutDays={totalWorkoutDays}
-            totalCalsBurned={totalCalsBurned}
-            totalMinutes={totalMinutes}
-          />
+          {!selectedDay && plan && (
+            <div style={S.glassCard}>
+              <span style={{ fontSize: '2.5rem' }}>📅</span>
+              <p style={S.noPlanTitle}>No Plan for This Day</p>
+              <p style={S.noPlanSub}>No training plan was generated for this date.</p>
+            </div>
+          )}
           {selectedDay && (
             <DayDetail
               key={selectedDay.id}
@@ -728,6 +913,189 @@ export default function Training() {
             />
           )}
           <div style={{ height: '20px' }} />
+
+          {/* ── Zero Health Time Banner ── */}
+          {healthTimeZero && !showTimeEditor && (
+            <button
+              onClick={() => setShowTimeEditor(true)}
+              style={{
+                width: '100%',
+                ...GLASS_WHITE,
+                borderRadius: 20,
+                padding: '16px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                border: '1.5px solid rgba(255, 149, 0, 0.35)',
+                background: 'rgba(255,149,0,0.06)',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{
+                width: 46, height: 46, borderRadius: 14,
+                background: 'rgba(255,149,0,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.4rem', flexShrink: 0,
+              }}>⏱️</div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text)' }}>
+                  You set health time to 0 minutes
+                </p>
+                <p style={{ fontFamily: FONT, fontSize: '0.8rem', color: 'rgba(255,149,0,0.9)', fontWeight: 600, marginTop: 3 }}>
+                  Tap here to update it and unlock training plans ✨
+                </p>
+              </div>
+              <ChevronRight size={20} color="rgba(255,149,0,0.8)" style={{ flexShrink: 0 }} />
+            </button>
+          )}
+
+          {/* ── Inline Time Editor (shown after tap) ── */}
+          {healthTimeZero && showTimeEditor && (
+            <div style={{
+              ...GLASS_WHITE,
+              borderRadius: 20,
+              padding: '20px 18px',
+              border: '1.5px solid rgba(255,149,0,0.3)',
+              background: 'rgba(255,149,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: '1.3rem' }}>⏱️</span>
+                <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '1rem', color: 'var(--color-text)' }}>
+                  How many minutes can you spare daily?
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {[20, 30, 45, 60].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setNewHealthTime(String(t))}
+                    style={{
+                      flex: 1, padding: '10px 0',
+                      borderRadius: 12,
+                      border: `1.5px solid ${newHealthTime === String(t) ? 'var(--color-accent)' : 'rgba(0,0,0,0.08)'}`,
+                      background: newHealthTime === String(t) ? 'rgba(52,199,89,0.12)' : 'rgba(255,255,255,0.7)',
+                      fontFamily: FONT, fontWeight: 700, fontSize: '0.9rem',
+                      color: newHealthTime === String(t) ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {t}m
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <input
+                  type="number"
+                  placeholder="Or type custom (1–300)"
+                  value={newHealthTime}
+                  onChange={e => setNewHealthTime(e.target.value)}
+                  min={1} max={300}
+                  style={{
+                    flex: 1, padding: '12px 14px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    fontFamily: FONT, fontSize: '1rem',
+                    background: 'rgba(255,255,255,0.8)',
+                    outline: 'none',
+                    color: 'var(--color-text)',
+                  }}
+                />
+                <button
+                  onClick={handleSaveHealthTime}
+                  disabled={savingHealthTime || !newHealthTime}
+                  style={{
+                    padding: '12px 20px',
+                    borderRadius: 12,
+                    background: !newHealthTime ? 'rgba(0,0,0,0.08)' : 'var(--color-accent)',
+                    border: 'none',
+                    color: !newHealthTime ? 'var(--color-text-muted)' : '#fff',
+                    fontFamily: FONT, fontWeight: 700, fontSize: '0.9rem',
+                    cursor: !newHealthTime ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    flexShrink: 0,
+                  }}
+                >
+                  {savingHealthTime
+                    ? <Loader2 size={16} className="spin" />
+                    : 'Save ✓'
+                  }
+                </button>
+              </div>
+              <button
+                onClick={() => setShowTimeEditor(false)}
+                style={{
+                  background: 'none', border: 'none',
+                  fontFamily: FONT, fontSize: '0.8rem',
+                  color: 'var(--color-text-faint)', cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* ── Generate Next 3 Days (shown only after health time is fixed) ── */}
+          {!healthTimeZero && (
+            nextPlanExists ? (
+              <div style={{
+                ...GLASS_WHITE,
+                borderRadius: '20px', padding: '14px 16px',
+                display: 'flex', alignItems: 'center', gap: '12px',
+                border: '1px solid rgba(52,199,89,0.2)',
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>✅</span>
+                <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-muted)', fontFamily: FONT }}>
+                  Next training plan is ready
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={handleGenerateNextPlan}
+                disabled={generatingNextPlan}
+                style={{
+                  width: '100%', ...GLASS_WHITE,
+                  borderRadius: '20px', padding: '16px',
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  cursor: generatingNextPlan ? 'not-allowed' : 'pointer',
+                  border: '1px solid rgba(52,199,89,0.25)',
+                  transition: 'all 180ms ease',
+                }}
+              >
+                <div style={{
+                  width: '48px', height: '48px',
+                  background: 'rgba(52,199,89,0.15)', borderRadius: '14px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.4rem', flexShrink: 0,
+                }}>🗓️</div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)', fontFamily: FONT }}>
+                    Generate Next 3 Days Plan
+                  </p>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 500, fontFamily: FONT, marginTop: '2px', color: 'var(--color-text-muted)' }}>
+                    {latestPlanEndDate
+                      ? (() => {
+                        const start = new Date(latestPlanEndDate);
+                        start.setDate(start.getDate() + 1);
+                        const end = new Date(start);
+                        end.setDate(end.getDate() + 2);
+                        const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                        return `${fmt(start)} – ${fmt(end)} · 3 day plan`;
+                      })()
+                      : 'Extend your training into the next 3 days'}
+                  </p>
+                </div>
+                {generatingNextPlan
+                  ? <Loader2 size={20} color="var(--color-accent)" style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                  : <ChevronRight size={20} color="var(--color-accent)" style={{ flexShrink: 0 }} />
+                }
+              </button>
+            )
+          )}
 
           {/* ── Export PDF ── */}
           <button
@@ -874,29 +1242,7 @@ export default function Training() {
   );
 }
 
-// ─── Stats Row ─────────────────────────────────────────────────
-function StatsRow({ totalWorkoutDays, totalCalsBurned, totalMinutes }) {
-  const animCals = useCountUp(totalCalsBurned);
-  const animMins = useCountUp(totalMinutes);
 
-  const stats = [
-    { label: 'Workout Days', value: totalWorkoutDays, icon: '🗓️' },
-    { label: 'Kcal Burned', value: animCals, icon: '🔥' },
-    { label: 'Total Mins', value: animMins, icon: '⏱️' },
-  ];
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-      {stats.map(({ label, value, icon }) => (
-        <div key={label} style={S.statBox}>
-          <span style={{ fontSize: '1.3rem' }}>{icon}</span>
-          <span style={S.statVal}>{value}</span>
-          <span style={S.statLabel}>{label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ─── Day Strip ─────────────────────────────────────────────────
 function DayStrip({ days, selectedDay, todayDow, onSelect, stripRef }) {
@@ -1146,6 +1492,10 @@ function GlobalStyles() {
         from { opacity:0; transform:translateY(16px); }
         to   { opacity:1; transform:translateY(0); }
       }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+      }
 
       .spin       { animation: spin 0.8s linear infinite; }
       .spin-ring  { animation: spin 0.9s linear infinite; }
@@ -1218,64 +1568,10 @@ const S = {
     transition: 'transform 150ms ease',
   },
 
-  // ── Hero Top Bar ──
-  heroHeader: {
-    position: 'relative', width: '100%',
-    padding: '16px', paddingTop: '16px', // padding to clear navbar
-  },
-  heroOverlay: {
-    ...GLASS_WHITE,
-    borderRadius: '20px',
-    display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', gap: '16px',
-    padding: '24px',
-  },
-  heroLabel: {
-    fontSize: '0.7rem', fontWeight: 700,
-    color: 'var(--color-accent)',
-    letterSpacing: '1.5px', textTransform: 'uppercase',
-    fontFamily: FONT, marginBottom: '6px',
-  },
-  heroTitle: {
-    fontFamily: FONT, fontSize: '1.6rem', fontWeight: 800,
-    color: 'var(--color-text)', lineHeight: 1.2,
-  },
-  heroSub: {
-    fontSize: '0.9rem', color: 'var(--color-text-muted)',
-    fontFamily: FONT, marginTop: '6px', fontWeight: 500,
-  },
-  regenBtn: {
-    width: '48px', height: '48px',
-    background: 'rgba(255,255,255,0.8)',
-    border: '1px solid rgba(0,0,0,0.05)',
-    borderRadius: '16px', flexShrink: 0,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-    transition: 'all 200ms ease',
-  },
-
   // ── Body ──
   body: {
     padding: '0 16px',
     display: 'flex', flexDirection: 'column', gap: '16px',
-  },
-
-  // ── Stats ──
-  statBox: {
-    ...GLASS_WHITE,
-    borderRadius: '20px', padding: '16px 8px',
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', gap: '6px',
-  },
-  statVal: {
-    fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800,
-    color: 'var(--color-text)',
-  },
-  statLabel: {
-    fontSize: '0.65rem', fontWeight: 700,
-    color: 'var(--color-text-muted)', fontFamily: FONT,
-    textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center',
   },
 
   // ── Day Header Card ──
