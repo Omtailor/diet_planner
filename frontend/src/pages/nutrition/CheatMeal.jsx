@@ -331,16 +331,16 @@ export default function CheatMeal() {
 
 // ── Styles ────────────────────────────────────────────────────────
 const s = {
-  page: { 
-    display: 'flex', flexDirection: 'column', gap: 16, padding: '16px' 
+  page: {
+    display: 'flex', flexDirection: 'column', gap: 16, padding: '16px'
   },
-  header: { 
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' 
+  header: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0'
   },
   backBtn: {
-    width: 44, height: 44, 
+    width: 44, height: 44,
     background: 'rgba(255,255,255,0.6)',
-    border: '1px solid rgba(0,0,0,0.04)', 
+    border: '1px solid rgba(0,0,0,0.04)',
     borderRadius: 14,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
@@ -390,7 +390,7 @@ const s = {
   uploadZone: {
     width: '100%', display: 'flex', flexDirection: 'column',
     alignItems: 'center', padding: '40px 16px',
-    background: 'rgba(255,255,255,0.4)', 
+    background: 'rgba(255,255,255,0.4)',
     border: '2px dashed rgba(0,0,0,0.1)',
     borderRadius: 20, cursor: 'pointer',
     transition: 'background 200ms ease'

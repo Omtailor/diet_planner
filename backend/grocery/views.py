@@ -1,9 +1,9 @@
 from datetime import date, timedelta, datetime
+from httpx import request
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser
-
 from .models import GroceryList, GroceryItem
 from .serializers import GroceryListSerializer
 from .grocery_generator import generate_grocery_list
@@ -16,8 +16,9 @@ class GroceryListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        start_date = request.query_params.get("start_date")
-        end_date = request.query_params.get("end_date")
+        grocery = GroceryList.objects.get(user=request.user)
+        serializer = GroceryListSerializer(grocery)
+        return Response(serializer.data)
 
         # ── Custom date range: build grocery on the fly from meal slots ──
         if start_date and end_date:
