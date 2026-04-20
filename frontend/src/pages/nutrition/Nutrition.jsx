@@ -543,20 +543,28 @@ export default function Nutrition() {
     }, 3000)
   }
 
+
   const handleRegenerate = async () => {
-    setRegenerating(true)
-    setLoading(true)
-    setDayMeal(null)
-    try {
-      await mealService.regenerateDay(selectedDate)
-      await fetchDayMeal(selectedDate)
-      toast.success('Day meals regenerated! 🔄')
-    } catch {
-      toast.error('Failed to regenerate')
-    } finally {
-      setRegenerating(false)
+    if (!dayMeal) {
+      toast("Generate a plan first!", {
+        icon: "🍽️",
+      });
+      return;
     }
-  }
+
+    setRegenerating(true);
+    setLoading(true);
+    setDayMeal(null);
+    try {
+      await mealService.regenerateDay(selectedDate);
+      await fetchDayMeal(selectedDate);
+      toast.success("Day meals regenerated!");
+    } catch {
+      toast.error("Failed to regenerate");
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   const handleGenerateNextWeek = async () => {
     setGeneratingNextWeek(true);
