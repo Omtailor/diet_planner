@@ -21,7 +21,7 @@ def _safe_int(value, default=None):
         return value
     if isinstance(value, float):
         return int(value)
-    match = re.search(r'\d+', str(value))
+    match = re.search(r"\d+", str(value))
     return int(match.group()) if match else default
 
 
@@ -49,17 +49,17 @@ def _build_profile_context(profile):
     Build a rich, human-readable profile context string for the prompt.
     Covers all personalization dimensions.
     """
-    has_gym     = getattr(profile, "has_gym", False)
-    age         = getattr(profile, "age", 25)
-    weight      = getattr(profile, "weight_kg", 70)
-    height      = getattr(profile, "height_cm", 170)
-    goal        = getattr(profile, "goal", "general_fitness")
-    gender      = getattr(profile, "gender", "male")
+    has_gym = getattr(profile, "has_gym", False)
+    age = getattr(profile, "age", 25)
+    weight = getattr(profile, "weight_kg", 70)
+    height = getattr(profile, "height_cm", 170)
+    goal = getattr(profile, "goal", "general_fitness")
+    gender = getattr(profile, "gender", "male")
     health_mins = getattr(profile, "health_time_minutes", 60)
-    activity    = getattr(profile, "activity_level", "moderate")
-    injuries    = getattr(profile, "injuries", "") or "none"
-    diet        = getattr(profile, "diet_preference", "non_veg")
-    target_wt   = getattr(profile, "target_weight_kg", None)
+    activity = getattr(profile, "activity_level", "moderate")
+    injuries = getattr(profile, "injuries", "") or "none"
+    diet = getattr(profile, "diet_preference", "non_veg")
+    target_wt = getattr(profile, "target_weight_kg", None)
 
     # Fallback: should never reach here due to view guard, but safety net
     if health_mins == 0:
@@ -90,9 +90,7 @@ def _build_profile_context(profile):
 
     # Equipment string
     if has_gym:
-        equipment_str = (
-            "Full gym access: barbells, dumbbells, cables, machines, pull-up bar, bench, squat rack."
-        )
+        equipment_str = "Full gym access: barbells, dumbbells, cables, machines, pull-up bar, bench, squat rack."
     else:
         equipment_str = (
             "Home/outdoor only: bodyweight exercises, resistance bands (if available). "
@@ -129,13 +127,19 @@ def _build_profile_context(profile):
 
     # Age-specific notes
     if age < 18:
-        age_note = "Teenager: avoid heavy spinal loading, focus on bodyweight and technique."
+        age_note = (
+            "Teenager: avoid heavy spinal loading, focus on bodyweight and technique."
+        )
     elif age < 30:
-        age_note = "Young adult: can handle high intensity, focus on progressive overload."
+        age_note = (
+            "Young adult: can handle high intensity, focus on progressive overload."
+        )
     elif age < 40:
         age_note = "Prime age: balanced intensity, incorporate mobility work."
     elif age < 50:
-        age_note = "Late 30s/40s: reduce high-impact, prioritize joint health and recovery."
+        age_note = (
+            "Late 30s/40s: reduce high-impact, prioritize joint health and recovery."
+        )
     elif age < 60:
         age_note = "50s: low-impact cardio preferred, focus on functional strength and flexibility."
     else:
@@ -143,19 +147,19 @@ def _build_profile_context(profile):
 
     # Goal-specific notes
     goal_note = {
-        "fat_loss":       "Fat loss: HIIT, circuit training, compound lifts with short rest. Calorie burn priority.",
-        "weight_loss":    "Weight loss: moderate cardio + full-body strength. Consistent moderate intensity.",
-        "muscle_building":"Muscle building: progressive overload, compound lifts (squat/bench/deadlift/row), higher volume.",
-        "maintenance":    "Maintenance: balanced mix of strength and cardio. Keep current fitness level.",
-        "general_fitness":"General fitness: balanced push/pull/legs split across 3 days.",
+        "fat_loss": "Fat loss: HIIT, circuit training, compound lifts with short rest. Calorie burn priority.",
+        "weight_loss": "Weight loss: moderate cardio + full-body strength. Consistent moderate intensity.",
+        "muscle_building": "Muscle building: progressive overload, compound lifts (squat/bench/deadlift/row), higher volume.",
+        "maintenance": "Maintenance: balanced mix of strength and cardio. Keep current fitness level.",
+        "general_fitness": "General fitness: balanced push/pull/legs split across 3 days.",
     }.get(goal, "General fitness: balanced approach.")
 
     # Activity level note
     activity_note = {
-        "sedentary":   "Sedentary lifestyle: start slow, beginner-friendly instructions, low intensity first session.",
-        "light":       "Lightly active: moderate intensity acceptable, clear form cues needed.",
-        "moderate":    "Moderately active: standard intensity and volume.",
-        "active":      "Active: can handle higher intensity and volume.",
+        "sedentary": "Sedentary lifestyle: start slow, beginner-friendly instructions, low intensity first session.",
+        "light": "Lightly active: moderate intensity acceptable, clear form cues needed.",
+        "moderate": "Moderately active: standard intensity and volume.",
+        "active": "Active: can handle higher intensity and volume.",
         "very_active": "Very active: high intensity, advanced variations acceptable.",
     }.get(activity, "Moderate activity level.")
 
@@ -168,25 +172,25 @@ def _build_profile_context(profile):
     )
 
     return {
-        "has_gym":        has_gym,
-        "age":            age,
-        "weight":         weight,
-        "height":         height,
-        "goal":           goal,
-        "gender":         gender,
-        "health_mins":    health_mins,
-        "activity":       activity,
-        "injuries":       injuries,
-        "diet":           diet,
-        "bmi":            bmi,
-        "bmi_category":   bmi_category,
-        "weight_note":    weight_note,
-        "equipment_str":  equipment_str,
-        "volume_guidance":volume_guidance,
-        "age_note":       age_note,
-        "goal_note":      goal_note,
-        "activity_note":  activity_note,
-        "injury_note":    injury_note,
+        "has_gym": has_gym,
+        "age": age,
+        "weight": weight,
+        "height": height,
+        "goal": goal,
+        "gender": gender,
+        "health_mins": health_mins,
+        "activity": activity,
+        "injuries": injuries,
+        "diet": diet,
+        "bmi": bmi,
+        "bmi_category": bmi_category,
+        "weight_note": weight_note,
+        "equipment_str": equipment_str,
+        "volume_guidance": volume_guidance,
+        "age_note": age_note,
+        "goal_note": goal_note,
+        "activity_note": activity_note,
+        "injury_note": injury_note,
     }
 
 
@@ -266,12 +270,14 @@ def generate_training_plan(user, profile, week_start=None):
     days_info = []
     for i in range(3):
         d = week_start + timedelta(days=i)
-        days_info.append({
-            "day_index": i,
-            "date":      str(d),
-            "weekday":   d.strftime("%A"),
-            "is_rest":   False,
-        })
+        days_info.append(
+            {
+                "day_index": i,
+                "date": str(d),
+                "weekday": d.strftime("%A"),
+                "is_rest": False,
+            }
+        )
 
     split_guidance = _build_split_guidance(
         ctx["goal"], ctx["has_gym"], ctx["health_mins"]
@@ -370,10 +376,10 @@ Equipment must be one of: gym, none
         return None
 
     for day_data in data.get("days", []):
-        idx          = day_data["day_index"]
+        idx = day_data["day_index"]
         current_date = week_start + timedelta(days=idx)
         actual_weekday = current_date.weekday()
-        is_rest      = day_data.get("is_rest", False)
+        is_rest = day_data.get("is_rest", False)
 
         day_training = DayTraining.objects.create(
             training_plan=plan,

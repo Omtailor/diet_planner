@@ -729,16 +729,28 @@ function Dashboard() {
     finally { setLoadingMeal(false) }
   }
 
+  // AFTER
   const handleRegenerate = async () => {
-    setRegenerating(true)
+    // Guard: no plan exists yet
+    if (!dayMeal) {
+      toast("Generate a plan first!", {
+        icon: "🍽️",
+      });
+      return;
+    }
+
+    setRegenerating(true);
     try {
-      await mealService.regenerateDay(today)
-      await fetchTodayMeal()
-      toast.success("Today's meals refreshed! 🔄")
-      if (navigator.vibrate) navigator.vibrate([30, 10, 30])
-    } catch { toast.error('Failed to regenerate meals') }
-    finally { setRegenerating(false) }
-  }
+      await mealService.regenerateDay(today);
+      await fetchTodayMeal();
+      toast.success("Today's meals refreshed!");
+      if (navigator.vibrate) navigator.vibrate([30, 10, 30]);
+    } catch {
+      toast.error("Failed to regenerate meals");
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   const getMealSlot = (slot) => dayMeal?.meal_slots?.find(m => m.slot === slot)
   const totalCals = dayMeal?.meal_slots?.reduce((s, m) => s + (m.calories || 0), 0) || 0

@@ -71,7 +71,7 @@ class DayTraining(models.Model):
     date = models.DateField()
     exercises = models.ManyToManyField(Exercise, blank=True)
     is_rest_day = models.BooleanField(default=False)
-    day_notes = models.TextField(blank=True, default='')
+    day_notes = models.TextField(blank=True, default="")
 
     class Meta:
         ordering = ["date"]

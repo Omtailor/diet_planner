@@ -11,6 +11,7 @@ from .training_generator import generate_training_plan
 
 class DayRangeView(APIView):
     """GET /api/training/days-range/?start=YYYY-MM-DD&end=YYYY-MM-DD"""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -20,7 +21,9 @@ class DayRangeView(APIView):
             start = date.fromisoformat(start_str)
             end = date.fromisoformat(end_str)
         except (TypeError, ValueError):
-            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD."}, status=400
+            )
 
         days = DayTraining.objects.filter(
             training_plan__user=request.user,
@@ -33,6 +36,7 @@ class DayRangeView(APIView):
 
 class WeeklyTrainingView(APIView):
     """GET /api/training/weekly/ — Get current week's training plan."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -59,6 +63,7 @@ class WeeklyTrainingView(APIView):
 
 class AllDayTrainingsView(APIView):
     """GET /api/training/all-days/ — All day trainings across all plans, merged and sorted."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -87,13 +92,16 @@ class AllDayTrainingsView(APIView):
 
 class DayTrainingView(APIView):
     """GET /api/training/day/<date>/ — Get a single day's training."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, training_date):
         try:
             target_date = date.fromisoformat(training_date)
         except ValueError:
-            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD."}, status=400
+            )
 
         try:
             day = DayTraining.objects.get(
@@ -108,6 +116,7 @@ class DayTrainingView(APIView):
 
 class GenerateTrainingPlanView(APIView):
     """POST /api/training/generate/ — Manually generate a new training plan."""
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -116,7 +125,10 @@ class GenerateTrainingPlanView(APIView):
 
         if not profile:
             return Response(
-                {"detail": "PROFILE_INCOMPLETE", "message": "Please complete your profile first."},
+                {
+                    "detail": "PROFILE_INCOMPLETE",
+                    "message": "Please complete your profile first.",
+                },
                 status=400,
             )
 
@@ -124,13 +136,19 @@ class GenerateTrainingPlanView(APIView):
         missing = [f for f in required_fields if not getattr(profile, f, None)]
         if missing:
             return Response(
-                {"detail": "PROFILE_INCOMPLETE", "message": "Please complete your onboarding first."},
+                {
+                    "detail": "PROFILE_INCOMPLETE",
+                    "message": "Please complete your onboarding first.",
+                },
                 status=400,
             )
 
         if getattr(profile, "health_time_minutes", 0) == 0:
             return Response(
-                {"detail": "HEALTH_TIME_ZERO", "message": "Please set your daily health time before generating a training plan."},
+                {
+                    "detail": "HEALTH_TIME_ZERO",
+                    "message": "Please set your daily health time before generating a training plan.",
+                },
                 status=400,
             )
 
@@ -139,11 +157,15 @@ class GenerateTrainingPlanView(APIView):
             try:
                 week_start = date.fromisoformat(week_start_str)
             except ValueError:
-                return Response({"error": "Invalid week_start format. Use YYYY-MM-DD."}, status=400)
+                return Response(
+                    {"error": "Invalid week_start format. Use YYYY-MM-DD."}, status=400
+                )
         else:
             week_start = date.today()
 
-        existing = TrainingPlan.objects.filter(user=request.user, week_start_date=week_start).first()
+        existing = TrainingPlan.objects.filter(
+            user=request.user, week_start_date=week_start
+        ).first()
         if existing:
             return Response(TrainingPlanSerializer(existing).data, status=200)
 
@@ -156,6 +178,7 @@ class GenerateTrainingPlanView(APIView):
 
 class LatestTrainingPlanView(APIView):
     """GET /api/training/latest/ — End date for next plan calculation."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -166,7 +189,9 @@ class LatestTrainingPlanView(APIView):
         )
         if not plan:
             return Response({"detail": "No training plan found."}, status=404)
-        return Response({
-            "week_start_date": plan.week_start_date,
-            "week_end_date": plan.week_end_date,
-        })
+        return Response(
+            {
+                "week_start_date": plan.week_start_date,
+                "week_end_date": plan.week_end_date,
+            }
+        )
