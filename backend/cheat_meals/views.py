@@ -1,5 +1,6 @@
 import os
 from datetime import date
+from urllib import request
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -94,15 +95,17 @@ class ManualCheatMealView(APIView):
             )
 
         # AI needs more info → return 202 with pending cheat meal ID
+        # AFTER
         if not ai_data.get("ready", True):
             cheat_meal = CheatMeal.objects.create(
                 user=request.user,
                 entry_method="manual",
+                food_name=description,  # ← save what user typed
                 notes=serializer.validated_data.get("notes", ""),
                 ai_raw_response={
                     "follow_up_question": ai_data.get("follow_up_question")
-                },  # ← fixed
-                meal_date=date.today(),  # ← required
+                },
+                meal_date=date.today(),
             )
             return Response(
                 {

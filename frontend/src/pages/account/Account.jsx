@@ -111,9 +111,11 @@ function CheatMealHistorySection({ onLogNew }) {
                     fontSize: '1.2rem', fontWeight: 800,
                     color: '#FF3B30'
                   }}>
-                    {m.user_edited_calories || m.ai_estimated_calories
-                      ? `${Math.round(m.user_edited_calories || m.ai_estimated_calories)} kcal`
-                      : '— kcal'}
+                    {m.user_edited_calories != null
+                      ? `${Math.round(m.user_edited_calories)} kcal`
+                      : m.ai_estimated_calories != null
+                        ? `${Math.round(m.ai_estimated_calories)} kcal`
+                        : 'Pending estimate'}
                   </p>
                   {m.ai_confidence && (
                     <p style={{
@@ -636,7 +638,7 @@ export default function Account() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
               <div>
                 <p style={{ fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>
-                  Weekly Grocery List
+                  Grocery List
                 </p>
                 <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: 4 }}>
                   Choose the date range to view ingredients

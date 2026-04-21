@@ -4,14 +4,38 @@ Two modes:
   1. Image mode  → send up to 2 images to Gemini Vision
   2. Manual mode → send text description; AI may ask 1 follow-up question
 """
-import json, pathlib, base64
+
+import json, pathlib, logging
 from django.conf import settings
 from google import genai
 from google.genai import types as genai_types
 
+logger = logging.getLogger(__name__)
+
+MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+
 
 def _client():
     return genai.Client(api_key=settings.GEMINI_API_KEY)
+
+
+def _generate_with_fallback(client, contents, config):
+    """Try each model in MODELS order, return first successful response."""
+    last_error = None
+    for model in MODELS:
+        try:
+            logger.info(f"[AIAnalyzer] Trying model: {model}")
+            response = client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+            logger.info(f"[AIAnalyzer] ✓ Got response from {model}")
+            return response
+        except Exception as e:
+            logger.warning(f"[AIAnalyzer] {model} failed: {e}")
+            last_error = e
+    raise last_error
 
 
 def analyze_food_images(image_paths: list[str]) -> dict:
@@ -45,20 +69,20 @@ Rules:
     for path in image_paths[:2]:
         img_bytes = pathlib.Path(path).read_bytes()
         ext = pathlib.Path(path).suffix.lower()
-        mime = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-                '.png': 'image/png', '.webp': 'image/webp'}.get(ext, 'image/jpeg')
-        parts.append(genai_types.Part.from_bytes(
-            data=img_bytes, mime_type=mime
-        ))
+        mime = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+        }.get(ext, "image/jpeg")
+        parts.append(genai_types.Part.from_bytes(data=img_bytes, mime_type=mime))
 
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=parts,
-        config=genai_types.GenerateContentConfig(
-            temperature=0.3,
-            response_mime_type='application/json',
-        ),
+    config = genai_types.GenerateContentConfig(
+        temperature=0.3,
+        response_mime_type="application/json",
     )
+
+    response = _generate_with_fallback(client, parts, config)
     data = json.loads(response.text.strip())
     _validate_food_analysis(data)
     return data
@@ -101,20 +125,25 @@ Rules:
 - If called with follow_up_answer, you MUST set ready=true.
 - Return ONLY valid JSON, no markdown fences."""
 
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=[prompt],
-        config=genai_types.GenerateContentConfig(
-            temperature=0.3,
-            response_mime_type='application/json',
-        ),
+    config = genai_types.GenerateContentConfig(
+        temperature=0.3,
+        response_mime_type="application/json",
     )
+
+    response = _generate_with_fallback(client, [prompt], config)
     return json.loads(response.text.strip())
 
 
 def _validate_food_analysis(data: dict):
-    required = ['food_name', 'portion_description', 'estimated_calories',
-                'protein_g', 'carbs_g', 'fats_g', 'confidence_level']
+    required = [
+        "food_name",
+        "portion_description",
+        "estimated_calories",
+        "protein_g",
+        "carbs_g",
+        "fats_g",
+        "confidence_level",
+    ]
     for field in required:
         if field not in data:
             raise ValueError(f"Gemini response missing field: {field}")
