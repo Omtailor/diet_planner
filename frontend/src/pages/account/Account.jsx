@@ -156,6 +156,7 @@ export default function Account() {
 
   const [grocery, setGrocery] = useState(null)
   const [groceryLoading, setGroceryLoading] = useState(false)
+  const [groceryError, setGroceryError] = useState(null)
   const [groceryRefreshing, setGroceryRefreshing] = useState(false)
   const [showGroceryRangeModal, setShowGroceryRangeModal] = useState(false)
   const [groceryStartDate, setGroceryStartDate] = useState(getDateStr(0))
@@ -227,26 +228,6 @@ export default function Account() {
     }
   }, [activeSection, profile, user])
 
-  useEffect(() => {
-    if (!showGrocerySheet) return
-    let isMounted = true
-    const load = async () => {
-      setGroceryLoading(true)
-      try {
-        const url = `grocery?start_date=${groceryStartDate}&end_date=${groceryEndDate}`
-        const res = await API.get(url)
-        if (isMounted) setGrocery(res.data)
-      } catch {
-        if (isMounted) setGrocery(null)
-        toast.error('Failed to load grocery list')
-      } finally {
-        if (isMounted) setGroceryLoading(false)
-      }
-    }
-    load()
-    return () => { isMounted = false }
-  }, [showGrocerySheet])
-
   const closeModal = () => {
     setActiveSection(null)
     setModalSaving(false)
@@ -260,9 +241,39 @@ export default function Account() {
     setActiveSection(key)
   }
 
-  const handleGroceryRangeConfirm = () => {
+  const handleGroceryRangeConfirm = async () => {
     setShowGroceryRangeModal(false)
+    setGroceryError(null)
+    setGrocery(null)
+    setGroceryLoading(true)
     setShowGrocerySheet(true)
+    try {
+      const url = `grocery?start_date=${groceryStartDate}&end_date=${groceryEndDate}`
+      const res = await API.get(url)
+      setGrocery(res.data)
+      if (res.data.is_partial) {
+        const fmt = (d) =>
+          new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+        setGroceryError({
+          type: 'partial',
+          message: `Grocery list shown until ${fmt(res.data.actual_end_date)} — no meal plan generated beyond that.`,
+        })
+      }
+    } catch (err) {
+      if (err?.response?.data?.no_plan) {
+        setGroceryError({
+          type: 'no_plan',
+          message: 'No meal plan found for this range. Generate a plan first from the Nutrition tab.',
+        })
+      } else {
+        setGroceryError({
+          type: 'error',
+          message: 'Could not load grocery list. Please try again.',
+        })
+      }
+    } finally {
+      setGroceryLoading(false)
+    }
   }
 
   const handleLogout = () => {
@@ -763,48 +774,87 @@ export default function Account() {
               <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0', flex: 1 }}>
                 <p style={{ fontFamily: FONT, color: 'var(--color-text-faint)', fontWeight: 600 }}>Loading...</p>
               </div>
-            ) : !grocery?.items?.length ? (
-              <p style={{ textAlign: 'center', padding: '60px 40px', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT }}>
-                No grocery list found for this date range.
-              </p>
             ) : (
-              <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
-                {grocery.items.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={async () => {
-                      try {
-                        await groceryService.checkItem(item.id, { is_checked: !item.is_checked })
-                        const url = `grocery?start_date=${groceryStartDate}&end_date=${groceryEndDate}`
-                        const res = await API.get(url)
-                        setGrocery(res.data)
-                      } catch {
-                        toast.error('Failed to update item')
-                      }
-                    }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 14,
-                      padding: 16,
-                      background: item.is_checked ? 'rgba(52,199,89,0.08)' : 'rgba(255,255,255,0.6)',
-                      border: `1px solid ${item.is_checked ? 'rgba(52,199,89,0.3)' : 'rgba(0,0,0,0.05)'}`,
-                      borderRadius: 16, cursor: 'pointer',
-                      transition: 'all 180ms ease', textAlign: 'left',
-                    }}
-                  >
-                    <span style={{ fontSize: '1.2rem' }}>{item.is_checked ? '✅' : '⬜'}</span>
-                    <div style={{ flex: 1 }}>
-                      <p style={{
-                        fontFamily: FONT, fontWeight: 700, fontSize: '1rem',
-                        color: item.is_checked ? 'var(--color-text-muted)' : 'var(--color-text)',
-                        textDecoration: item.is_checked ? 'line-through' : 'none',
-                      }}>{item.ingredient_name}</p>
-                    </div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600, fontFamily: FONT, flexShrink: 0 }}>
-                      {item.quantity} {item.unit}
+              <>
+                {groceryError && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    padding: '12px 14px',
+                    borderRadius: 14,
+                    marginBottom: 16,
+                    flexShrink: 0,
+                    background: groceryError.type === 'no_plan'
+                      ? 'rgba(255, 59, 48, 0.08)'
+                      : 'rgba(255, 149, 0, 0.10)',
+                    border: `1px solid ${groceryError.type === 'no_plan'
+                      ? 'rgba(255, 59, 48, 0.2)'
+                      : 'rgba(255, 149, 0, 0.25)'}`,
+                  }}>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>
+                      {groceryError.type === 'no_plan' ? '🚫' : '📅'}
                     </span>
-                  </button>
-                ))}
-              </div>
+                    <p style={{
+                      fontFamily: FONT,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      color: groceryError.type === 'no_plan' ? '#FF3B30' : '#FF9500',
+                      lineHeight: 1.5,
+                      margin: 0,
+                    }}>
+                      {groceryError.message}
+                    </p>
+                  </div>
+                )}
+
+                {!grocery?.items?.length && !groceryError ? (
+                  <p style={{ textAlign: 'center', padding: '60px 40px', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT }}>
+                    No grocery list found for this date range.
+                  </p>
+                ) : (
+                  <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
+                    {grocery?.items?.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={async () => {
+                          try {
+                            await groceryService.checkItem(item.id, { is_checked: !item.is_checked })
+                            const url = `grocery?start_date=${groceryStartDate}&end_date=${groceryEndDate}`
+                            const res = await API.get(url)
+                            setGrocery(res.data)
+                          } catch {
+                            toast.error('Failed to update item')
+                          }
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 14,
+                          padding: 16,
+                          background: item.is_checked ? 'rgba(52,199,89,0.08)' : 'rgba(255,255,255,0.6)',
+                          border: `1px solid ${item.is_checked ? 'rgba(52,199,89,0.3)' : 'rgba(0,0,0,0.05)'}`,
+                          borderRadius: 16, cursor: 'pointer',
+                          transition: 'all 180ms ease', textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ fontSize: '1.2rem' }}>{item.is_checked ? '✅' : '◻️'}</span>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontFamily: FONT, fontWeight: 700, fontSize: '1rem',
+                            color: item.is_checked ? 'var(--color-text-muted)' : 'var(--color-text)',
+                            textDecoration: item.is_checked ? 'line-through' : 'none',
+                            textTransform: 'capitalize',
+                          }}>
+                            {item.ingredient_name}
+                          </p>
+                        </div>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600, fontFamily: FONT, flexShrink: 0 }}>
+                          {item.quantity} {item.unit}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Footer */}
