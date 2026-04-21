@@ -3,10 +3,10 @@ import { Home, Salad, Dumbbell, User } from 'lucide-react'
 import { useRef, useEffect, useState } from 'react'
 
 const navItems = [
-  { path: '/',          icon: Home,     label: 'Home' },
-  { path: '/training',  icon: Dumbbell, label: 'Training' },
-  { path: '/nutrition', icon: Salad,    label: 'Nutrition' },
-  { path: '/account',   icon: User,     label: 'Account' },
+  { path: '/', icon: Home, label: 'Home' },
+  { path: '/training', icon: Dumbbell, label: 'Training' },
+  { path: '/nutrition', icon: Salad, label: 'Nutrition' },
+  { path: '/account', icon: User, label: 'Account' },
 ]
 
 const FONT = "'General Sans', sans-serif"

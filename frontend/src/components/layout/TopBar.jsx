@@ -1,10 +1,10 @@
 import { useLocation } from 'react-router-dom'
 
 const pageTitles = {
-  '/':          null,
+  '/': null,
   '/nutrition': 'Nutrition',
-  '/training':  'Training',
-  '/account':   'Account',
+  '/training': 'Training',
+  '/account': 'Account',
 }
 
 export default function TopBar() {
