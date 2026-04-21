@@ -11,14 +11,13 @@ from meals.models import DayMeal, MealSlot
 
 
 class GroceryListView(APIView):
-    """GET /api/grocery/ — Get grocery list, optionally filtered by date range."""
+    """GET /api/grocery/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD"""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        grocery = GroceryList.objects.get(user=request.user)
-        serializer = GroceryListSerializer(grocery)
-        return Response(serializer.data)
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
 
         # ── Custom date range: build grocery on the fly from meal slots ──
         if start_date and end_date:
@@ -38,18 +37,25 @@ class GroceryListView(APIView):
                 food_item__isnull=False,
             ).select_related("food_item", "day_meal")
 
+            # Scenario 2 — zero overlap: not even one meal plan day exists
             if not slots.exists():
                 return Response(
-                    {"error": "No meal plan found for the selected date range."},
+                    {
+                        "error": "No meal plan found for the selected date range. Generate a plan first from the Nutrition tab.",
+                        "no_plan": True,
+                    },
                     status=404,
                 )
+
+            # Find the actual last date covered by meal slots
+            actual_end = slots.order_by("-day_meal__date").first().day_meal.date
+            is_partial = actual_end < end  # Scenario 1 — partial overlap
 
             # Aggregate ingredients from all food items in those slots
             merged = {}
             for slot in slots:
                 ingredients = slot.food_item.ingredients or []
                 for ing in ingredients:
-                    # Each ingredient: {"name": "Paneer", "quantity": 200, "unit": "g"}
                     name = ing.get("name", "").strip()
                     unit = ing.get("unit", "g").strip()
                     qty = ing.get("quantity", 0)
@@ -64,7 +70,7 @@ class GroceryListView(APIView):
                         )
                     else:
                         merged[key] = {
-                            "id": None,  # not a DB item — generated on the fly
+                            "id": None,
                             "ingredient_name": name,
                             "quantity": round(qty, 2),
                             "unit": unit,
@@ -75,14 +81,17 @@ class GroceryListView(APIView):
                 merged.values(), key=lambda x: x["ingredient_name"].lower()
             )
 
-            return Response(
-                {
-                    "id": None,
-                    "items": items_list,
-                    "total_items": len(items_list),
-                    "checked_items": 0,
-                }
-            )
+            response_data = {
+                "id": None,
+                "items": items_list,
+                "total_items": len(items_list),
+                "checked_items": 0,
+                "actual_end_date": actual_end.strftime("%Y-%m-%d"),
+                "requested_end_date": end.strftime("%Y-%m-%d"),
+                "is_partial": is_partial,
+            }
+
+            return Response(response_data)
 
         # ── No date filter — fall back to latest plan's saved grocery list ──
         try:
