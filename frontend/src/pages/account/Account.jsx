@@ -28,6 +28,8 @@ const GLASS_WHITE = {
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
 };
 
+const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
 // ─── Sub-Components ────────────────────────────────────────────
 
 function CheatMealHistorySection({ onLogNew }) {
@@ -175,6 +177,14 @@ export default function Account() {
         : `${profile?.health_time_minutes ?? 60} min/day · ${profile?.has_gym ? 'Gym' : 'No gym'}`,
       key: 'gym'
     },
+    {
+      icon: '🙏',
+      label: 'Fasting',
+      sub: profile?.is_fasting
+        ? `Fasting · ${profile?.fasting_days ? profile.fasting_days.split(',').map(d => d.trim().charAt(0).toUpperCase() + d.trim().slice(1)).join(', ') : 'No days set'}`
+        : 'Not fasting',
+      key: 'fasting'
+    },
     { icon: '🍔', label: 'Cheat Meal History', sub: 'Past cheat meals', key: 'cheat' },
     { icon: '🛒', label: 'Grocery List', sub: 'Weekly ingredients', key: 'grocery' },
   ]
@@ -224,6 +234,15 @@ export default function Account() {
       setDraft({
         has_gym: profile?.has_gym ?? false,
         health_time_minutes: profile?.health_time_minutes ?? 60,
+      })
+      return
+    }
+
+    if (activeSection === 'fasting') {
+      setDraft({
+        is_fasting: profile?.is_fasting ?? false,
+        fasting_days: profile?.fasting_days ?? '',
+        fasting_type: profile?.fasting_type ?? '',
       })
     }
   }, [activeSection, profile, user])
@@ -603,6 +622,110 @@ export default function Account() {
                     }}
                     disabled={modalSaving}
                     style={S.modalPrimaryBtn}
+                  >
+                    {modalSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'fasting' && (
+              <div>
+                <p style={S.modalDesc}>Update your fasting schedule. Plans will respect these on next generation.</p>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!draft?.is_fasting}
+                    onChange={e => setDraft(d => ({ ...d, is_fasting: e.target.checked }))}
+                  />
+                  <span style={{ fontFamily: FONT, fontWeight: 700, color: 'var(--color-text)' }}>
+                    I observe fasting 🙏
+                  </span>
+                </label>
+
+                {draft?.is_fasting && (
+                  <>
+                    <label style={S.fieldLabel}>Fasting Days</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                      {ALL_DAYS.map(day => {
+                        const selectedDays = draft?.fasting_days
+                          ? draft.fasting_days.split(',').map(d => d.trim().toLowerCase()).filter(Boolean)
+                          : []
+                        const isSelected = selectedDays.includes(day.toLowerCase())
+                        const toggleDay = () => {
+                          const updated = isSelected
+                            ? selectedDays.filter(d => d !== day.toLowerCase())
+                            : [...selectedDays, day.toLowerCase()]
+                          setDraft(d => ({ ...d, fasting_days: updated.join(',') }))
+                        }
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={toggleDay}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: 999,
+                              fontSize: '0.85rem',
+                              fontFamily: FONT,
+                              fontWeight: isSelected ? 700 : 500,
+                              cursor: 'pointer',
+                              border: `1px solid ${isSelected ? 'var(--color-accent)' : 'rgba(0,0,0,0.1)'}`,
+                              background: isSelected ? 'var(--color-accent)' : 'rgba(0,0,0,0.03)',
+                              color: isSelected ? '#fff' : 'var(--color-text-muted)',
+                              transition: 'all 180ms ease',
+                              transform: isSelected ? 'scale(1.04)' : 'scale(1)',
+                            }}
+                          >
+                            {isSelected && '✓ '}{day}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {draft?.fasting_days && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-accent)', fontWeight: 600, fontFamily: FONT, marginBottom: 16 }}>
+                        {draft.fasting_days.split(',').filter(Boolean).length} day(s) selected
+                      </p>
+                    )}
+
+                    <label style={{ ...S.fieldLabel, marginTop: 8 }}>Fasting Type (e.g. Ekadashi, Navratri)</label>
+                    <input
+                      style={S.modalInput}
+                      placeholder="Type of fast"
+                      value={draft?.fasting_type ?? ''}
+                      onChange={e => setDraft(d => ({ ...d, fasting_type: e.target.value }))}
+                    />
+                  </>
+                )}
+
+                <div style={S.modalActions}>
+                  <button type="button" onClick={closeModal} style={S.modalSecondaryBtn}>Cancel</button>
+                  <button
+                    type="button"
+                    disabled={modalSaving}
+                    style={S.modalPrimaryBtn}
+                    onClick={async () => {
+                      if (draft?.is_fasting && !draft?.fasting_days) {
+                        toast.error('Please select at least one fasting day')
+                        return
+                      }
+                      setModalSaving(true)
+                      try {
+                        await authService.updateProfile({
+                          is_fasting: !!draft?.is_fasting,
+                          fasting_days: draft?.is_fasting ? draft?.fasting_days ?? '' : '',
+                          fasting_type: draft?.is_fasting ? draft?.fasting_type ?? '' : '',
+                        })
+                        toast.success('Fasting preferences updated 🙏')
+                        await fetchProfile()
+                        closeModal()
+                      } catch {
+                        toast.error('Failed to update fasting preferences')
+                      } finally {
+                        setModalSaving(false)
+                      }
+                    }}
                   >
                     {modalSaving ? 'Saving...' : 'Save Changes'}
                   </button>
