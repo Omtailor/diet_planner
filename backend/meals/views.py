@@ -28,16 +28,20 @@ from meals.meal_generator import MealPlanGenerator
 
 def run_background_tasks(user, profile, week_start=None):
     from django.db import close_old_connections
+
     close_old_connections()
 
     try:
         from grocery.grocery_generator import generate_grocery_list
+
         generate_grocery_list(user)
     except Exception as e:
-        logger.error("[BG] Grocery generation failed for user %s: %s",
-                     user.id, e, exc_info=True)
+        logger.error(
+            "[BG] Grocery generation failed for user %s: %s", user.id, e, exc_info=True
+        )
 
     close_old_connections()
+
 
 class WeeklyPlanView(APIView):
     """
@@ -229,22 +233,35 @@ class GenerateNextWeekView(APIView):
 
     def post(self, request):
         user = request.user
-        profile = getattr(user, 'profile', None)
+        profile = getattr(user, "profile", None)
 
         # ── Guard: no profile at all
         if not profile:
             return Response(
-                {'detail': 'PROFILE_INCOMPLETE', 'message': 'Please complete your profile first.'},
-                status=400
+                {
+                    "detail": "PROFILE_INCOMPLETE",
+                    "message": "Please complete your profile first.",
+                },
+                status=400,
             )
 
         # ── Guard: incomplete onboarding (check required fields)
-        required_fields = ['age', 'weight_kg', 'height_cm', 'goal', 'diet_preference', 'gender']
+        required_fields = [
+            "age",
+            "weight_kg",
+            "height_cm",
+            "goal",
+            "diet_preference",
+            "gender",
+        ]
         missing = [f for f in required_fields if not getattr(profile, f, None)]
         if missing:
             return Response(
-                {'detail': 'PROFILE_INCOMPLETE', 'message': 'Please complete your onboarding first.'},
-                status=400
+                {
+                    "detail": "PROFILE_INCOMPLETE",
+                    "message": "Please complete your onboarding first.",
+                },
+                status=400,
             )
 
         # ── Determine next week_start ──────────────────────────────────────────
@@ -265,21 +282,24 @@ class GenerateNextWeekView(APIView):
 
         # ── Check if plan for this period already exists ───────────────────────
         existing = WeeklyPlan.objects.filter(
-            user=request.user,
-            week_start_date=week_start
+            user=request.user, week_start_date=week_start
         ).first()
         if existing:
-            return Response({'detail': 'Next plan already exists.'}, status=400)
+            return Response({"detail": "Next plan already exists."}, status=400)
 
         # ── Generate ───────────────────────────────────────────────────────────
         try:
             generator = MealPlanGenerator(profile)
             plan = generator.generate(week_start=week_start)
             if not plan:
-                return Response({'detail': 'Generation failed. Please try again.'}, status=500)
+                return Response(
+                    {"detail": "Generation failed. Please try again."}, status=500
+                )
         except Exception as e:
             logger.error(f"[generate_next_week] Failed: {e}")
-            return Response({'detail': 'Generation failed. Please try again.'}, status=500)
+            return Response(
+                {"detail": "Generation failed. Please try again."}, status=500
+            )
 
         thread = threading.Thread(
             target=run_background_tasks,
@@ -289,11 +309,14 @@ class GenerateNextWeekView(APIView):
         thread.daemon = True
         thread.start()
 
-        return Response({
-            'detail': 'Plan generated successfully.',
-            'week_start_date': str(plan.week_start_date),
-            'week_end_date':   str(plan.week_end_date),
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "detail": "Plan generated successfully.",
+                "week_start_date": str(plan.week_start_date),
+                "week_end_date": str(plan.week_end_date),
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class LatestPlanView(APIView):

@@ -254,28 +254,15 @@ export default function Training() {
   const handleGenerateNextPlan = async () => {
     setGeneratingNextPlan(true);
     try {
-      const nextStart = latestPlanEndDate
-        ? (() => {
-          const d = new Date(latestPlanEndDate);
-          d.setDate(d.getDate() + 1);
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, '0');
-          const dd = String(d.getDate()).padStart(2, '0');
-          return `${yyyy}-${mm}-${dd}`;
-        })()
-        : getDateStr(0);
-
-      const res = await API.post('/training/generate/', { week_start: nextStart });
+      const res = await API.post('/training/generate/');
       const firstDateOfNewPlan = res.data?.day_trainings?.[0]?.date;
 
-      // Re-fetch ALL days (merges old + new plan days into one list)
-      await fetchPlan();          // ← this sets plan to merged all-days response
+      await fetchPlan();
       await checkNextPlan();
       await fetchProfile();
 
-      // After fetchPlan sets the merged plan, jump to first day of new plan
       if (firstDateOfNewPlan) {
-        setSelectedDate(firstDateOfNewPlan);   // useEffect sync will set selectedDay
+        setSelectedDate(firstDateOfNewPlan);
         setExpandedEx(null);
       }
 
@@ -1104,16 +1091,24 @@ export default function Training() {
                     Generate Next 3 Days Plan
                   </p>
                   <p style={{ fontSize: '0.8rem', fontWeight: 500, fontFamily: FONT, marginTop: '2px', color: 'var(--color-text-muted)' }}>
-                    {latestPlanEndDate
-                      ? (() => {
-                        const start = new Date(latestPlanEndDate);
-                        start.setDate(start.getDate() + 1);
-                        const end = new Date(start);
+                    {(() => {
+                      if (!latestPlanEndDate) {
+                        const start = new Date();
+                        const end = new Date();
                         end.setDate(end.getDate() + 2);
                         const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                         return `${fmt(start)} – ${fmt(end)} · 3 day plan`;
-                      })()
-                      : 'Extend your training into the next 3 days'}
+                      }
+                      const start = new Date(latestPlanEndDate);
+                      start.setDate(start.getDate() + 1);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const displayStart = start < today ? today : start;
+                      const displayEnd = new Date(displayStart);
+                      displayEnd.setDate(displayStart.getDate() + 2);
+                      const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                      return `${fmt(displayStart)} – ${fmt(displayEnd)} · 3 day plan`;
+                    })()}
                   </p>
                 </div>
                 {generatingNextPlan

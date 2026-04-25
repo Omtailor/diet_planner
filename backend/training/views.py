@@ -161,7 +161,17 @@ class GenerateTrainingPlanView(APIView):
                     {"error": "Invalid week_start format. Use YYYY-MM-DD."}, status=400
                 )
         else:
-            week_start = date.today()
+            latest_plan = (
+                TrainingPlan.objects.filter(user=request.user)
+                .order_by("-week_end_date")
+                .first()
+            )
+            if latest_plan:
+                week_start = latest_plan.week_end_date + timedelta(days=1)
+                if week_start < date.today():
+                    week_start = date.today()
+            else:
+                week_start = date.today()
 
         existing = TrainingPlan.objects.filter(
             user=request.user, week_start_date=week_start
