@@ -1199,7 +1199,7 @@ export default function Nutrition() {
         setLatestPlanEndDate(res.data.week_end_date);
       }
       toast.success('Next 3 days plan ready! 🎉', {
-        duration: 4000,
+        duration: 8000,
         style: { fontFamily: FONT, fontWeight: 700 }
       });
 
@@ -1591,9 +1591,9 @@ export default function Nutrition() {
 
   const weekDays = getWeekDays(selectedDate)
 
-  // Show button when: no plan exists yet (fresh state) OR plan exists and not yet generated next
+  // Keep the action button visible; the ready state is shown separately above it.
   const canGenerateNext = true
-  const nextWeekButtonActive = !nextWeekExists && canGenerateNext
+  const nextWeekButtonActive = canGenerateNext
 
   // ── Onboarding Blocker UI (full-page overlay) ─────────────────────────────
   if (showOnboardingBlocker) {
@@ -1863,82 +1863,62 @@ export default function Nutrition() {
 
       {/* ── Next Week Plan ── */}
       <div style={{ height: '8px' }} />
-      {nextWeekExists ? (
+      <button
+        onClick={handleGenerateNextWeek}
+        disabled={generatingNextWeek}
+        style={{
+          width: '100%', ...GLASS_WHITE,
+          borderRadius: '20px', padding: '16px',
+          display: 'flex', alignItems: 'center', gap: '14px',
+          cursor: generatingNextWeek ? 'not-allowed' : 'pointer',
+          border: '1px solid rgba(52,199,89,0.25)',
+          opacity: generatingNextWeek ? 0.7 : 1,
+          transition: 'all 180ms ease',
+        }}
+      >
         <div style={{
-          ...GLASS_WHITE,
-          borderRadius: '20px', padding: '14px 16px',
-          display: 'flex', alignItems: 'center', gap: '12px',
-          border: '1px solid rgba(52,199,89,0.2)',
+          width: '48px', height: '48px',
+          background: 'rgba(52,199,89,0.15)',
+          borderRadius: '14px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.4rem', flexShrink: 0,
         }}>
-          <span style={{ fontSize: '1.2rem' }}>✅</span>
+          🗓️
+        </div>
+        <div style={{ flex: 1, textAlign: 'left' }}>
           <p style={{
-            fontSize: '0.9rem', fontWeight: 600,
-            color: 'var(--color-text-muted)', fontFamily: FONT,
+            fontSize: '1rem', fontWeight: 700,
+            color: 'var(--color-text)', fontFamily: FONT,
           }}>
-            Next plan is ready
+            Generate Next 3 days Plan
+          </p>
+          <p style={{
+            fontSize: '0.8rem', fontWeight: 500,
+            fontFamily: FONT, marginTop: '2px',
+            color: 'var(--color-text-muted)',
+          }}>
+            {!latestPlanEndDate
+              ? 'No plan yet — generate your first plan!'
+              : (() => {
+                const start = new Date(latestPlanEndDate)
+                start.setDate(start.getDate() + 1)
+                const today = new Date(); today.setHours(0, 0, 0, 0)
+                const displayStart = start > today ? start : today
+                const displayEnd = new Date(displayStart)
+                displayEnd.setDate(displayStart.getDate() + 2)
+                const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                return `${fmt(displayStart)} – ${fmt(displayEnd)} · 3 day meal + training plan`
+              })()}
           </p>
         </div>
-      ) : (
-        <button
-          onClick={nextWeekButtonActive ? handleGenerateNextWeek : undefined}
-          disabled={!nextWeekButtonActive || generatingNextWeek}
-          style={{
-            width: '100%', ...GLASS_WHITE,
-            borderRadius: '20px', padding: '16px',
-            display: 'flex', alignItems: 'center', gap: '14px',
-            cursor: nextWeekButtonActive && !generatingNextWeek ? 'pointer' : 'not-allowed',
-            border: `1px solid ${nextWeekButtonActive ? 'rgba(52,199,89,0.25)' : 'rgba(0,0,0,0.06)'}`,
-            opacity: nextWeekButtonActive ? 1 : 0.55,
-            transition: 'all 180ms ease',
-          }}
-        >
-          <div style={{
-            width: '48px', height: '48px',
-            background: nextWeekButtonActive ? 'rgba(52,199,89,0.15)' : 'rgba(0,0,0,0.05)',
-            borderRadius: '14px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.4rem', flexShrink: 0,
-          }}>
-            🗓️
-          </div>
-          <div style={{ flex: 1, textAlign: 'left' }}>
-            <p style={{
-              fontSize: '1rem', fontWeight: 700,
-              color: 'var(--color-text)', fontFamily: FONT,
-            }}>
-              Generate Next 3 days Plan
-            </p>
-            <p style={{
-              fontSize: '0.8rem', fontWeight: 500,
-              fontFamily: FONT, marginTop: '2px',
-              color: nextWeekButtonActive ? 'var(--color-text-muted)' : '#FF9500',
-            }}>
-              {!latestPlanEndDate
-                ? 'No plan yet — generate your first plan!'
-                : nextWeekButtonActive
-                  ? (() => {
-                    const start = new Date(latestPlanEndDate)
-                    start.setDate(start.getDate() + 1)
-                    const today = new Date(); today.setHours(0, 0, 0, 0)
-                    const displayStart = start > today ? start : today
-                    const displayEnd = new Date(displayStart)
-                    displayEnd.setDate(displayStart.getDate() + 2)
-                    const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-                    return `${fmt(displayStart)} – ${fmt(displayEnd)} · 3 day meal + training plan`
-                  })()
-                  : 'Next plan already generated'}
-            </p>
-          </div>
-          {generatingNextWeek
-            ? <Loader2 size={20} color="var(--color-accent)"
-              style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-            : <ChevronRight size={20}
-              color={nextWeekButtonActive ? 'var(--color-accent)' : 'var(--color-text-faint)'}
-              style={{ flexShrink: 0 }} />
-          }
-        </button>
-      )
-      }
+        {generatingNextWeek
+          ? <Loader2 size={20} color="var(--color-accent)"
+            style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+          : <ChevronRight size={20}
+            color="var(--color-accent)"
+            style={{ flexShrink: 0 }} />
+        }
+      </button>
 
       {/* ── Bottom Action Buttons ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
