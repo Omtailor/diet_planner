@@ -9,6 +9,8 @@ import { useAuth } from '../../context/AuthContext'
 import { mealService } from '../../services/mealService'
 import { authService } from '../../services/authService'
 
+const FONT = 'General Sans, sans-serif'
+
 // ─── Helpers ───────────────────────────────────────────────────
 
 const QUOTES = [
@@ -169,17 +171,17 @@ function CalorieRing({ consumed = 0, target = 2000 }) {
           style={{ transition: 'stroke-dasharray 900ms cubic-bezier(0.16,1,0.3,1)' }}
         />
         <text x="74" y="68" textAnchor="middle"
-          fill="var(--color-text)" fontSize="22" fontWeight="700"
+          fill="var(--color-text)" fontSize="26" fontWeight="700"
           fontFamily="'General Sans', sans-serif">
           {animated}
         </text>
         <text x="74" y="84" textAnchor="middle"
-          fill="var(--color-text-faint)" fontSize="11"
+          fill="var(--color-text-faint)" fontSize="13"
           fontFamily="'General Sans', sans-serif">
           of {target} kcal
         </text>
         <text x="74" y="99" textAnchor="middle"
-          fill="var(--color-text-muted)" fontSize="10"
+          fill="var(--color-text-muted)" fontSize="12"
           fontFamily="'General Sans', sans-serif">
           consumed
         </text>
@@ -203,13 +205,13 @@ function MacroBar({ label, value, max, glowColor, trackColor }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <span style={{
-          fontSize: '0.72rem', color: 'var(--color-text-muted)',
-          fontFamily: "'General Sans', sans-serif", fontWeight: 500,
+          fontSize: '0.8rem', color: 'var(--color-text-muted)',
+          fontFamily: FONT, fontWeight: 600,
           textTransform: 'uppercase', letterSpacing: '0.6px',
         }}>{label}</span>
         <span style={{
-          fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text)',
-          fontFamily: "'General Sans', sans-serif",
+          fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text)',
+          fontFamily: FONT,
         }}>
           {Math.round(value)}g{' '}
           <span style={{ color: 'var(--color-text-faint)', fontWeight: 400 }}>/ {max}g</span>
@@ -267,21 +269,21 @@ function MealPreviewCard({ slot, meal, onTap, index = 0 }) {
         </div>
         <div style={{ flex: 1, textAlign: 'left' }}>
           <p style={{
-            fontSize: '0.68rem', color: 'var(--color-text-faint)',
-            fontFamily: "'General Sans', sans-serif",
-            letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: 600,
+            fontSize: '0.72rem', color: 'var(--color-text-faint)',
+            fontFamily: FONT,
+            letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: 700,
           }}>{label}</p>
           <p style={{
-            fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text)',
-            fontFamily: "'General Sans', sans-serif",
-            marginTop: '2px', lineHeight: 1.3,
+            fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)',
+            fontFamily: FONT,
+            marginTop: '3px', lineHeight: 1.3,
           }}>
             {meal?.food_item?.name || '—'}
           </p>
           {meal?.calories && (
             <p style={{
-              fontSize: '0.73rem', color: 'var(--color-text-muted)',
-              fontFamily: "'General Sans', sans-serif", marginTop: '2px',
+              fontSize: '0.8rem', color: 'var(--color-text-muted)',
+              fontFamily: FONT, marginTop: '3px', fontWeight: 500,
             }}>
               ~{Math.round(meal.calories)} kcal
             </p>
@@ -295,24 +297,25 @@ function MealPreviewCard({ slot, meal, onTap, index = 0 }) {
 
 const mealCardStyle = {
   width: '100%',
-  background: 'rgba(255,255,255,0.60)',
-  border: '1px solid rgba(0,0,0,0.05)',
-  borderRadius: '14px',
-  padding: '13px 14px',
+  background: 'rgba(255,255,255,0.65)',
+  border: '1px solid rgba(255,255,255,0.80)',
+  borderRadius: '20px',
+  padding: '16px',
   cursor: 'pointer',
-  backdropFilter: 'blur(8px)',
-  WebkitBackdropFilter: 'blur(8px)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
   animation: 'mealSlideIn 0.4s cubic-bezier(0.16,1,0.3,1) both',
 }
 
 const mealThumb = {
-  width: '42px', height: '42px',
+  width: '48px', height: '48px',
   background: 'rgba(255,255,255,0.70)',
   border: '1px solid rgba(0,0,0,0.05)',
-  borderRadius: '10px',
+  borderRadius: '14px',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0,
-  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
 }
 
 // ─── Weight Card ───────────────────────────────────────────────
@@ -404,21 +407,21 @@ function BMICard({ profile }) {
           border: `1px solid ${cat.color}40`,
           borderRadius: '20px',
           padding: '3px 10px',
-          fontFamily: "'General Sans', sans-serif",
+          fontFamily: FONT,
         }}>{cat.label}</span>
       </div>
 
       {/* BMI value */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', margin: '8px 0 16px' }}>
         <span style={{
-          fontFamily: "'General Sans', sans-serif",
+          fontFamily: FONT,
           fontSize: '2.75rem', fontWeight: 700,
           color: 'var(--color-text)', lineHeight: 1,
         }}>{bmi || '—'}</span>
         <span style={{
           fontSize: '0.9rem', fontWeight: 500,
           color: 'var(--color-text-muted)',
-          fontFamily: "'General Sans', sans-serif",
+          fontFamily: FONT,
         }}>BMI</span>
       </div>
 
@@ -484,9 +487,9 @@ function BMICard({ profile }) {
           { label: 'Obese', color: '#e05252' },
         ].map(({ label, color }) => (
           <span key={label} style={{
-            fontSize: '0.6rem',
+            fontSize: '0.72rem',
             color: cat.label === label ? color : 'var(--color-text-faint)',
-            fontFamily: "'General Sans', sans-serif",
+            fontFamily: FONT,
             fontWeight: cat.label === label ? 700 : 400,
           }}>{label}</span>
         ))}
@@ -517,8 +520,8 @@ function QuoteCard() {
         Daily Motivation ✨
       </p>
       <p style={{
-        fontSize: '0.9375rem', color: 'var(--color-text)',
-        fontFamily: "'General Sans', sans-serif",
+        fontSize: '1.05rem', color: 'var(--color-text)',
+        fontFamily: FONT,
         lineHeight: 1.6, fontStyle: 'italic',
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(8px)',
@@ -527,8 +530,8 @@ function QuoteCard() {
         "{QUOTES[idx]}"
       </p>
       <p style={{
-        fontSize: '0.7rem', color: 'var(--color-text-faint)',
-        fontFamily: "'General Sans', sans-serif", marginTop: '10px',
+        fontSize: '0.78rem', color: 'var(--color-text-faint)',
+        fontFamily: FONT, marginTop: '10px',
       }}>
         Tap for next quote →
       </p>
@@ -537,13 +540,13 @@ function QuoteCard() {
 }
 
 const quoteCardStyle = {
-  background: 'linear-gradient(135deg, rgba(76,175,80,0.07), rgba(255,255,255,0.55))',
+  background: 'rgba(255,255,255,0.65)',
   backdropFilter: 'blur(24px) saturate(180%)',
   WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-  border: '1px solid rgba(255,255,255,0.70)',
-  boxShadow: '0 8px 32px rgba(30,80,45,0.08)',
-  borderRadius: '18px',
-  padding: '18px 16px',
+  border: '1px solid rgba(255,255,255,0.80)',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.04)',
+  borderRadius: '24px',
+  padding: '20px 18px',
   cursor: 'pointer',
   transition: 'all 300ms cubic-bezier(0.4,0,0.2,1)',
 }
@@ -570,13 +573,13 @@ function WeightModal({ current, onClose, onSave }) {
       <div style={modalSheet} onClick={e => e.stopPropagation()}>
         <div style={modalHandle} />
         <h3 style={{
-          fontFamily: "'General Sans', sans-serif",
-          fontSize: '1.25rem', fontWeight: 700,
+          fontFamily: FONT,
+          fontSize: '1.3rem', fontWeight: 700,
           color: 'var(--color-text)', marginBottom: '6px',
         }}>Update Weight</h3>
         <p style={{
           fontSize: '0.875rem', color: 'var(--color-text-muted)',
-          fontFamily: "'General Sans', sans-serif", marginBottom: '20px',
+          fontFamily: FONT, marginBottom: '20px',
         }}>Keep your plan accurate 📈</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           <input
@@ -589,7 +592,7 @@ function WeightModal({ current, onClose, onSave }) {
           <span style={{
             fontSize: '1rem', fontWeight: 600,
             color: 'var(--color-text-muted)',
-            fontFamily: "'General Sans', sans-serif",
+            fontFamily: FONT,
           }}>kg</span>
         </div>
         <button onClick={handleSave} disabled={loading}
@@ -612,28 +615,28 @@ function WeightModal({ current, onClose, onSave }) {
 // ─── Shared Tokens ─────────────────────────────────────────────
 
 const glassCard = {
-  background: 'rgba(255,255,255,0.60)',
-  backdropFilter: 'blur(25px) saturate(200%)',
-  WebkitBackdropFilter: 'blur(25px) saturate(200%)',
-  border: '1px solid rgba(255,255,255,0.70)',
-  boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
-  borderRadius: '18px',
-  padding: '18px 16px',
+  background: 'rgba(255,255,255,0.65)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.80)',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.04)',
+  borderRadius: '24px',
+  padding: '20px 18px',
   transition: 'all 300ms ease',
 }
 
 const sectionLabel = {
-  fontSize: '0.68rem', fontWeight: 700,
+  fontSize: '0.75rem', fontWeight: 700,
   color: 'var(--color-text-faint)',
   letterSpacing: '1px', textTransform: 'uppercase',
-  fontFamily: "'General Sans', sans-serif",
+  fontFamily: FONT,
 }
 
 const weightRow = {
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  background: 'rgba(255,255,255,0.55)',
-  border: '1px solid rgba(255,255,255,0.70)',
-  borderRadius: '12px', padding: '12px 14px',
+  background: 'rgba(255,255,255,0.65)',
+  border: '1px solid rgba(255,255,255,0.80)',
+  borderRadius: '16px', padding: '14px 16px',
 }
 
 const weightIcon = {
@@ -642,30 +645,30 @@ const weightIcon = {
 }
 
 const weightLabel = {
-  fontSize: '0.7rem', color: 'var(--color-text-faint)',
-  fontFamily: "'General Sans', sans-serif", letterSpacing: '0.3px',
+  fontSize: '0.8rem', color: 'var(--color-text-muted)',
+  fontFamily: FONT, letterSpacing: '0.3px',
 }
 
 const weightVal = {
-  fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)',
-  fontFamily: "'General Sans', sans-serif",
+  fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text)',
+  fontFamily: FONT,
 }
 
 const noteText = {
-  fontSize: '0.75rem', color: 'var(--color-text-muted)',
-  fontFamily: "'General Sans', sans-serif", marginTop: '12px',
+  fontSize: '0.85rem', color: 'var(--color-text-muted)',
+  fontFamily: FONT, marginTop: '12px',
   background: 'rgba(255,255,255,0.50)',
   borderRadius: '10px', padding: '10px 12px', lineHeight: 1.5,
 }
 
 const accentBtn = {
-  fontSize: '0.8125rem', fontWeight: 600,
+  fontSize: '0.9rem', fontWeight: 700,
   color: '#ffffff', background: 'var(--color-accent)',
-  border: 'none', borderRadius: '8px',
-  padding: '6px 14px', cursor: 'pointer',
-  fontFamily: "'General Sans', sans-serif",
-  transition: 'background 200ms ease, transform 150ms ease',
-  boxShadow: '0 2px 8px rgba(58,158,95,0.30)',
+  border: 'none', borderRadius: '16px',
+  padding: '14px 20px', cursor: 'pointer',
+  fontFamily: FONT,
+  transition: 'opacity 180ms ease, transform 150ms ease',
+  boxShadow: '0 8px 24px rgba(52,199,89,0.30)',
 }
 
 const inputStyle = {
@@ -676,7 +679,7 @@ const inputStyle = {
   border: '1px solid rgba(255,255,255,0.70)',
   borderRadius: '12px',
   color: 'var(--color-text)', fontSize: '1rem',
-  fontFamily: "'General Sans', sans-serif",
+  fontFamily: FONT,
   transition: 'border-color 180ms ease, box-shadow 180ms ease',
 }
 
@@ -773,7 +776,7 @@ function Dashboard() {
   const quickActions = [
     {
       icon: <UtensilsCrossed size={22} color="var(--color-accent)" />,
-      glow: 'rgba(58,158,95,0.15)',
+      glow: 'hsla(142, 46%, 42%, 0.15)',
       label: 'View Meals',
       action: () => navigate('/nutrition'),
     },
@@ -795,18 +798,7 @@ function Dashboard() {
     <div style={pageWrapper}>
 
       {/* ── Ambient Background ── */}
-      <div style={ambientBg}>
-        <div style={glowTopRight} />
-        <div style={glowBottomLeft} />
-        <svg style={grainOverlay} width="100%" height="100%">
-          <filter id="grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.65"
-              numOctaves="3" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#grain)" opacity="0.4" />
-        </svg>
-      </div>
+      <div style={ambientBg} />
 
       {/* ── Greeting ── */}
       <div style={greetingSection} className="dash-fadeUp">
@@ -829,8 +821,8 @@ function Dashboard() {
         <div>
           <p style={sectionLabel}>Today's Target</p>
           <p style={{
-            fontFamily: "'General Sans', sans-serif",
-            fontSize: '1.75rem', fontWeight: 700,
+            fontFamily: FONT,
+            fontSize: '1.9rem', fontWeight: 800,
             color: 'var(--color-text)', lineHeight: 1, marginTop: '4px',
           }}>
             {targetCals}
@@ -861,8 +853,8 @@ function Dashboard() {
               ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
               : <RefreshCw size={13} />}
             <span style={{
-              fontSize: '0.72rem',
-              fontFamily: "'General Sans', sans-serif", fontWeight: 500,
+              fontSize: '0.78rem',
+              fontFamily: "'Satoshi', sans-serif", fontWeight: 500,
             }}>Regenerate</span>
           </button>
         </div>
@@ -891,9 +883,9 @@ function Dashboard() {
               {icon}
             </div>
             <span style={{
-              fontSize: '0.65rem', fontWeight: 500,
+              fontSize: '0.72rem', fontWeight: 600,
               color: 'var(--color-text-muted)',
-              fontFamily: "'General Sans', sans-serif",
+              fontFamily: FONT,
               textAlign: 'center', lineHeight: 1.3,
               textTransform: 'uppercase', letterSpacing: '0.8px',
             }}>{label}</span>
@@ -905,7 +897,7 @@ function Dashboard() {
       <div style={glassCard}>
         <div style={{
           display: 'flex', justifyContent: 'space-between',
-          alignItems: 'center', marginBottom: '14px',
+          alignItems: 'center', marginBottom: '16px',
         }}>
           <p style={sectionLabel}>Today's Meals</p>
           <button onClick={() => navigate('/nutrition')}
@@ -962,70 +954,31 @@ function Dashboard() {
       )}
 
       <style>{`
-        @keyframes spin    { to { transform: rotate(360deg); } }
+        :root {
+          --color-accent: #34C759;
+          --color-text: #1C1C1E;
+          --color-text-muted: #636366;
+          --color-text-faint: #8E8E93;
+        }
+        body, #root {
+          background: #F2F2F7 !important;
+        }
+        @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
-
-        @keyframes bmiBreath {
-          0%,100% { transform: scaleY(1.0); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-          50%     { transform: scaleY(1.1); box-shadow: 0 4px 16px rgba(255,255,255,0.5); }
-        }
-
-        @keyframes badgePulse {
-          0%,100% { opacity: 1; }
-          50%     { opacity: 0.6; }
-        }
-
-        @keyframes dashFadeUp {
-          from { opacity:0; transform:translateY(20px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-
-        @keyframes mealSlideIn {
-          from { opacity:0; transform:translateX(-12px); }
-          to   { opacity:1; transform:translateX(0); }
-        }
-
-        .dash-fadeUp  { animation: dashFadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both; }
-        .dash-delay-1 { animation-delay: 0.08s; }
-        .dash-delay-2 { animation-delay: 0.16s; }
-        .dash-delay-3 { animation-delay: 0.24s; }
-
-        .meal-card:hover  {
-          background: rgba(255,255,255,0.80) !important;
-          transform: translateX(3px);
-        }
-        .meal-card:active { transform: scale(0.98); }
-
-        .quick-tile:hover {
-          transform: translateY(-5px) scale(1.02);
-          box-shadow: 0 12px 28px rgba(0,0,0,0.08);
-          background: rgba(255,255,255,0.80) !important;
-        }
-        .quick-tile:active { transform: scale(0.97); }
-
-        .see-all-btn { position: relative; display: inline-flex; align-items: center; gap: 4px; }
-        .see-all-btn::after {
-          content: '';
-          position: absolute; bottom: -1px; left: 0; right: 100%;
-          height: 1px; background: var(--color-accent);
-          transition: right 250ms ease;
-        }
-        .see-all-btn:hover::after { right: 0; }
-        .see-all-btn:hover .see-all-arrow {
-          animation: arrowBounce 0.5s ease infinite alternate;
-        }
-
-        @keyframes arrowBounce {
-          from { transform: translateX(0); }
-          to   { transform: translateX(4px); }
-        }
-
-        .glass-input:focus {
-          outline: none;
-          border-color: var(--color-accent) !important;
-          box-shadow: 0 0 0 3px rgba(58,158,95,0.15) !important;
-        }
-        .glass-input::placeholder { color: var(--color-text-faint); }
+        @keyframes dashFadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes mealSlideIn { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes badgePulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+        .dash-fadeUp { animation: dashFadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both }
+        .dash-delay-1 { animation-delay: 0.08s }
+        .dash-delay-2 { animation-delay: 0.16s }
+        .dash-delay-3 { animation-delay: 0.24s }
+        .meal-card:hover { background: rgba(255,255,255,0.85) !important; transform: translateX(3px) }
+        .meal-card:active { transform: scale(0.98) }
+        .quick-tile:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 12px 28px rgba(0,0,0,0.08); background: rgba(255,255,255,0.85) !important }
+        .quick-tile:active { transform: scale(0.97) }
+        .spin { animation: spin 0.8s linear infinite }
+        .week-strip::-webkit-scrollbar { display: none }
+        .glass-input:focus { outline: none; border-color: var(--color-accent) !important; box-shadow: 0 0 0 3px rgba(52,199,89,0.15) !important }
       `}</style>
     </div>
   )
@@ -1035,34 +988,15 @@ function Dashboard() {
 
 const pageWrapper = {
   display: 'flex', flexDirection: 'column',
-  gap: '14px', padding: '0 16px 100px',
+  gap: '16px', padding: '0 16px 100px',
   paddingBottom: '100px',
   position: 'relative',
-  fontFamily: "'General Sans', sans-serif",
+  fontFamily: FONT,
+  minHeight: '100dvh', background: '#F2F2F7',
 }
 
 const ambientBg = {
-  position: 'fixed', inset: 0,
-  zIndex: -1, pointerEvents: 'none', overflow: 'hidden',
-  background: 'linear-gradient(160deg, #eef7f0 0%, #f5faf6 50%, #e8f4eb 100%)',
-}
-
-const glowTopRight = {
-  position: 'absolute', top: '-15%', right: '-10%',
-  width: '500px', height: '500px', borderRadius: '50%',
-  background: 'radial-gradient(circle, rgba(76,175,80,0.14) 0%, transparent 70%)',
-  filter: 'blur(60px)',
-}
-
-const glowBottomLeft = {
-  position: 'absolute', bottom: '-15%', left: '-10%',
-  width: '450px', height: '450px', borderRadius: '50%',
-  background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, transparent 70%)',
-  filter: 'blur(60px)',
-}
-
-const grainOverlay = {
-  position: 'absolute', inset: 0, opacity: 0.03, pointerEvents: 'none',
+  display: 'none',
 }
 
 const greetingSection = {
@@ -1070,13 +1004,13 @@ const greetingSection = {
 }
 
 const greetingTime = {
-  fontSize: '0.8rem', color: 'var(--color-text-faint)',
-  fontFamily: "'General Sans', sans-serif", marginBottom: '4px',
+  fontSize: '0.85rem', color: 'var(--color-text-faint)',
+  fontFamily: FONT, marginBottom: '4px',
 }
 
 const greetingName = {
-  fontFamily: "'General Sans', sans-serif",
-  fontSize: '1.5rem', fontWeight: 700,
+  fontFamily: FONT,
+  fontSize: '1.5rem', fontWeight: 800,
   color: 'var(--color-text)', letterSpacing: '-0.3px', lineHeight: 1.2,
 }
 
@@ -1086,7 +1020,7 @@ const avatarCircle = {
   borderRadius: '50%',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   fontSize: '1.125rem', fontWeight: 700,
-  color: '#ffffff', fontFamily: "'General Sans', sans-serif",
+  color: '#ffffff', fontFamily: FONT,
   flexShrink: 0,
   boxShadow: '0 0 20px rgba(76,175,80,0.35)',
 }
@@ -1106,23 +1040,26 @@ const regenBtn = {
 }
 
 const quickGrid = {
-  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px',
+  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px',
+  alignItems: 'stretch',
 }
 
 const quickBtn = {
-  background: 'rgba(255,255,255,0.60)',
-  backdropFilter: 'blur(16px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-  border: '1px solid rgba(255,255,255,0.70)',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-  borderRadius: '16px', padding: '18px 8px',
+  background: 'rgba(255,255,255,0.65)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.80)',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.04)',
+  borderRadius: '20px', padding: '20px 8px',
   display: 'flex', flexDirection: 'column',
-  alignItems: 'center', gap: '10px', cursor: 'pointer',
+  alignItems: 'center', justifyContent: 'center',
+  gap: '10px', cursor: 'pointer', width: '100%',
+  minHeight: '110px',
   transition: 'all 250ms cubic-bezier(0.16,1,0.3,1)',
 }
 
 const quickIconWrap = {
-  width: '46px', height: '46px',
+  width: '50px', height: '50px',
   borderRadius: '12px',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   transition: 'transform 200ms ease',
@@ -1130,8 +1067,8 @@ const quickIconWrap = {
 
 const ghostBtn = {
   background: 'none', border: 'none', cursor: 'pointer',
-  fontSize: '0.8rem', color: 'var(--color-accent)',
-  fontFamily: "'General Sans', sans-serif",
+  fontSize: '0.875rem', color: 'var(--color-accent)',
+  fontFamily: "'Satoshi', sans-serif",
   fontWeight: 600, padding: '0 0 2px 0',
 }
 
