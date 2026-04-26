@@ -1916,14 +1916,16 @@ export default function Nutrition() {
               {!latestPlanEndDate
                 ? 'No plan yet — generate your first plan!'
                 : nextWeekButtonActive
-                  ? `Starts ${(() => {
-                    if (!latestPlanEndDate) return 'today'
-                    const d = new Date(latestPlanEndDate)
-                    d.setDate(d.getDate() + 1)
+                  ? (() => {
+                    const start = new Date(latestPlanEndDate)
+                    start.setDate(start.getDate() + 1)
                     const today = new Date(); today.setHours(0, 0, 0, 0)
-                    const start = d > today ? d : today
-                    return start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-                  })()} · 3 day meal + training plan`
+                    const displayStart = start > today ? start : today
+                    const displayEnd = new Date(displayStart)
+                    displayEnd.setDate(displayStart.getDate() + 2)
+                    const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                    return `${fmt(displayStart)} – ${fmt(displayEnd)} · 3 day meal + training plan`
+                  })()
                   : 'Next plan already generated'}
             </p>
           </div>
