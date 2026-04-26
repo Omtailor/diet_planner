@@ -1907,7 +1907,7 @@ export default function Nutrition() {
                 const displayEnd = new Date(displayStart)
                 displayEnd.setDate(displayStart.getDate() + 2)
                 const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-                return `${fmt(displayStart)} – ${fmt(displayEnd)} · 3 day meal + training plan`
+                return `${fmt(displayStart)} – ${fmt(displayEnd)} · 3 day plan`
               })()}
           </p>
         </div>
