@@ -164,6 +164,7 @@ export default function Account() {
   const [groceryStartDate, setGroceryStartDate] = useState(getDateStr(0))
   const [groceryEndDate, setGroceryEndDate] = useState(getDateStr(6))
   const [showGrocerySheet, setShowGrocerySheet] = useState(false)
+  const [showOnboardingBlocker, setShowOnboardingBlocker] = useState(false)
 
   const menuItems = [
     { icon: '👤', label: 'Personal Info', sub: 'Name, age, city', key: 'personal' },
@@ -253,6 +254,13 @@ export default function Account() {
   }
 
   const handleMenuClick = (key) => {
+    if (key === 'cheat' || key === 'grocery') {
+      if (!profile?.age || !profile?.goal || !profile?.diet_preference) {
+        setShowOnboardingBlocker(true)
+        return
+      }
+    }
+
     if (key === 'grocery') {
       setShowGroceryRangeModal(true)
       return
@@ -740,6 +748,99 @@ export default function Account() {
             )}
 
 
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Blocker */}
+      {showOnboardingBlocker && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(255,255,255,0.97)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '32px', gap: 0,
+            animation: 'fadeUp 0.3s ease-out',
+          }}
+          onClick={() => setShowOnboardingBlocker(false)}
+        >
+          <div
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 340 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '4rem', marginBottom: 16 }}>📋</div>
+
+            <h2 style={{
+              fontFamily: FONT, fontSize: '1.5rem', fontWeight: 800,
+              color: 'var(--color-text)', textAlign: 'center',
+              letterSpacing: '-0.3px', marginBottom: 10,
+            }}>
+              Complete Your Profile First
+            </h2>
+
+            <p style={{
+              fontFamily: FONT, fontSize: '0.95rem', fontWeight: 500,
+              color: 'var(--color-text-muted)', textAlign: 'center',
+              maxWidth: 260, lineHeight: 1.6, marginBottom: 32,
+            }}>
+              We need a few details about you — age, weight, goal, and diet preference — to build a personalised meal plan.
+            </p>
+
+            <div style={{
+              width: '100%', maxWidth: 300,
+              background: 'rgba(52,199,89,0.06)',
+              border: '1px solid rgba(52,199,89,0.2)',
+              borderRadius: 16, padding: '16px 20px',
+              marginBottom: 28, display: 'flex',
+              flexDirection: 'column', gap: 10,
+            }}>
+              {[
+                { emoji: '👤', text: 'Basic info — age, gender, city' },
+                { emoji: '⚖️', text: 'Body stats — height & weight' },
+                { emoji: '🎯', text: 'Your goal — fat loss, muscle gain...' },
+                { emoji: '🥗', text: 'Diet preference — veg, non-veg, jain' },
+              ].map(({ emoji, text }) => (
+                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: '1.2rem' }}>{emoji}</span>
+                  <span style={{ fontFamily: FONT, fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)' }}>{text}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setShowOnboardingBlocker(false)
+                navigate('/onboarding')
+              }}
+              style={{
+                width: '100%', maxWidth: 300, padding: 16,
+                background: 'var(--color-accent)', border: 'none',
+                borderRadius: 16, color: '#ffffff',
+                fontFamily: FONT, fontWeight: 800, fontSize: '1rem',
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(52,199,89,0.35)',
+                marginBottom: 12,
+              }}
+            >
+              Complete Onboarding →
+            </button>
+
+            <button
+              onClick={() => setShowOnboardingBlocker(false)}
+              style={{
+                width: '100%', maxWidth: 300, padding: 12,
+                background: 'transparent',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: 16, color: 'var(--color-text-muted)',
+                fontFamily: FONT, fontWeight: 600, fontSize: '0.9rem',
+                cursor: 'pointer',
+              }}
+            >
+              Maybe Later
+            </button>
           </div>
         </div>
       )}
