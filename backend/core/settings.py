@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "cheat_meals",
     "grocery",
     "training",
-
 ]
 
 # ── DRF ───────────────────────────────────────────────────────────────────────
@@ -60,31 +59,30 @@ REST_FRAMEWORK = {
 
 # ── JWT — Step 3 ──────────────────────────────────────────────────────────────
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=6),   # ← was 1 day, reduced
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=6),  # ← was 1 day, reduced
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,              # ← was False, now True
+    "BLACKLIST_AFTER_ROTATION": True,  # ← was False, now True
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 # Add your Vercel frontend URL to .env as:
 # CORS_ALLOWED_ORIGINS=https://your-app.vercel.app,http://localhost:5173
-_cors = os.getenv(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://localhost:3000"
-)
+_cors = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000")
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors.split(",") if o.strip()]
 
-_FRONTEND_ORIGIN = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")[0].strip()
+_FRONTEND_ORIGIN = (
+    os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")[0].strip()
+)
 
 # ── HTTPS Security Headers (production only) ──────────────────────────────────
 if IS_PROD:
-    SECURE_HSTS_SECONDS = 31536000           # 1 year HSTS
+    SECURE_HSTS_SECONDS = 31536000  # 1 year HSTS
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = True               # Force HTTPS
-    SESSION_COOKIE_SECURE = True             # Cookie only over HTTPS
+    SECURE_SSL_REDIRECT = True  # Force HTTPS
+    SESSION_COOKIE_SECURE = True  # Cookie only over HTTPS
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -98,7 +96,7 @@ if IS_PROD:
 
 # ── Middleware ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",   
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "core.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -143,7 +141,9 @@ DATABASES = {
 
 # ── Password Validation ───────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -166,13 +166,13 @@ ADMIN_URL = os.getenv("DJANGO_ADMIN_URL", "admin")  # falls back to /admin/ loca
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {'class': 'logging.StreamHandler'},
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
     },
 }

@@ -11,7 +11,7 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 # Only paths under these top-level folders will ever be served.
 # Add a new entry here when you introduce a new upload type.
 ALLOWED_MEDIA_PREFIXES = {
-    "cheat_meals",   # CheatMealImage uploads
+    "cheat_meals",  # CheatMealImage uploads
 }
 
 
@@ -35,20 +35,20 @@ def protected_media(request, file_path):
     # ── 1. Authenticate ───────────────────────────────────────────────────────
     user = _get_jwt_user(request)
     if user is None or not user.is_authenticated:
-        return JsonResponse({'detail': 'Authentication required.'}, status=401)
+        return JsonResponse({"detail": "Authentication required."}, status=401)
 
     # ── 2. Check top-level prefix is in allowlist (default-deny) ─────────────
     parts = Path(file_path).parts
     if not parts or parts[0] not in ALLOWED_MEDIA_PREFIXES:
         # Unknown prefix — deny even for authenticated users
-        return JsonResponse({'detail': 'Forbidden.'}, status=403)
+        return JsonResponse({"detail": "Forbidden."}, status=403)
 
     # ── 3. Resolve path and prevent directory traversal ───────────────────────
     media_root = Path(settings.MEDIA_ROOT).resolve()
-    requested  = (media_root / file_path).resolve()
+    requested = (media_root / file_path).resolve()
 
     if not str(requested).startswith(str(media_root) + os.sep):
-        return JsonResponse({'detail': 'Invalid path.'}, status=400)
+        return JsonResponse({"detail": "Invalid path."}, status=400)
 
     if not requested.exists() or not requested.is_file():
         raise Http404
@@ -56,21 +56,22 @@ def protected_media(request, file_path):
     # ── 4. Per-prefix ownership check ────────────────────────────────────────
     if parts[0] == "cheat_meals":
         from cheat_meals.models import CheatMealImage
+
         owns = CheatMealImage.objects.filter(
             image=file_path,
             cheat_meal__user=user,
         ).exists()
         if not owns:
-            return JsonResponse({'detail': 'Forbidden.'}, status=403)
+            return JsonResponse({"detail": "Forbidden."}, status=403)
 
     # ── 5. Serve file ─────────────────────────────────────────────────────────
     content_type, _ = mimetypes.guess_type(str(requested))
-    content_type = content_type or 'application/octet-stream'
+    content_type = content_type or "application/octet-stream"
 
     response = FileResponse(
-        open(requested, 'rb'),
+        open(requested, "rb"),
         content_type=content_type,
     )
-    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
-    response['X-Content-Type-Options'] = 'nosniff'
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+    response["X-Content-Type-Options"] = "nosniff"
     return response

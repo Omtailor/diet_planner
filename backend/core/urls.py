@@ -5,25 +5,18 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from core.media_serve import protected_media
 
 urlpatterns = [
-    # ✅ Admin URL read from env — not hardcoded /admin/
-    path(f'{settings.ADMIN_URL}/', admin.site.urls),
-
+    path(f"{settings.ADMIN_URL}/", admin.site.urls),
     # Auth
-    path('api/auth/', include('users.urls')),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-
+    path("api/auth/", include("users.urls")),
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     # Meals
-    path('api/meals/', include('meals.urls')),
-
+    path("api/meals/", include("meals.urls")),
     # Cheat Meals
-    path('api/cheat-meals/', include('cheat_meals.urls')),
-
+    path("api/cheat-meals/", include("cheat_meals.urls")),
     # Training
-    path('api/training/', include('training.urls')),
-
+    path("api/training/", include("training.urls")),
     # Grocery
-    path('api/grocery/', include('grocery.urls')),
-
+    path("api/grocery/", include("grocery.urls")),
     # Authenticated media
-    path('media/<path:file_path>', protected_media, name='protected_media'),
+    path("media/<path:file_path>", protected_media, name="protected_media"),
 ]
