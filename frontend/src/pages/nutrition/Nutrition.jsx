@@ -1111,6 +1111,10 @@ export default function Nutrition() {
   const [showOnboardingBlocker, setShowOnboardingBlocker] = useState(false)
   const slots = ['breakfast', 'lunch', 'dinner']
 
+  const isProfileComplete = () => Boolean(
+    profile?.age && profile?.height_cm && profile?.weight_kg && profile?.gender
+  )
+
   useEffect(() => {
     fetchDayMeal(selectedDate)
   }, [selectedDate])
@@ -1191,6 +1195,11 @@ export default function Nutrition() {
   };
 
   const handleGenerateNextWeek = async () => {
+    // Pre-check BEFORE showing cooking loader
+    if (!isProfileComplete()) {
+      setShowOnboardingBlocker(true)
+      return
+    }
     setGeneratingNextWeek(true);
     try {
       const res = await mealService.generateNextWeek();
@@ -1922,11 +1931,29 @@ export default function Nutrition() {
 
       {/* ── Bottom Action Buttons ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <GroceryCard onView={() => setShowGroceryRangeModal(true)} />
-        <CheatMealButton onLog={() => navigate('/cheat-meal')} />
+        <GroceryCard onView={() => {
+          if (!isProfileComplete()) {
+            setShowOnboardingBlocker(true)
+            return
+          }
+          setShowGroceryRangeModal(true)
+        }} />
+        <CheatMealButton onLog={() => {
+          if (!isProfileComplete()) {
+            setShowOnboardingBlocker(true)
+            return
+          }
+          navigate('/cheat-meal')
+        }} />
 
         {/* Export PDF */}
-        <button onClick={() => setShowExportModal(true)} disabled={exportPdfLoading}
+        <button onClick={() => {
+          if (!isProfileComplete()) {
+            setShowOnboardingBlocker(true)
+            return
+          }
+          setShowExportModal(true)
+        }} disabled={exportPdfLoading}
           style={{
             width: '100%',
             ...GLASS_WHITE,
