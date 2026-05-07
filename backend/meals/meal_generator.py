@@ -644,9 +644,6 @@ RETURN VALID JSON ONLY:
                         config=types.GenerateContentConfig(
                             temperature=0.1,
                             response_mime_type="application/json",
-                            thinking_config=types.ThinkingConfig(
-                                thinking_budget=1024  # ✅ ADD THIS
-                            ),
                         ),
                     )
                     raw = response.text.strip()
@@ -694,10 +691,6 @@ RETURN VALID JSON ONLY:
                             # ✅ FIXED: Lower temperature for mathematical accuracy
                             temperature=0.1,
                             response_mime_type="application/json",
-                            # ✅ Cap thinking tokens — reduces latency ~20-30s for structured output
-                            thinking_config=types.ThinkingConfig(
-                                thinking_budget=1024  # default is ~8000, cap at 1024 for JSON tasks
-                            ),
                         ),
                     )
                     raw = response.text.strip()
@@ -1178,10 +1171,6 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
                         config=types.GenerateContentConfig(
                             temperature=0.1,
                             response_mime_type="application/json",
-                            # ✅ Cap thinking tokens — reduces latency ~20-30s for structured output
-                            thinking_config=types.ThinkingConfig(
-                                thinking_budget=512  # default is ~8000, cap at 1024 for JSON tasks
-                            ),
                         ),
                     )
                     raw = response.text.strip()
