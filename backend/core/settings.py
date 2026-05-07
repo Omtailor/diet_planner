@@ -97,8 +97,7 @@ if IS_PROD:
 # ── Middleware ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.security.SecurityMiddleware",
-    "core.middleware.SecurityHeadersMiddleware",
+    "django.middleware.security.SecurityMiddleware",    "whitenoise.middleware.WhiteNoiseMiddleware",    "core.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -134,8 +133,12 @@ DATABASES = {
         "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST"),
-        "PORT": os.getenv("DB_PORT"),
+        "PORT": os.getenv("DB_PORT", "5432"),
         "CONN_MAX_AGE": 60,
+        # ✅ Required for Neon.tech — enforces SSL in production
+        "OPTIONS": {
+            "sslmode": "require",
+        },
     }
 }
 
@@ -157,6 +160,8 @@ USE_TZ = True
 
 # ── Static & Media ────────────────────────────────────────────────────────────
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
