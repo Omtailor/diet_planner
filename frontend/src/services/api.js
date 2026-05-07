@@ -35,6 +35,7 @@ export const safeStorage = {
 const API = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 60000,
 })
 
 // ── JWT refresh queue (prevents race condition) ─────────────────────────

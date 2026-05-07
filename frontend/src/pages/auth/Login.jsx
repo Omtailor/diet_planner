@@ -32,7 +32,11 @@ function Login() {
         toast.success('Complete your profile first!'); navigate('/onboarding')
       }
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Invalid credentials')
+      if (err.code === 'ECONNABORTED') {
+        toast.error('Server is waking up, please try again in 30 seconds ☕')
+      } else {
+        toast.error(err.response?.data?.error || 'Invalid credentials')
+      }
     } finally {
       setLoading(false)
     }

@@ -43,11 +43,15 @@ function Signup() {
       toast.success("Account created! Let's set up your profile 🎉")
       navigate('/onboarding')
     } catch (err) {
-      const data = err.response?.data
-      if (data?.username) toast.error(`Username: ${data.username[0]}`)
-      else if (data?.email) toast.error(`Email: ${data.email[0]}`)
-      else if (data?.password) toast.error(`Password: ${data.password[0]}`)
-      else toast.error('Registration failed. Try again.')
+      if (err.code === 'ECONNABORTED') {
+        toast.error('Server is waking up, please try again in 30 seconds ☕')
+      } else {
+        const data = err.response?.data
+        if (data?.username) toast.error(`Username: ${data.username[0]}`)
+        else if (data?.email) toast.error(`Email: ${data.email[0]}`)
+        else if (data?.password) toast.error(`Password: ${data.password[0]}`)
+        else toast.error('Registration failed. Try again.')
+      }
     } finally {
       setLoading(false)
     }

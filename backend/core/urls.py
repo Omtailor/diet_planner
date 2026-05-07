@@ -1,10 +1,16 @@
+from django.http import JsonResponse
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from rest_framework_simplejwt.views import TokenRefreshView
 from core.media_serve import protected_media
 
+
+def health(request):
+    return JsonResponse({"status": "ok"})
+
 urlpatterns = [
+    path('health/', health),
     path(f"{settings.ADMIN_URL}/", admin.site.urls),
     # Auth
     path("api/auth/", include("users.urls")),
