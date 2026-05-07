@@ -16,27 +16,13 @@ const STEP_IMAGES = [bg6, bg7, bg8, bg9, bg10, bg11]
 const TOTAL_STEPS = 6
 
 const LOADING_SENTENCES = [
-  "Initializing your Neural Health Profile...",
-  "Mapping your unique metabolic fingerprint...",
-  "Sculpting your 7-day nutrient architecture...",
-  "Harmonizing Indian flavors with macro-precision...",
-  "Optimizing fiber ratios for digestive efficiency...",
-  "Calibrating your glycemic response window...",
-  "Engineering a hypertrophy-focused training split...",
-  "Syncing hydration cycles with your daily rhythm...",
-  "Balancing micronutrients: Zinc, Iron, and Vitamin D...",
-  "Simulating your 16:8 fasting metabolic curve...",
-  "Drafting your bespoke, zero-waste grocery map...",
-  "Finalizing your recovery and rest-day protocols...",
-  "Stress-testing your plan for 100% adherence...",
-  "Encoding your culinary preferences into the engine...",
-  "Synthesizing your activity levels with caloric load...",
-  "Cross-referencing allergies and dietary restrictions...",
-  "Allocating micronutrient density for cellular repair...",
-  "Constructing your high-performance training schedule...",
-  "Plan finalized. Preparing your digital reveal...",
-  "Welcome to the new you. Launching now... 🚀"
-];
+  "Saving your profile...",
+  "Storing your health details...",
+  "Setting up your preferences...",
+  "Configuring your dietary settings...",
+  "Almost there...",
+  "Finalizing your profile setup...",
+]
 
 // ─── Step Components ───────────────────────────────────────────
 
@@ -342,7 +328,7 @@ function Step6({ data }) {
       <div style={s.aiNote}>
         <span style={{ fontSize: '1.25rem' }}>🤖</span>
         <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
-          Our AI will generate your personalized 3-day Indian meal plan and training schedule instantly!
+          Your profile is ready! Head to the dashboard to generate your personalized meal and training plan whenever you're ready.
         </p>
       </div>
     </div>
@@ -538,7 +524,7 @@ function Onboarding() {
       }
       await authService.onboarding(payload)
       await fetchProfile()
-      toast.success('Profile saved! Generating your plan... 🚀')
+      toast.success('Profile saved! Welcome to Diet Planner 🎉')
       navigate('/')
     } catch (err) {
       const errData = err.response?.data
@@ -615,7 +601,7 @@ function Onboarding() {
             {loading
               ? <Loader2 size={20} style={{ animation: 'spin 0.8s linear infinite' }} />
               : step === TOTAL_STEPS
-                ? 'Generate My Plan 🚀'
+                ? 'Complete Setup 🎉'
                 : 'Continue →'
             }
           </button>

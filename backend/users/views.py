@@ -7,10 +7,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import UserProfile, WeightLog
 from .serializers import UserProfileSerializer, RegisterSerializer, LoginSerializer
-from meals.meal_generator import MealPlanGenerator
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def get_tokens_for_user(user):
@@ -100,30 +96,11 @@ class OnboardingView(APIView):
             if profile.weight_kg:
                 WeightLog.objects.create(user=request.user, weight_kg=profile.weight_kg)
 
-            # ── AUTO-GENERATE MEAL PLAN ──────────────────────
-            try:
-                generator = MealPlanGenerator(profile)
-                plan = generator.generate()
-                plan_generated = plan is not None
-
-                try:
-                    from grocery.grocery_generator import generate_grocery_list
-
-                    generate_grocery_list(profile.user)
-                except Exception as e:
-                    logger.warning(f"[Onboarding] Grocery list generation failed: {e}")
-
-            except Exception as e:
-                logger.warning(f"[Onboarding] Meal plan generation failed: {e}")
-                plan_generated = False
-            # ────────────────────────────────────────────────
-
             return Response(
                 {
                     "message": "Profile setup complete",
                     "profile": serializer.data,
                     "onboarding_complete": True,
-                    "meal_plan_generated": plan_generated,  # ← tells frontend if plan is ready
                 },
                 status=status.HTTP_201_CREATED,
             )

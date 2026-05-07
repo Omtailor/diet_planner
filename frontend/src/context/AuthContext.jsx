@@ -44,8 +44,12 @@ export function AuthProvider({ children }) {
     safeStorage.set('access_token', tokens.access)
     safeStorage.set('refresh_token', tokens.refresh)
     setUser(userData)
-    const profileData = await fetchProfile()
-    return profileData
+    try {
+      const profileData = await fetchProfile()
+      return profileData
+    } catch {
+      return null
+    }
   }
 
   const logout = () => {
