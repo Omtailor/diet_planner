@@ -3,8 +3,6 @@ import logging
 import threading
 from datetime import date, timedelta
 
-from google import genai
-from google.genai import types
 from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)

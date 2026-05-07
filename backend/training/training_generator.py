@@ -6,7 +6,6 @@ Extreme personalization based on full user profile.
 import json
 import re
 from datetime import timedelta, date
-from google import genai
 from django.conf import settings
 from .models import Exercise, TrainingPlan, DayTraining
 
@@ -361,14 +360,36 @@ Equipment must be one of: gym, none
 """
 
     try:
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=prompt,
-        )
-        raw = response.text.strip()
-        raw = re.sub(r"^```(?:json)?\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
+        import requests as _requests
+        models_to_try = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+        raw = None
+        for model_name in models_to_try:
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{model_name}:generateContent?key={settings.GEMINI_API_KEY}"
+            )
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.2,
+                    "maxOutputTokens": 32768,
+                },
+            }
+            try:
+                resp = _requests.post(url, json=payload, timeout=120)
+                if resp.status_code != 200:
+                    raise RuntimeError(f"{resp.status_code}: {resp.text[:300]}")
+                raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                raw = re.sub(r"^```(?:json)?\s*", "", raw)
+                raw = re.sub(r"\s*```$", "", raw)
+                break
+            except Exception as e:
+                print(f"[TrainingGenerator] {model_name} failed: {e}")
+                continue
+
+        if not raw:
+            raise RuntimeError("All models failed.")
+
         data = json.loads(raw)
     except Exception as e:
         print(f"[TrainingGenerator] Gemini error: {e}")

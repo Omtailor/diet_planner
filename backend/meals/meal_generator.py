@@ -3,8 +3,6 @@ import time
 import logging
 from datetime import date, timedelta
 
-from google import genai
-from google.genai import types
 from django.conf import settings
 from pydantic import ValidationError
 
@@ -19,7 +17,7 @@ class MealPlanGenerator:
     def __init__(self, profile):
         self.profile = profile
         self.user = profile.user
-        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        # Use direct HTTP requests to the Generative Language API instead of the SDK client.
 
     # ──────────────────────────────────────────────────────
     # 1. CALORIE CALCULATION
@@ -632,32 +630,41 @@ RETURN VALID JSON ONLY:
     def fetch_day_from_gemini(self, prompt: str):
         """Fetch a single day from Gemini synchronously."""
         from meals.schemas import DayMealSchema
+        import requests
 
         models_to_try = [("gemini-2.5-flash", 1), ("gemini-2.5-flash-lite", 2)]
         raw = None
+        api_key = settings.GEMINI_API_KEY
+
         for model_name, max_attempts in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.1,
+                    "maxOutputTokens": 65536,
+                    "responseMimeType": "application/json",
+                },
+            }
+
             for attempt in range(max_attempts):
                 try:
-                    response = self.client.models.generate_content(
-                        model=model_name,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            temperature=0.1,
-                            response_mime_type="application/json",
-                        ),
-                    )
-                    raw = response.text.strip()
+                    resp = requests.post(url, json=payload, timeout=120)
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"{resp.status_code}: {resp.text[:500]}")
+                    data = resp.json()
+                    raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
                     break
                 except Exception as e:
-                    logger.warning(
-                        f"Day fetch failed ({model_name} attempt {attempt+1}): {e}"
-                    )
+                    logger.warning(f"Day fetch failed ({model_name} attempt {attempt+1}): {e}")
                     if attempt < max_attempts - 1:
                         time.sleep((attempt + 1) * 5)
             if raw:
                 break
+
         if not raw:
             return None
+
         try:
             data = json.loads(raw)
             return DayMealSchema(data)
@@ -670,44 +677,47 @@ RETURN VALID JSON ONLY:
     # ──────────────────────────────────────────────────────
 
     def fetch_from_gemini(self, prompt: str) -> WeeklyPlanSchema | None:
+        import requests
         import time
 
-        # Primary model with retries, fallback to 2.0-flash on persistent 503
         models_to_try = [
-            ("gemini-2.5-flash", 1),  # Primary
-            ("gemini-2.5-flash-lite", 2),  # Fallback
+            ("gemini-2.5-flash", 1),
+            ("gemini-2.5-flash-lite", 2),
         ]
 
         raw = None
+        api_key = settings.GEMINI_API_KEY
 
         for model_name, max_attempts in models_to_try:
             logger.info(f"[MealGenerator] Trying model: {model_name}")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.1,
+                    "maxOutputTokens": 65536,
+                    "responseMimeType": "application/json",
+                },
+            }
+
             for attempt in range(max_attempts):
                 try:
-                    response = self.client.models.generate_content(
-                        model=model_name,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            # ✅ FIXED: Lower temperature for mathematical accuracy
-                            temperature=0.1,
-                            response_mime_type="application/json",
-                        ),
-                    )
-                    raw = response.text.strip()
+                    resp = requests.post(url, json=payload, timeout=120)
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"{resp.status_code}: {resp.text[:500]}")
+                    data = resp.json()
+                    raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
                     logger.info(f"[MealGenerator] ✓ Got response from {model_name}")
-                    break  # Success — exit attempt loop
-
+                    break
                 except Exception as e:
-                    logger.warning(
-                        f"[MealGenerator] {model_name} attempt {attempt+1} failed: {e}"
-                    )
+                    logger.warning(f"[MealGenerator] {model_name} attempt {attempt+1} failed: {e}")
                     if attempt < max_attempts - 1:
                         wait = (attempt + 1) * 10
                         logger.info(f"[MealGenerator] Retrying in {wait}s...")
                         time.sleep(wait)
 
             if raw:
-                break  # Got a response — exit model loop
+                break
 
         if not raw:
             logger.error("[MealGenerator] All models and attempts failed.")
@@ -1156,30 +1166,38 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
 
         prompt = self.build_regen_prompt(day_meal, existing_names)
 
+        import requests
+
         models_to_try = [
             ("gemini-2.5-flash", 1),
             ("gemini-2.5-flash-lite", 2),
         ]
 
         raw = None
+        api_key = settings.GEMINI_API_KEY
+
         for model_name, max_attempts in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.1,
+                    "maxOutputTokens": 65536,
+                    "responseMimeType": "application/json",
+                },
+            }
+
             for attempt in range(max_attempts):
                 try:
-                    response = self.client.models.generate_content(
-                        model=model_name,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            temperature=0.1,
-                            response_mime_type="application/json",
-                        ),
-                    )
-                    raw = response.text.strip()
+                    resp = requests.post(url, json=payload, timeout=120)
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"{resp.status_code}: {resp.text[:500]}")
+                    data = resp.json()
+                    raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
                     logger.info(f"[RegenerateDay] ✓ Got response from {model_name}")
                     break
                 except Exception as e:
-                    logger.warning(
-                        f"[RegenerateDay] {model_name} attempt {attempt+1} failed: {e}"
-                    )
+                    logger.warning(f"[RegenerateDay] {model_name} attempt {attempt+1} failed: {e}")
                     if attempt < max_attempts - 1:
                         time.sleep((attempt + 1) * 10)
             if raw:
