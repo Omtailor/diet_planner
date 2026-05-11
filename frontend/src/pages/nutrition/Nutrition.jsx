@@ -1056,6 +1056,8 @@ export default function Nutrition() {
   const [regenerating, setRegenerating] = useState(false)
   const MEAL_CACHE_KEY = 'meal_cache'
   const MEAL_CACHE_TTL = 60 * 1000
+  const PAST_MEAL_TTL = 10 * 60 * 1000
+  const EMPTY_CACHE_TTL = 30 * 1000
   const lastFetchTime = useRef(null)
 
   const getMealCache = () => {
@@ -1130,6 +1132,11 @@ export default function Nutrition() {
     checkNextWeekPlan()
   }, [])
 
+  // Prefetch adjacent days as soon as the page opens
+  useEffect(() => {
+    prefetchAdjacentDays(selectedDate)
+  }, [])
+
   useEffect(() => {
     fetchDayMeal(selectedDate)
   }, [selectedDate])
@@ -1156,7 +1163,7 @@ export default function Nutrition() {
   }
 
   const prefetchAdjacentDays = (date) => {
-    [-1, 1].forEach(async (offset) => {
+    [-3, -2, -1, 1, 2, 3].forEach(async (offset) => {
       const d = new Date(date)
       d.setDate(d.getDate() + offset)
       const yyyy = d.getFullYear()
@@ -1172,35 +1179,49 @@ export default function Nutrition() {
         const latest = getMealCache()
         latest[adjDate] = { data: res.data, ts: Date.now() }
         setMealCache(latest)
-      } catch {}
+      } catch {
+        const latest = getMealCache()
+        if (!latest[adjDate]) {
+          latest[adjDate] = { data: null, ts: Date.now(), empty: true }
+          setMealCache(latest)
+        }
+      }
     })
   }
 
   const fetchDayMeal = async (date) => {
     const cache = getMealCache()
     const entry = cache[date]
-    const isFresh = entry && (Date.now() - entry.ts < MEAL_CACHE_TTL)
+    const today = getDateStr(0)
+    const ttl = entry?.empty
+      ? EMPTY_CACHE_TTL
+      : date < today
+        ? PAST_MEAL_TTL
+        : MEAL_CACHE_TTL
+    const isFresh = entry && (Date.now() - entry.ts < ttl)
 
-    if (isFresh) {
-      setDayMeal(entry.data)
-      setLoading(false)
-      return
-    }
+    // Always render cache instantly — even stale
     if (entry) {
       setDayMeal(entry.data)
       setLoading(false)
+      if (isFresh) return // fresh → skip network call entirely
+      // stale → fall through to background revalidation (no spinner)
     } else {
-      setLoading(true)
+      setLoading(true) // no cache at all → show skeleton
     }
 
     try {
       const res = await mealService.getDayMeal(date)
-      setDayMeal(res.data)
+      setDayMeal(res.data) // silently update UI with fresh data
       const updated = { ...getMealCache(), [date]: { data: res.data, ts: Date.now() } }
       setMealCache(updated)
       prefetchAdjacentDays(date)
     } catch {
-      if (!entry) setDayMeal(null)
+      if (!entry) {
+        setDayMeal(null)
+        const updated = { ...getMealCache(), [date]: { data: null, ts: Date.now(), empty: true } }
+        setMealCache(updated)
+      }
     } finally {
       setLoading(false)
     }
@@ -1770,6 +1791,14 @@ export default function Nutrition() {
             <button key={d}
               data-selected={isSelected}
               onClick={() => { setSelectedDate(d); setDateOffset(0); switchSlot(0); }}
+              onMouseEnter={() => {
+                const cache = getMealCache()
+                if (!cache[d]) prefetchAdjacentDays(d)
+              }}
+              onTouchStart={() => {
+                const cache = getMealCache()
+                if (!cache[d]) prefetchAdjacentDays(d)
+              }}
               style={{
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: '6px',

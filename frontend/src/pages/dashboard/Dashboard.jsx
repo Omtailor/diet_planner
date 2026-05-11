@@ -751,7 +751,7 @@ function Dashboard() {
         lastFetchRef.current = Date.now()
         if (isFresh) return
       }
-    } catch {}
+    } catch { }
 
     if (!dayMeal) setLoadingMeal(true)
     try {
