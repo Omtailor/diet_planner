@@ -1058,14 +1058,77 @@ export default function Nutrition() {
   const MEAL_CACHE_TTL = 60 * 1000
   const PAST_MEAL_TTL = 10 * 60 * 1000
   const EMPTY_CACHE_TTL = 30 * 1000
-  const lastFetchTime = useRef(null)
 
-  const getMealCache = () => {
-    try { return JSON.parse(sessionStorage.getItem(MEAL_CACHE_KEY) || '{}'); }
-    catch { return {}; }
+  // In-memory cache + inflight map to avoid repeated JSON parsing
+  const cacheRef = useRef({})
+  const inflightRef = useRef(new Map())
+  const selectedFetchIdRef = useRef(0)
+  const prefetchTimeoutRef = useRef(null)
+  const abortControllerRef = useRef(null)
+
+  useEffect(() => {
+    try {
+      cacheRef.current = JSON.parse(sessionStorage.getItem(MEAL_CACHE_KEY) || '{}')
+    } catch {
+      cacheRef.current = {}
+    }
+  }, [])
+
+  const persistCache = () => {
+    try {
+      sessionStorage.setItem(MEAL_CACHE_KEY, JSON.stringify(cacheRef.current))
+    } catch { }
   }
-  const setMealCache = (cache) => {
-    sessionStorage.setItem(MEAL_CACHE_KEY, JSON.stringify(cache));
+
+  const getCacheEntry = (date) => cacheRef.current[date]
+  const setCacheEntry = (date, value) => {
+    cacheRef.current = { ...cacheRef.current, [date]: value }
+    persistCache()
+  }
+  const removeCacheEntry = (date) => {
+    const next = { ...cacheRef.current }
+    delete next[date]
+    cacheRef.current = next
+    persistCache()
+  }
+
+  const getTTL = (date, entry) => {
+    const today = getDateStr(0)
+    if (entry?.empty) return EMPTY_CACHE_TTL
+    return date < today ? PAST_MEAL_TTL : MEAL_CACHE_TTL
+  }
+
+  const isFreshEntry = (date, entry) => {
+    if (!entry) return false
+    return Date.now() - entry.ts < getTTL(date, entry)
+  }
+
+  const fetchMealForDate = async (date, { background = false, signal } = {}) => {
+    const cached = getCacheEntry(date)
+
+    if (cached && isFreshEntry(date, cached)) return cached.data
+
+    if (inflightRef.current.has(date)) return inflightRef.current.get(date)
+
+    const req = mealService.getDayMeal(date, signal ? { signal } : undefined)
+      .then((res) => {
+        const data = res.data
+        setCacheEntry(date, { data, ts: Date.now() })
+        return data
+      })
+      .catch((err) => {
+        if (signal?.aborted) throw err
+        if (!cached) {
+          setCacheEntry(date, { data: null, ts: Date.now(), empty: true })
+        }
+        throw err
+      })
+      .finally(() => {
+        inflightRef.current.delete(date)
+      })
+
+    inflightRef.current.set(date, req)
+    return req
   }
   const [activeSlot, setActiveSlot] = useState(0)
   const [displaySlot, setDisplaySlot] = useState(0)
@@ -1132,13 +1195,14 @@ export default function Nutrition() {
     checkNextWeekPlan()
   }, [])
 
-  // Prefetch adjacent days as soon as the page opens
-  useEffect(() => {
-    prefetchAdjacentDays(selectedDate)
-  }, [])
-
   useEffect(() => {
     fetchDayMeal(selectedDate)
+    return () => {
+      clearTimeout(prefetchTimeoutRef.current)
+      if (abortControllerRef.current) {
+        try { abortControllerRef.current.abort() } catch { }
+      }
+    }
   }, [selectedDate])
 
   useEffect(() => {
@@ -1162,68 +1226,76 @@ export default function Nutrition() {
     }
   }
 
-  const prefetchAdjacentDays = (date) => {
-    [-3, -2, -1, 1, 2, 3].forEach(async (offset) => {
-      const d = new Date(date)
+  const getAdjacentDates = (date, offsets = [-1, 1, -2, 2]) => {
+    const base = new Date(date)
+    return offsets.map((offset) => {
+      const d = new Date(base)
       d.setDate(d.getDate() + offset)
       const yyyy = d.getFullYear()
       const mm = String(d.getMonth() + 1).padStart(2, '0')
       const dd = String(d.getDate()).padStart(2, '0')
-      const adjDate = `${yyyy}-${mm}-${dd}`
-
-      const cache = getMealCache()
-      if (cache[adjDate]) return
-
-      try {
-        const res = await mealService.getDayMeal(adjDate)
-        const latest = getMealCache()
-        latest[adjDate] = { data: res.data, ts: Date.now() }
-        setMealCache(latest)
-      } catch {
-        const latest = getMealCache()
-        if (!latest[adjDate]) {
-          latest[adjDate] = { data: null, ts: Date.now(), empty: true }
-          setMealCache(latest)
-        }
-      }
+      return `${yyyy}-${mm}-${dd}`
     })
   }
 
-  const fetchDayMeal = async (date) => {
-    const cache = getMealCache()
-    const entry = cache[date]
-    const today = getDateStr(0)
-    const ttl = entry?.empty
-      ? EMPTY_CACHE_TTL
-      : date < today
-        ? PAST_MEAL_TTL
-        : MEAL_CACHE_TTL
-    const isFresh = entry && (Date.now() - entry.ts < ttl)
+  const prefetchDate = async (date) => {
+    const entry = getCacheEntry(date)
+    if (entry && isFreshEntry(date, entry)) return
+    if (inflightRef.current.has(date)) return
+    try {
+      await fetchMealForDate(date, { background: true })
+    } catch {
+      // ignore background misses
+    }
+  }
 
-    // Always render cache instantly — even stale
-    if (entry) {
-      setDayMeal(entry.data)
+  const prefetchAdjacentDays = async (date) => {
+    const dates = getAdjacentDates(date)
+    // nearest first (await to avoid too many concurrent requests)
+    for (const d of dates) {
+      await prefetchDate(d)
+    }
+  }
+
+  const scheduleAdjacentPrefetch = (date) => {
+    clearTimeout(prefetchTimeoutRef.current)
+    prefetchTimeoutRef.current = setTimeout(() => {
+      prefetchAdjacentDays(date)
+    }, 150)
+  }
+
+  const fetchDayMeal = async (date) => {
+    const requestId = ++selectedFetchIdRef.current
+    const cached = getCacheEntry(date)
+
+    if (abortControllerRef.current) {
+      try { abortControllerRef.current.abort() } catch { }
+    }
+    abortControllerRef.current = new AbortController()
+
+    if (cached) {
+      setDayMeal(cached.data)
       setLoading(false)
-      if (isFresh) return // fresh → skip network call entirely
-      // stale → fall through to background revalidation (no spinner)
+      if (isFreshEntry(date, cached)) {
+        scheduleAdjacentPrefetch(date)
+        return
+      }
+      // stale → background revalidation
     } else {
-      setLoading(true) // no cache at all → show skeleton
+      setLoading(true)
     }
 
     try {
-      const res = await mealService.getDayMeal(date)
-      setDayMeal(res.data) // silently update UI with fresh data
-      const updated = { ...getMealCache(), [date]: { data: res.data, ts: Date.now() } }
-      setMealCache(updated)
-      prefetchAdjacentDays(date)
-    } catch {
-      if (!entry) {
-        setDayMeal(null)
-        const updated = { ...getMealCache(), [date]: { data: null, ts: Date.now(), empty: true } }
-        setMealCache(updated)
-      }
+      const data = await fetchMealForDate(date, { signal: abortControllerRef.current.signal })
+      if (requestId !== selectedFetchIdRef.current) return
+      setDayMeal(data)
+      scheduleAdjacentPrefetch(date)
+    } catch (err) {
+      if (abortControllerRef.current?.signal?.aborted) return
+      if (requestId !== selectedFetchIdRef.current) return
+      if (!cached) setDayMeal(null)
     } finally {
-      setLoading(false)
+      if (requestId === selectedFetchIdRef.current) setLoading(false)
     }
   }
 
@@ -1252,13 +1324,9 @@ export default function Nutrition() {
     }
 
     setRegenerating(true);
-    setLoading(true);
-    setDayMeal(null);
     try {
       await mealService.regenerateDay(selectedDate);
-      const cache = getMealCache();
-      delete cache[selectedDate];
-      setMealCache(cache);
+      removeCacheEntry(selectedDate);
       await fetchDayMeal(selectedDate);
       toast.success("Day meals regenerated!");
     } catch {
@@ -1792,12 +1860,10 @@ export default function Nutrition() {
               data-selected={isSelected}
               onClick={() => { setSelectedDate(d); setDateOffset(0); switchSlot(0); }}
               onMouseEnter={() => {
-                const cache = getMealCache()
-                if (!cache[d]) prefetchAdjacentDays(d)
+                prefetchDate(d)
               }}
               onTouchStart={() => {
-                const cache = getMealCache()
-                if (!cache[d]) prefetchAdjacentDays(d)
+                prefetchDate(d)
               }}
               style={{
                 display: 'flex', flexDirection: 'column',
