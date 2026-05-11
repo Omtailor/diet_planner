@@ -361,6 +361,7 @@ Equipment must be one of: gym, none
 
     try:
         import requests as _requests
+
         models_to_try = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
         raw = None
         for model_name in models_to_try:
@@ -379,7 +380,9 @@ Equipment must be one of: gym, none
                 resp = _requests.post(url, json=payload, timeout=120)
                 if resp.status_code != 200:
                     raise RuntimeError(f"{resp.status_code}: {resp.text[:300]}")
-                raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                raw = resp.json()["candidates"][0]["content"]["parts"][0][
+                    "text"
+                ].strip()
                 raw = re.sub(r"^```(?:json)?\s*", "", raw)
                 raw = re.sub(r"\s*```$", "", raw)
                 break
