@@ -1054,6 +1054,17 @@ export default function Nutrition() {
   const [dayMeal, setDayMeal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
+  const MEAL_CACHE_KEY = 'meal_cache'
+  const MEAL_CACHE_TTL = 60 * 1000
+  const lastFetchTime = useRef(null)
+
+  const getMealCache = () => {
+    try { return JSON.parse(sessionStorage.getItem(MEAL_CACHE_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  const setMealCache = (cache) => {
+    sessionStorage.setItem(MEAL_CACHE_KEY, JSON.stringify(cache));
+  }
   const [activeSlot, setActiveSlot] = useState(0)
   const [displaySlot, setDisplaySlot] = useState(0)
   const [cardVisible, setCardVisible] = useState(true)
@@ -1116,12 +1127,12 @@ export default function Nutrition() {
   )
 
   useEffect(() => {
-    fetchDayMeal(selectedDate)
-  }, [selectedDate])
-
-  useEffect(() => {
     checkNextWeekPlan()
   }, [])
+
+  useEffect(() => {
+    fetchDayMeal(selectedDate)
+  }, [selectedDate])
 
   useEffect(() => {
     if (!weekStripRef.current) return
@@ -1144,13 +1155,52 @@ export default function Nutrition() {
     }
   }
 
+  const prefetchAdjacentDays = (date) => {
+    [-1, 1].forEach(async (offset) => {
+      const d = new Date(date)
+      d.setDate(d.getDate() + offset)
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      const adjDate = `${yyyy}-${mm}-${dd}`
+
+      const cache = getMealCache()
+      if (cache[adjDate]) return
+
+      try {
+        const res = await mealService.getDayMeal(adjDate)
+        const latest = getMealCache()
+        latest[adjDate] = { data: res.data, ts: Date.now() }
+        setMealCache(latest)
+      } catch {}
+    })
+  }
+
   const fetchDayMeal = async (date) => {
-    setLoading(true)
+    const cache = getMealCache()
+    const entry = cache[date]
+    const isFresh = entry && (Date.now() - entry.ts < MEAL_CACHE_TTL)
+
+    if (isFresh) {
+      setDayMeal(entry.data)
+      setLoading(false)
+      return
+    }
+    if (entry) {
+      setDayMeal(entry.data)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
     try {
       const res = await mealService.getDayMeal(date)
       setDayMeal(res.data)
+      const updated = { ...getMealCache(), [date]: { data: res.data, ts: Date.now() } }
+      setMealCache(updated)
+      prefetchAdjacentDays(date)
     } catch {
-      setDayMeal(null)
+      if (!entry) setDayMeal(null)
     } finally {
       setLoading(false)
     }
@@ -1185,6 +1235,9 @@ export default function Nutrition() {
     setDayMeal(null);
     try {
       await mealService.regenerateDay(selectedDate);
+      const cache = getMealCache();
+      delete cache[selectedDate];
+      setMealCache(cache);
       await fetchDayMeal(selectedDate);
       toast.success("Day meals regenerated!");
     } catch {
@@ -1211,6 +1264,8 @@ export default function Nutrition() {
         duration: 8000,
         style: { fontFamily: FONT, fontWeight: 700 }
       });
+
+      sessionStorage.removeItem(MEAL_CACHE_KEY);
 
       const nextStartStr =
         res?.data?.week_start_date ||
@@ -1821,9 +1876,11 @@ export default function Nutrition() {
       </div>
 
       {/* ── Meal Swipe Card ── */}
-      {loading || (regenerating && !dayMeal) ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {loading || regenerating || !dayMeal ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Skeleton height="80px" radius="24px" />
           <Skeleton height="320px" radius="24px" />
+          <Skeleton height="60px" radius="20px" />
         </div>
       ) : dayMeal ? (
         <div style={{
