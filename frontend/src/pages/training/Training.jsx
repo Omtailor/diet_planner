@@ -159,10 +159,12 @@ export default function Training() {
     if (!weekStripRef.current) return;
     const t = setTimeout(() => {
       const selected = weekStripRef.current?.querySelector('[data-selected="true"]');
-      if (selected) selected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }, 100);
+      if (selected) {
+        selected.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+      }
+    }, 200);
     return () => clearTimeout(t);
-  }, [selectedDate, plan]);
+  }, [selectedDate, plan, loading]);
 
 
 
@@ -270,6 +272,12 @@ export default function Training() {
       await API.post('/training/generate/');
       // After generation, jump to the first day of the new plan.
       await fetchPlan(true);
+      setTimeout(() => {
+        const selected = weekStripRef.current?.querySelector('[data-selected="true"]');
+        if (selected) {
+          selected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+      }, 300);
       toast.success('Training plan generated! 🏋️‍♂️');
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     } catch (err) {
