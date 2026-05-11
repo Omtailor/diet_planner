@@ -90,10 +90,15 @@ class DayMealView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        day_meal = DayMeal.objects.filter(
-            weekly_plan__user=request.user,
-            date=parsed_date,
-        ).first()
+        day_meal = (
+            DayMeal.objects.filter(
+                weekly_plan__user=request.user,
+                date=parsed_date,
+            )
+            .select_related("weekly_plan")
+            .prefetch_related("meal_slots__food_item")
+            .first()
+        )
 
         if not day_meal:
             return Response(
@@ -346,3 +351,46 @@ class LatestPlanView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class BatchDayMealView(APIView):
+    """
+    GET /api/meals/batch/?dates=2026-05-10,2026-05-11,2026-05-12
+    Returns multiple days' meals in a single request to avoid N+1 HTTP calls.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        dates_param = request.query_params.get("dates", "")
+        if not dates_param:
+            return Response(
+                {"detail": "dates query parameter is required (comma-separated YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        date_strs = [d.strip() for d in dates_param.split(",") if d.strip()]
+        parsed_dates = []
+        for ds in date_strs[:15]:  # Cap at 15 to prevent abuse
+            try:
+                parsed_dates.append(date.fromisoformat(ds))
+            except ValueError:
+                pass  # Skip invalid dates silently
+
+        if not parsed_dates:
+            return Response({"results": {}}, status=status.HTTP_200_OK)
+
+        day_meals = (
+            DayMeal.objects.filter(
+                weekly_plan__user=request.user,
+                date__in=parsed_dates,
+            )
+            .select_related("weekly_plan")
+            .prefetch_related("meal_slots__food_item")
+        )
+
+        results = {}
+        for dm in day_meals:
+            results[str(dm.date)] = DayMealSerializer(dm).data
+
+        return Response({"results": results}, status=status.HTTP_200_OK)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, RefreshCw, ShoppingCart, Loader2, X, CheckSquare, Square } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -38,7 +38,7 @@ function formatFullDate(dateStr) {
 function getWeekDays(centerDate) {
   const center = new Date(centerDate)
   const days = []
-  for (let i = -15; i <= 29; i++) {
+  for (let i = -3; i <= 11; i++) {
     const d = new Date(center.getTime())
     d.setDate(d.getDate() + i)
     const yyyy = d.getFullYear()
@@ -1110,7 +1110,8 @@ export default function Nutrition() {
 
     if (inflightRef.current.has(date)) return inflightRef.current.get(date)
 
-    const req = mealService.getDayMeal(date, signal ? { signal } : undefined)
+    const reqOpts = signal ? { signal } : undefined
+    const req = mealService.getDayMeal(date, reqOpts)
       .then((res) => {
         const data = res.data
         setCacheEntry(date, { data, ts: Date.now() })
@@ -1251,9 +1252,28 @@ export default function Nutrition() {
 
   const prefetchAdjacentDays = async (date) => {
     const dates = getAdjacentDates(date)
-    // nearest first (await to avoid too many concurrent requests)
-    for (const d of dates) {
-      await prefetchDate(d)
+    // Filter out dates already fresh in cache
+    const needed = dates.filter(d => {
+      const entry = getCacheEntry(d)
+      return !(entry && isFreshEntry(d, entry))
+    })
+    if (needed.length === 0) return
+
+    // Use batch endpoint — 1 HTTP call instead of 4
+    try {
+      const res = await mealService.getBatchDayMeals(needed)
+      const results = res.data?.results || {}
+      for (const d of needed) {
+        if (results[d]) {
+          setCacheEntry(d, { data: results[d], ts: Date.now() })
+        } else {
+          // No plan for this date — cache as empty
+          setCacheEntry(d, { data: null, ts: Date.now(), empty: true })
+        }
+      }
+    } catch {
+      // Fallback: fire individual requests in parallel
+      await Promise.allSettled(needed.map(d => prefetchDate(d)))
     }
   }
 
@@ -1742,7 +1762,7 @@ export default function Nutrition() {
     }
   }
 
-  const weekDays = getWeekDays(selectedDate)
+  const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate])
 
   // Keep the action button visible; the ready state is shown separately above it.
   const canGenerateNext = true
