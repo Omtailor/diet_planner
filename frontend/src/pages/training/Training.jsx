@@ -111,8 +111,11 @@ function NeedleBar({ value, max, color, glow }) {
 export default function Training() {
   const navigate = useNavigate()
   const { fetchProfile } = useAuth()
+  const PLAN_CACHE_KEY = 'training_plan';
+  const CACHE_TTL = 60 * 1000;
   const [plan, setPlan] = useState(null);
   const weekStripRef = useRef(null);
+  const lastFetchTime = useRef(null);
   const [exportPdfLoading, setExportPdfLoading] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showOnboardingBlocker, setShowOnboardingBlocker] = useState(false)
@@ -172,10 +175,52 @@ export default function Training() {
   }, [selectedDate, plan]);
 
   const fetchPlan = async (jumpToFirstDay = false) => {
-    setLoading(true);
+    const now = Date.now();
+    let cachedPlan = null;
+
+    if (!jumpToFirstDay) {
+      const cached = sessionStorage.getItem(PLAN_CACHE_KEY);
+      if (cached) {
+        try {
+          cachedPlan = JSON.parse(cached);
+          if (cachedPlan) {
+            setPlan(cachedPlan);
+
+            const todayDay = cachedPlan.day_trainings?.find(d => d.date === todayStr);
+            const firstDay = cachedPlan.day_trainings?.[0] || null;
+            const initialDay = todayDay || firstDay || null;
+            setSelectedDay(initialDay);
+            setSelectedDate(todayStr);
+
+            if (cachedPlan?.week_end_date) setLatestPlanEndDate(cachedPlan.week_end_date);
+            setLoading(false);
+          }
+        } catch (_) {
+          sessionStorage.removeItem(PLAN_CACHE_KEY);
+        }
+      }
+    }
+
+    const isFresh =
+      !jumpToFirstDay &&
+      lastFetchTime.current &&
+      now - lastFetchTime.current < CACHE_TTL;
+
+    if (isFresh && (plan || cachedPlan)) {
+      setLoading(false);
+      return;
+    }
+
+    if (!cachedPlan) setLoading(true);
+
     try {
-      const res = await API.get('/training/all-days/');
+      const [res, profileRes] = await Promise.all([
+        API.get('/training/all-days/'),
+        API.get('/auth/profile/').catch(() => null),
+      ]);
+
       setPlan(res.data);
+      sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(res.data));
 
       const todayDay = res.data.day_trainings?.find(d => d.date === todayStr);
       const firstDay = res.data.day_trainings?.[0] || null;
@@ -193,12 +238,16 @@ export default function Training() {
 
       if (res.data?.week_end_date) setLatestPlanEndDate(res.data.week_end_date);
 
-      try {
-        const profileRes = await API.get('/auth/profile/');
-        if (parseInt(profileRes.data.health_time_minutes) === 0) setHealthTimeZero(true);
-      } catch (_) { }
+      if (profileRes?.data) {
+        setHealthTimeZero(parseInt(profileRes.data.health_time_minutes, 10) === 0);
+      }
+
+      lastFetchTime.current = Date.now();
     } catch (e) {
-      if (e?.response?.status === 404) setPlan(null);
+      if (e?.response?.status === 404) {
+        setPlan(null);
+        sessionStorage.removeItem(PLAN_CACHE_KEY);
+      }
       else toast.error('Failed to load training plan');
     } finally {
       setLoading(false);
@@ -589,11 +638,16 @@ export default function Training() {
   const isRestDay = selectedDay?.is_rest_day ?? false;
 
   // ── Loading ────────────────────────────────────────────────────
-  if (loading) return (
+  if (loading && !plan) return (
     <div style={S.page}>
-      <div style={S.centeredContent}>
-        <div style={S.spinnerRing} className="spin-ring" />
-        <p style={S.loadingText}>Loading your training plan...</p>
+      <div style={S.body}>
+        <div style={{ display: 'flex', gap: 8, padding: '10px 0' }}>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="skeleton" style={{ width: 44, height: 76, borderRadius: 20 }} />
+          ))}
+        </div>
+        <div className="skeleton" style={{ height: 80, borderRadius: 20 }} />
+        <div className="skeleton" style={{ height: 200, borderRadius: 20 }} />
       </div>
       <GlobalStyles />
     </div>
@@ -1525,6 +1579,16 @@ function GlobalStyles() {
       @keyframes pulse {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.15); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+
+      .skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.2s ease-in-out infinite;
       }
 
       .spin       { animation: spin 0.8s linear infinite; }
