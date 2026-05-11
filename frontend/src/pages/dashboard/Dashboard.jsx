@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronRight, RefreshCw, Loader2,
@@ -719,6 +719,10 @@ function Dashboard() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [showOnboardingBlocker, setShowOnboardingBlocker] = useState(false)
+  const DASH_MEAL_KEY = 'dash_meal_today'
+  const DASH_MEAL_TTL = 60 * 1000
+  const REFETCH_COOLDOWN = 30 * 1000
+  const lastFetchRef = useRef(null)
 
   const isOnboardingComplete = !!(
     profile?.age &&
@@ -733,17 +737,36 @@ function Dashboard() {
   useEffect(() => { fetchTodayMeal() }, [])
 
   const fetchTodayMeal = async () => {
-    setLoadingMeal(true)
+    const now = Date.now()
+    if (lastFetchRef.current && now - lastFetchRef.current < REFETCH_COOLDOWN && dayMeal) {
+      return
+    }
+    try {
+      const raw = sessionStorage.getItem(DASH_MEAL_KEY)
+      if (raw) {
+        const { data, ts } = JSON.parse(raw)
+        const isFresh = Date.now() - ts < DASH_MEAL_TTL
+        setDayMeal(data)
+        setLoadingMeal(false)
+        lastFetchRef.current = Date.now()
+        if (isFresh) return
+      }
+    } catch {}
+
+    if (!dayMeal) setLoadingMeal(true)
     try {
       const res = await mealService.getDayMeal(today)
       setDayMeal(res.data)
-    } catch { setDayMeal(null) }
-    finally { setLoadingMeal(false) }
+      sessionStorage.setItem(DASH_MEAL_KEY, JSON.stringify({ data: res.data, ts: Date.now() }))
+    } catch {
+      setDayMeal(null)
+    } finally {
+      setLoadingMeal(false)
+      lastFetchRef.current = Date.now()
+    }
   }
 
-  // AFTER
   const handleRegenerate = async () => {
-    // Guard: no plan exists yet
     if (!dayMeal) {
       toast("Generate a plan first!", {
         icon: "🍽️",
@@ -754,6 +777,8 @@ function Dashboard() {
     setRegenerating(true);
     try {
       await mealService.regenerateDay(today);
+      sessionStorage.removeItem(DASH_MEAL_KEY);
+      sessionStorage.removeItem('meal_cache');
       await fetchTodayMeal();
       toast.success("Today's meals refreshed!");
       if (navigator.vibrate) navigator.vibrate([30, 10, 30]);
@@ -764,15 +789,24 @@ function Dashboard() {
     }
   };
 
-  const getMealSlot = (slot) => dayMeal?.meal_slots?.find(m => m.slot === slot)
-  const totalCals = dayMeal?.meal_slots?.reduce((s, m) => s + (m.calories || 0), 0) || 0
+  const getMealSlot = useCallback(
+    (slot) => dayMeal?.meal_slots?.find(m => m.slot === slot),
+    [dayMeal]
+  )
+  const totalCals = useMemo(() =>
+    dayMeal?.meal_slots?.reduce((s, m) => s + (m.calories || 0), 0) ?? 0,
+    [dayMeal]
+  )
   const targetCals = profile?.target_calories || 2000
 
-  const macros = dayMeal?.meal_slots?.reduce((acc, m) => ({
-    protein: acc.protein + (m.protein_g || 0),
-    carbs: acc.carbs + (m.carbs_g || 0),
-    fats: acc.fats + (m.fats_g || 0),
-  }), { protein: 0, carbs: 0, fats: 0 }) || { protein: 0, carbs: 0, fats: 0 }
+  const macros = useMemo(() =>
+    dayMeal?.meal_slots?.reduce((acc, m) => ({
+      protein: acc.protein + (m.protein_g || 0),
+      carbs: acc.carbs + (m.carbs_g || 0),
+      fats: acc.fats + (m.fats_g || 0),
+    }), { protein: 0, carbs: 0, fats: 0 }) ?? { protein: 0, carbs: 0, fats: 0 },
+    [dayMeal]
+  )
 
   const status = dayMeal?.status || 'on_track'
   const statusConfig = {
@@ -874,17 +908,38 @@ function Dashboard() {
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <CalorieRing consumed={totalCals} target={targetCals} />
+          {loadingMeal ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 148 }}>
+              <SkeletonBlock height="148px" radius="50%" width="148px" />
+              <SkeletonBlock height="14px" radius="8px" width="100%" />
+              <SkeletonBlock height="14px" radius="8px" width="100%" />
+              <SkeletonBlock height="14px" radius="8px" width="100%" />
+            </div>
+          ) : (
+            <>
+              <CalorieRing consumed={totalCals} target={targetCals} />
+            </>
+          )}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <MacroBar label="Protein" value={macros.protein}
-              max={Math.round(targetCals * 0.30 / 4)}
-              trackColor="#60B8FF" glowColor="rgba(96,184,255,0.45)" />
-            <MacroBar label="Carbs" value={macros.carbs}
-              max={Math.round(targetCals * 0.45 / 4)}
-              trackColor="#e09a2e" glowColor="rgba(224,154,46,0.45)" />
-            <MacroBar label="Fats" value={macros.fats}
-              max={Math.round(targetCals * 0.25 / 9)}
-              trackColor="#e05252" glowColor="rgba(224,82,82,0.45)" />
+            {loadingMeal ? (
+              <>
+                <SkeletonBlock height="14px" radius="8px" />
+                <SkeletonBlock height="14px" radius="8px" />
+                <SkeletonBlock height="14px" radius="8px" />
+              </>
+            ) : (
+              <>
+                <MacroBar label="Protein" value={macros.protein}
+                  max={Math.round(targetCals * 0.30 / 4)}
+                  trackColor="#60B8FF" glowColor="rgba(96,184,255,0.45)" />
+                <MacroBar label="Carbs" value={macros.carbs}
+                  max={Math.round(targetCals * 0.45 / 4)}
+                  trackColor="#e09a2e" glowColor="rgba(224,154,46,0.45)" />
+                <MacroBar label="Fats" value={macros.fats}
+                  max={Math.round(targetCals * 0.25 / 9)}
+                  trackColor="#e05252" glowColor="rgba(224,82,82,0.45)" />
+              </>
+            )}
           </div>
         </div>
       </div>
