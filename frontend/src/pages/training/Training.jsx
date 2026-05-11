@@ -171,17 +171,25 @@ export default function Training() {
     setExpandedEx(null);
   }, [selectedDate, plan]);
 
-  const fetchPlan = async () => {
+  const fetchPlan = async (jumpToFirstDay = false) => {
     setLoading(true);
     try {
       const res = await API.get('/training/all-days/');
       setPlan(res.data);
 
-      // On reload, prefer today's day, else first day
       const todayDay = res.data.day_trainings?.find(d => d.date === todayStr);
-      const initialDay = todayDay || res.data.day_trainings?.[0] || null;
-      setSelectedDay(initialDay);
-      if (initialDay?.date) setSelectedDate(initialDay.date);
+      const firstDay = res.data.day_trainings?.[0] || null;
+      const initialDay = todayDay || firstDay || null;
+
+      if (jumpToFirstDay && firstDay) {
+        // After generation, go to the first day of the newly generated plan.
+        setSelectedDay(firstDay);
+        setSelectedDate(firstDay.date);
+      } else {
+        // On refresh/load, always land on today's date (even if no plan for today).
+        setSelectedDay(initialDay);
+        setSelectedDate(todayStr);
+      }
 
       if (res.data?.week_end_date) setLatestPlanEndDate(res.data.week_end_date);
 
@@ -211,8 +219,8 @@ export default function Training() {
     setGenerating(true);
     try {
       await API.post('/training/generate/');
-      // Re-fetch all days so plan state is always from the merged endpoint
-      await fetchPlan();
+      // After generation, jump to the first day of the new plan.
+      await fetchPlan(true);
       toast.success('Training plan generated! 🏋️‍♂️');
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     } catch (err) {
