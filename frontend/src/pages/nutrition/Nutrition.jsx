@@ -831,7 +831,7 @@ function CookingLoader({ dietType = 'non-veg', onDone }) {
               {done ? '🎉 Your plan is ready!' : 'Cooking your meal plan...'}
             </p>
             <p style={{ fontFamily: FONT, fontSize: 'clamp(0.78rem,2.5vw,0.9rem)', color: '#4a6652', fontWeight: 500 }}>
-              {done ? 'Bon appétit! 3 days of delicious meals await.' : 'AI is crafting 9 personalised Indian meals for you'}
+              {done ? 'Sit tight! Your personalised meal plan is getting ready.' : 'We are crafting 9 personalised Indian meals for you'}
             </p>
           </div>
 
