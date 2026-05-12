@@ -266,10 +266,18 @@ export default function Training() {
     }
   };
 
+  const clearTrainingCache = () => {
+    // Clear both sessionStorage and in-memory TTL to force a fresh backend fetch
+    sessionStorage.removeItem(PLAN_CACHE_KEY);
+    lastFetchTime.current = null;
+  };
+
   const generatePlan = async () => {
     setGenerating(true);
     try {
       await API.post('/training/generate/');
+      // Clear all caches so fetchPlan hits the backend for fresh data
+      clearTrainingCache();
       // After generation, jump to the first day of the new plan.
       await fetchPlan(true);
       setTimeout(() => {
@@ -322,7 +330,9 @@ export default function Training() {
       const res = await API.post('/training/generate/');
       const firstDateOfNewPlan = res.data?.day_trainings?.[0]?.date;
 
-      await fetchPlan();
+      // Clear all caches so fetchPlan hits the backend for fresh data
+      clearTrainingCache();
+      await fetchPlan(!!firstDateOfNewPlan);
       await checkNextPlan();
       await fetchProfile();
 
