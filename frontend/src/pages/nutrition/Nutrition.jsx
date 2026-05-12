@@ -1103,12 +1103,14 @@ export default function Nutrition() {
     return Date.now() - entry.ts < getTTL(date, entry)
   }
 
-  const fetchMealForDate = async (date, { background = false, signal } = {}) => {
-    const cached = getCacheEntry(date)
+  const fetchMealForDate = async (date, { background = false, signal, forceRefresh = false } = {}) => {
+    if (!forceRefresh) {
+      const cached = getCacheEntry(date)
 
-    if (cached && isFreshEntry(date, cached)) return cached.data
+      if (cached && isFreshEntry(date, cached)) return cached.data
 
-    if (inflightRef.current.has(date)) return inflightRef.current.get(date)
+      if (inflightRef.current.has(date)) return inflightRef.current.get(date)
+    }
 
     const reqOpts = signal ? { signal } : undefined
     const req = mealService.getDayMeal(date, reqOpts)
@@ -1119,6 +1121,7 @@ export default function Nutrition() {
       })
       .catch((err) => {
         if (signal?.aborted) throw err
+        const cached = getCacheEntry(date)
         if (!cached) {
           setCacheEntry(date, { data: null, ts: Date.now(), empty: true })
         }
@@ -1346,8 +1349,10 @@ export default function Nutrition() {
     setRegenerating(true);
     try {
       await mealService.regenerateDay(selectedDate);
-      removeCacheEntry(selectedDate);
-      await fetchDayMeal(selectedDate);
+      // Clear all caches so fresh data is fetched immediately
+      clearAllCaches();
+      const data = await fetchMealForDate(selectedDate, { forceRefresh: true });
+      setDayMeal(data);
       toast.success("Day meals regenerated!");
     } catch {
       toast.error("Failed to regenerate");
@@ -1355,6 +1360,14 @@ export default function Nutrition() {
       setRegenerating(false);
     }
   };
+
+  const clearAllCaches = () => {
+    // Clear both in-memory and persisted caches to force fresh fetches
+    cacheRef.current = {}
+    sessionStorage.removeItem(MEAL_CACHE_KEY)
+    // Also clear Dashboard's cached meal data so it stays in sync
+    sessionStorage.removeItem('dash_meal_today')
+  }
 
   const handleGenerateNextWeek = async () => {
     // Pre-check BEFORE showing cooking loader
@@ -1374,7 +1387,8 @@ export default function Nutrition() {
         style: { fontFamily: FONT, fontWeight: 700 }
       });
 
-      sessionStorage.removeItem(MEAL_CACHE_KEY);
+      // Clear ALL caches (in-memory + sessionStorage) so fresh data is fetched
+      clearAllCaches();
 
       const nextStartStr =
         res?.data?.week_start_date ||
@@ -1392,10 +1406,20 @@ export default function Nutrition() {
       if (nextStartStr) {
         setLoading(true);
         setDayMeal(null);
+        // Update selectedDate — this will also trigger fetchDayMeal via useEffect,
+        // but we prevent the race by using forceRefresh below
         setSelectedDate(nextStartStr);
         setDateOffset(0);
         switchSlot(0);
-        await fetchDayMeal(nextStartStr);
+        // Force-refresh bypasses cache entirely — guarantees a fresh backend fetch
+        try {
+          const data = await fetchMealForDate(nextStartStr, { forceRefresh: true })
+          setDayMeal(data)
+        } catch {
+          // If the direct fetch fails, the useEffect will retry via selectedDate change
+        } finally {
+          setLoading(false)
+        }
       }
     } catch (err) {
       const detail = err?.response?.data?.detail

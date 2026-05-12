@@ -736,22 +736,25 @@ function Dashboard() {
 
   useEffect(() => { fetchTodayMeal() }, [])
 
-  const fetchTodayMeal = async () => {
+  const fetchTodayMeal = async (forceRefresh = false) => {
     const now = Date.now()
-    if (lastFetchRef.current && now - lastFetchRef.current < REFETCH_COOLDOWN && dayMeal) {
+    if (!forceRefresh && lastFetchRef.current && now - lastFetchRef.current < REFETCH_COOLDOWN && dayMeal) {
       return
     }
-    try {
-      const raw = sessionStorage.getItem(DASH_MEAL_KEY)
-      if (raw) {
-        const { data, ts } = JSON.parse(raw)
-        const isFresh = Date.now() - ts < DASH_MEAL_TTL
-        setDayMeal(data)
-        setLoadingMeal(false)
-        lastFetchRef.current = Date.now()
-        if (isFresh) return
-      }
-    } catch { }
+
+    if (!forceRefresh) {
+      try {
+        const raw = sessionStorage.getItem(DASH_MEAL_KEY)
+        if (raw) {
+          const { data, ts } = JSON.parse(raw)
+          const isFresh = Date.now() - ts < DASH_MEAL_TTL
+          setDayMeal(data)
+          setLoadingMeal(false)
+          lastFetchRef.current = Date.now()
+          if (isFresh) return
+        }
+      } catch { }
+    }
 
     if (!dayMeal) setLoadingMeal(true)
     try {
@@ -779,7 +782,9 @@ function Dashboard() {
       await mealService.regenerateDay(today);
       sessionStorage.removeItem(DASH_MEAL_KEY);
       sessionStorage.removeItem('meal_cache');
-      await fetchTodayMeal();
+      // Reset cooldown so fetchTodayMeal doesn't skip the re-fetch
+      lastFetchRef.current = null;
+      await fetchTodayMeal(true);
       toast.success("Today's meals refreshed!");
       if (navigator.vibrate) navigator.vibrate([30, 10, 30]);
     } catch {
