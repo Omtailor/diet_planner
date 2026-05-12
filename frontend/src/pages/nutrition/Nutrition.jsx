@@ -1763,6 +1763,7 @@ export default function Nutrition() {
   }
 
   const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate])
+  const hasPlan = !!dayMeal
 
   // Keep the action button visible; the ready state is shown separately above it.
   const canGenerateNext = true
@@ -1973,7 +1974,7 @@ export default function Nutrition() {
       </div>
 
       {/* ── Regenerate Bar ── */}
-      {dayMeal && (
+      {hasPlan && (
         <div style={S.regenBar}>
           <p style={{
             fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600,
