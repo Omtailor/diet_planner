@@ -802,6 +802,27 @@ function Dashboard() {
     dayMeal?.meal_slots?.reduce((s, m) => s + (m.calories || 0), 0) ?? 0,
     [dayMeal]
   )
+  // Time-aware consumed calories
+  const consumedCals = useMemo(() => {
+    if (!dayMeal?.meal_slots) return 0
+    const hour = new Date().getHours()
+    const minute = new Date().getMinutes()
+    const timeInMins = hour * 60 + minute  // e.g. 13:30 → 810
+
+    const MEAL_TIMES = {
+      breakfast: 8 * 60,      // 8:00 AM → 480
+      lunch: 13 * 60,         // 1:00 PM → 780
+      dinner: 20 * 60 + 30,   // 8:30 PM → 1230
+    }
+
+    return dayMeal.meal_slots.reduce((sum, m) => {
+      const mealTime = MEAL_TIMES[m.slot]
+      if (mealTime !== undefined && timeInMins >= mealTime) {
+        return sum + (m.calories || 0)
+      }
+      return sum
+    }, 0)
+  }, [dayMeal])
   const targetCals = profile?.target_calories || 2000
 
   const macros = useMemo(() =>
@@ -922,7 +943,7 @@ function Dashboard() {
             </div>
           ) : (
             <>
-              <CalorieRing consumed={totalCals} target={targetCals} />
+              <CalorieRing consumed={consumedCals} target={targetCals} />
             </>
           )}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
