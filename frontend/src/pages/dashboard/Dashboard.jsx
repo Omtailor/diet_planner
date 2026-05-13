@@ -140,6 +140,7 @@ function SkeletonBlock({ width = '100%', height = '16px', radius = '8px' }) {
 
 function CalorieRing({ consumed = 0, target = 2000 }) {
   const animated = useCountUp(consumed)
+  const isOver = consumed >= target
   const pct = Math.min(consumed / target, 1)
   const r = 54
   const circ = 2 * Math.PI * r
@@ -148,31 +149,36 @@ function CalorieRing({ consumed = 0, target = 2000 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <svg width="148" height="148" viewBox="0 0 148 148"
-        style={{ filter: 'drop-shadow(0 0 8px rgba(76,175,80,0.4))' }}>
+        style={{
+          filter: `drop-shadow(0 0 ${isOver ? '14px' : '8px'} rgba(76,175,80,${isOver ? '0.65' : '0.4'}))`,
+          transition: 'filter 600ms ease',
+        }}>
         <defs>
           <linearGradient id="calorieGrad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#4CAF50" />
-            <stop offset="100%" stopColor="#1a7a42" />
+            <stop offset="100%" stopColor={isOver ? '#4CAF50' : '#1a7a42'} />
           </linearGradient>
         </defs>
         {/* Track */}
         <circle cx="74" cy="74" r={r}
           fill="none"
-          stroke="rgba(0,0,0,0.06)"
+          stroke={isOver ? 'rgba(76,175,80,0.15)' : 'rgba(0,0,0,0.06)'}
           strokeWidth="10" />
         {/* Progress */}
         <circle cx="74" cy="74" r={r}
           fill="none"
-          stroke="url(#calorieGrad)"
+          stroke={isOver ? '#4CAF50' : 'url(#calorieGrad)'}
           strokeWidth="10"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${circ}`}
           strokeDashoffset={circ / 4}
-          style={{ transition: 'stroke-dasharray 900ms cubic-bezier(0.16,1,0.3,1)' }}
+          style={{ transition: 'stroke-dasharray 900ms cubic-bezier(0.16,1,0.3,1), stroke 600ms ease' }}
         />
         <text x="74" y="68" textAnchor="middle"
-          fill="var(--color-text)" fontSize="26" fontWeight="700"
-          fontFamily="'General Sans', sans-serif">
+          fill={isOver ? '#4CAF50' : 'var(--color-text)'}
+          fontSize="26" fontWeight="700"
+          fontFamily="'General Sans', sans-serif"
+          style={{ transition: 'fill 400ms ease' }}>
           {animated}
         </text>
         <text x="74" y="84" textAnchor="middle"
@@ -181,9 +187,10 @@ function CalorieRing({ consumed = 0, target = 2000 }) {
           of {target} kcal
         </text>
         <text x="74" y="99" textAnchor="middle"
-          fill="var(--color-text-muted)" fontSize="12"
-          fontFamily="'General Sans', sans-serif">
-          consumed
+          fill={isOver ? '#4CAF50' : 'var(--color-text-muted)'} fontSize="12"
+          fontFamily="'General Sans', sans-serif"
+          style={{ transition: 'fill 400ms ease' }}>
+          {isOver ? '🎯 Goal hit!' : 'consumed'}
         </text>
       </svg>
     </div>
