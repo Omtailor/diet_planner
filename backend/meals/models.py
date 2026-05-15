@@ -20,6 +20,13 @@ class FoodItem(models.Model):
     name = models.CharField(max_length=200)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     diet_type = models.CharField(max_length=10, choices=DIET_CHOICES, default="veg")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="created_food_items",
+        null=True,
+        blank=True,
+    )
 
     # Nutrition per serving
     calories = models.FloatField()

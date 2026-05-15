@@ -1051,7 +1051,8 @@ function Dashboard() {
                   setShowOnboardingBlocker(true)
                   return
                 }
-                mealService.generatePlan().then(fetchTodayMeal)
+                sessionStorage.removeItem(DASH_MEAL_KEY)
+                mealService.generatePlan().then(() => fetchTodayMeal(true))
               }}
               style={{ ...accentBtn, marginTop: '4px' }}>
               Generate Plan

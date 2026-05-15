@@ -765,6 +765,9 @@ RETURN VALID JSON ONLY:
             },
         )
 
+        self.profile.target_calories = tdee
+        self.profile.save(update_fields=["target_calories"])
+
         # ✅ Collect slots for bulk create
         slots_to_create = []
 
@@ -807,9 +810,11 @@ RETURN VALID JSON ONLY:
                 food_item, created = FoodItem.objects.get_or_create(
                     name=meal_data.name,
                     diet_type=self.profile.diet_preference,  # scoped per diet
+                    created_by=self.user,
                     defaults={
                         "category": slot_name,
                         "diet_type": self.profile.diet_preference,
+                        "created_by": self.user,
                         "calories": meal_data.calories,
                         "protein_g": meal_data.protein,
                         "carbs_g": meal_data.carbs,
@@ -852,10 +857,10 @@ RETURN VALID JSON ONLY:
                         slot=slot_name,
                         food_item=food_item,
                         quantity_g=meal_data.serving_size or 1.0,
-                        calories=meal_data.calories,
-                        protein_g=meal_data.protein,
-                        carbs_g=meal_data.carbs,
-                        fats_g=meal_data.fats,
+                        calories=meal_data.calories or food_item.calories,
+                        protein_g=meal_data.protein or food_item.protein_g,
+                        carbs_g=meal_data.carbs or food_item.carbs_g,
+                        fats_g=meal_data.fats or food_item.fats_g,
                     )
                 )
 
@@ -886,6 +891,9 @@ RETURN VALID JSON ONLY:
                 "plan_notes": "",
             },
         )
+
+        self.profile.target_calories = tdee
+        self.profile.save(update_fields=["target_calories"])
 
         # ✅ Collect slots for bulk create
         slots_to_create = []
@@ -924,8 +932,10 @@ RETURN VALID JSON ONLY:
                 food_item, created = FoodItem.objects.get_or_create(
                     name=meal_data.name,
                     diet_type=self.profile.diet_preference,
+                    created_by=self.user,
                     defaults={
                         "category": slot_name,
+                        "created_by": self.user,
                         "calories": meal_data.calories,
                         "protein_g": meal_data.protein,
                         "carbs_g": meal_data.carbs,
@@ -967,10 +977,10 @@ RETURN VALID JSON ONLY:
                         slot=slot_name,
                         food_item=food_item,
                         quantity_g=meal_data.serving_size or 1.0,
-                        calories=meal_data.calories,
-                        protein_g=meal_data.protein,
-                        carbs_g=meal_data.carbs,
-                        fats_g=meal_data.fats,
+                        calories=meal_data.calories or food_item.calories,
+                        protein_g=meal_data.protein or food_item.protein_g,
+                        carbs_g=meal_data.carbs or food_item.carbs_g,
+                        fats_g=meal_data.fats or food_item.fats_g,
                     )
                 )
 
@@ -1239,9 +1249,11 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
             food_item, _ = FoodItem.objects.update_or_create(
                 name=meal_data.name,
                 diet_type=self.profile.diet_preference,
+                created_by=self.user,
                 defaults={
                     "category": slot_name,
                     "diet_type": self.profile.diet_preference,
+                    "created_by": self.user,
                     "calories": meal_data.calories,
                     "protein_g": meal_data.protein,
                     "carbs_g": meal_data.carbs,

@@ -51,6 +51,7 @@ class UserProfile(models.Model):
     height_cm = models.FloatField(null=True, blank=True)
     weight_kg = models.FloatField(null=True, blank=True)
     target_weight_kg = models.FloatField(null=True, blank=True)
+    target_calories = models.FloatField(null=True, blank=True)
 
     # Health & Goal
     health_time_minutes = models.PositiveIntegerField(default=60)
