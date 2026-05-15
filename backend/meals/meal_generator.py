@@ -656,7 +656,9 @@ RETURN VALID JSON ONLY:
                     raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
                     break
                 except Exception as e:
-                    logger.warning(f"Day fetch failed ({model_name} attempt {attempt+1}): {e}")
+                    logger.warning(
+                        f"Day fetch failed ({model_name} attempt {attempt+1}): {e}"
+                    )
                     if attempt < max_attempts - 1:
                         time.sleep((attempt + 1) * 5)
             if raw:
@@ -710,7 +712,9 @@ RETURN VALID JSON ONLY:
                     logger.info(f"[MealGenerator] ✓ Got response from {model_name}")
                     break
                 except Exception as e:
-                    logger.warning(f"[MealGenerator] {model_name} attempt {attempt+1} failed: {e}")
+                    logger.warning(
+                        f"[MealGenerator] {model_name} attempt {attempt+1} failed: {e}"
+                    )
                     if attempt < max_attempts - 1:
                         wait = (attempt + 1) * 10
                         logger.info(f"[MealGenerator] Retrying in {wait}s...")
@@ -1197,7 +1201,9 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
                     logger.info(f"[RegenerateDay] ✓ Got response from {model_name}")
                     break
                 except Exception as e:
-                    logger.warning(f"[RegenerateDay] {model_name} attempt {attempt+1} failed: {e}")
+                    logger.warning(
+                        f"[RegenerateDay] {model_name} attempt {attempt+1} failed: {e}"
+                    )
                     if attempt < max_attempts - 1:
                         time.sleep((attempt + 1) * 10)
             if raw:
