@@ -802,14 +802,13 @@ function Dashboard() {
   };
 
   const getMealSlot = useCallback(
-    (slot) => dayMeal?.meal_slots?.find(m => m.slot === slot),
+    (slot) => dayMeal?.meal_slots?.find((m) => m.slot === slot),
     [dayMeal]
   )
   const totalCals = useMemo(() =>
     dayMeal?.meal_slots?.reduce((s, m) => s + (m.calories || 0), 0) ?? 0,
     [dayMeal]
   )
-  // Time-aware consumed calories
   const consumedCals = useMemo(() => {
     if (!dayMeal?.meal_slots) return 0
     const hour = new Date().getHours()
@@ -830,16 +829,34 @@ function Dashboard() {
       return sum
     }, 0)
   }, [dayMeal])
-  const targetCals = profile?.target_calories || 2000
 
-  const macros = useMemo(() =>
-    dayMeal?.meal_slots?.reduce((acc, m) => ({
-      protein: acc.protein + (m.protein_g || 0),
-      carbs: acc.carbs + (m.carbs_g || 0),
-      fats: acc.fats + (m.fats_g || 0),
-    }), { protein: 0, carbs: 0, fats: 0 }) ?? { protein: 0, carbs: 0, fats: 0 },
-    [dayMeal]
-  )
+  const macros = useMemo(() => {
+    if (!dayMeal?.meal_slots) return { protein: 0, carbs: 0, fats: 0 }
+
+    const hour = new Date().getHours()
+    const minute = new Date().getMinutes()
+    const timeInMins = hour * 60 + minute
+
+    const MEALTIMES = {
+      breakfast: 8 * 60,
+      lunch: 13 * 60,
+      dinner: 20 * 60 + 30,
+    }
+
+    return dayMeal.meal_slots.reduce((acc, m) => {
+      const mealTime = MEALTIMES[m.slot]
+      if (mealTime === undefined || timeInMins < mealTime) return acc
+      return {
+        protein: acc.protein + (m.protein_g || 0),
+        carbs: acc.carbs + (m.carbs_g || 0),
+        fats: acc.fats + (m.fats_g || 0),
+      }
+    }, { protein: 0, carbs: 0, fats: 0 })
+  }, [dayMeal])
+  const targetCals = profile?.target_calories ?? 2000
+  const targetProtein = Math.round((targetCals * 0.30) / 4)
+  const targetCarbs = Math.round((targetCals * 0.45) / 4)
+  const targetFats = Math.round((targetCals * 0.25) / 9)
 
   const status = dayMeal?.status || 'on_track'
   const statusConfig = {
@@ -963,13 +980,13 @@ function Dashboard() {
             ) : (
               <>
                 <MacroBar label="Protein" value={macros.protein}
-                  max={Math.round(targetCals * 0.30 / 4)}
+                  max={targetProtein}
                   trackColor="#60B8FF" glowColor="rgba(96,184,255,0.45)" />
                 <MacroBar label="Carbs" value={macros.carbs}
-                  max={Math.round(targetCals * 0.45 / 4)}
+                  max={targetCarbs}
                   trackColor="#e09a2e" glowColor="rgba(224,154,46,0.45)" />
                 <MacroBar label="Fats" value={macros.fats}
-                  max={Math.round(targetCals * 0.25 / 9)}
+                  max={targetFats}
                   trackColor="#e05252" glowColor="rgba(224,82,82,0.45)" />
               </>
             )}
