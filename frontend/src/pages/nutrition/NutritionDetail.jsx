@@ -52,7 +52,7 @@ function FlowerUI({ meal }) {
 
   // 5 Petals spaced evenly around the circle
   const petalAngles = [-90, -18, 54, 126, 198]
-  
+
   // SVG Canvas Settings
   const SVG_SIZE = 380
   const CENTER = SVG_SIZE / 2
@@ -61,10 +61,10 @@ function FlowerUI({ meal }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px' }}>
-      
+
       {/* 🌸 SVG Flower Canvas */}
       <div style={{ position: 'relative', width: `${SVG_SIZE}px`, height: `${SVG_SIZE}px` }}>
-        
+
         <svg width={SVG_SIZE} height={SVG_SIZE} viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} style={{ position: 'absolute', inset: 0 }}>
           <defs>
             <filter id="petalBlur" x="-50%" y="-50%" width="200%" height="200%">
@@ -77,8 +77,8 @@ function FlowerUI({ meal }) {
               return (
                 <radialGradient key={`grad-${i}`} id={`petalGrad-${i}`}
                   gradientUnits="userSpaceOnUse" cx={pcx} cy={pcy} r={100}>
-                  <stop offset="0%"   stopColor={item.color} stopOpacity="0.95" />
-                  <stop offset="60%"  stopColor={item.color} stopOpacity="0.55" />
+                  <stop offset="0%" stopColor={item.color} stopOpacity="0.95" />
+                  <stop offset="60%" stopColor={item.color} stopOpacity="0.55" />
                   <stop offset="100%" stopColor={item.color} stopOpacity="0" />
                 </radialGradient>
               )
@@ -107,7 +107,7 @@ function FlowerUI({ meal }) {
         {items.map((item, i) => {
           const angleDeg = petalAngles[i]
           const angleRad = (angleDeg * Math.PI) / 180
-          
+
           // Calculate exact X/Y for the text using trigonometry
           const lx = CENTER + Math.cos(angleRad) * LABEL_DIST
           const ly = CENTER + Math.sin(angleRad) * LABEL_DIST
@@ -136,15 +136,15 @@ function FlowerUI({ meal }) {
                 </span>
               ) : (
                 <span style={{
-                   fontSize: '1.25rem', fontWeight: 800, color: '#1C1C1E', 
-                   fontFamily: FONT, lineHeight: 1, textShadow: '0 2px 8px #ffffff'
+                  fontSize: '1.25rem', fontWeight: 800, color: '#1C1C1E',
+                  fontFamily: FONT, lineHeight: 1, textShadow: '0 2px 8px #ffffff'
                 }}>
                   {item.value}
                 </span>
               )}
               <span style={{
                 fontSize: '0.85rem', fontWeight: 700,
-                color: '#636366', fontFamily: FONT, 
+                color: '#636366', fontFamily: FONT,
                 letterSpacing: '0.5px', textShadow: '0 1px 4px #ffffff',
               }}>
                 {item.label}
@@ -165,13 +165,13 @@ function FlowerUI({ meal }) {
           background: '#ffffff',
           overflow: 'hidden', zIndex: 10,
         }}>
-          <img 
-            src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=200&q=80" 
-            alt="Salad Bowl" 
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+          <img
+            src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=200&q=80"
+            alt="Salad Bowl"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         </div>
-        
+
         {/* Little Green Leaf Overlay */}
         <div style={{
           position: 'absolute',
@@ -210,7 +210,7 @@ function FlowerUI({ meal }) {
               fontSize: '1rem', fontWeight: 800,
               color: 'var(--color-text)', fontFamily: FONT
             }}>
-              {value} <span style={{fontSize: '0.8rem', color: 'var(--color-text-faint)'}}>{unit}</span>
+              {value} <span style={{ fontSize: '0.8rem', color: 'var(--color-text-faint)' }}>{unit}</span>
             </span>
           </div>
         ))}
@@ -439,7 +439,7 @@ export default function NutritionDetail() {
       )}
 
       <div style={{ height: '16px' }} />
-      
+
       {/* Global CSS mapped to Theme */}
       <style>{`
         :root {
@@ -475,9 +475,9 @@ const S = {
     cursor: 'pointer', flexShrink: 0,
     boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
   },
-  slotTabs: { 
+  slotTabs: {
     ...GLASS_WHITE, padding: '8px', borderRadius: '24px',
-    display: 'flex', gap: '8px' 
+    display: 'flex', gap: '8px'
   },
   card: {
     ...GLASS_WHITE,

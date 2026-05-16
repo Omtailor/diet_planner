@@ -1375,50 +1375,48 @@ export default function Nutrition() {
       setShowOnboardingBlocker(true)
       return
     }
-    setGeneratingNextWeek(true);
+    setGeneratingNextWeek(true)
+
+    let generatedStartStr = null
+
     try {
-      const res = await mealService.generateNextWeek();
-      setNextWeekExists(true);
+      const res = await mealService.generateNextWeek()
+      setNextWeekExists(true)
       if (res?.data?.week_end_date) {
-        setLatestPlanEndDate(res.data.week_end_date);
+        setLatestPlanEndDate(res.data.week_end_date)
       }
       toast.success('Next 3 days plan ready! 🎉', {
         duration: 8000,
-        style: { fontFamily: FONT, fontWeight: 700 }
-      });
+        style: { fontFamily: FONT, fontWeight: 700 },
+      })
 
       // Clear ALL caches (in-memory + sessionStorage) so fresh data is fetched
-      clearAllCaches();
+      clearAllCaches()
 
-      const nextStartStr =
+      generatedStartStr =
         res?.data?.week_start_date ||
         (latestPlanEndDate
           ? (() => {
-            const nextStart = new Date(latestPlanEndDate);
-            nextStart.setDate(nextStart.getDate() + 1);
-            const yyyy = nextStart.getFullYear();
-            const mm = String(nextStart.getMonth() + 1).padStart(2, '0');
-            const dd = String(nextStart.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
+            const nextStart = new Date(latestPlanEndDate)
+            nextStart.setDate(nextStart.getDate() + 1)
+            const yyyy = nextStart.getFullYear()
+            const mm = String(nextStart.getMonth() + 1).padStart(2, '0')
+            const dd = String(nextStart.getDate()).padStart(2, '0')
+            return `${yyyy}-${mm}-${dd}`
           })()
-          : null);
+          : null)
 
-      if (nextStartStr) {
-        setLoading(true);
-        setDayMeal(null);
-        // Update selectedDate — this will also trigger fetchDayMeal via useEffect,
-        // but we prevent the race by using forceRefresh below
-        setSelectedDate(nextStartStr);
-        setDateOffset(0);
-        switchSlot(0);
-        // Force-refresh bypasses cache entirely — guarantees a fresh backend fetch
+      if (generatedStartStr) {
         try {
-          const data = await fetchMealForDate(nextStartStr, { forceRefresh: true })
+          const data = await fetchMealForDate(generatedStartStr, { forceRefresh: true })
           setDayMeal(data)
+          setSelectedDate(generatedStartStr)
+          setDateOffset(0)
+          switchSlot(0)
         } catch {
-          // If the direct fetch fails, the useEffect will retry via selectedDate change
-        } finally {
-          setLoading(false)
+          setSelectedDate(generatedStartStr)
+          setDateOffset(0)
+          switchSlot(0)
         }
       }
     } catch (err) {
@@ -1426,16 +1424,18 @@ export default function Nutrition() {
       if (detail === 'PROFILE_INCOMPLETE') {
         setShowOnboardingBlocker(true)
       } else if (detail === 'Next plan already exists.') {
-        setNextWeekExists(true);
-        toast.success('Next plan already exists! 🗓️');
+        setNextWeekExists(true)
+        toast.success('Next plan already exists! 🗓️')
       } else {
         const msg = err?.response?.data?.message || 'Failed to generate next plan'
-        toast.error(msg);
+        toast.error(msg)
       }
-    } finally {
-      setGeneratingNextWeek(false);
+      setGeneratingNextWeek(false)
+      return
     }
-  };
+
+    setGeneratingNextWeek(false)
+  }
 
   const getMealSlot = (slot) =>
     dayMeal?.meal_slots?.find(m => m.slot === slot)
@@ -1891,7 +1891,15 @@ export default function Nutrition() {
     <div style={S.pageWrap}>
 
       {/* ── Generation Loading Overlay ── */}
-      {generatingNextWeek && <CookingLoader dietType={profile?.diet_preference || 'non-veg'} />}
+      {generatingNextWeek && (
+        <CookingLoader
+          dietType={profile?.diet_preference || 'non-veg'}
+          onDone={() => {
+            // CookingLoader's animation finished — loader will unmount when
+            // generatingNextWeek flips to false (handled in handleGenerateNextWeek)
+          }}
+        />
+      )}
 
       {/* ── Week Strip ── */}
       <div ref={weekStripRef} style={S.weekStrip} className="week-strip">
