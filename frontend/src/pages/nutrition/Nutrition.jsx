@@ -1054,7 +1054,7 @@ export default function Nutrition() {
   const [dayMeal, setDayMeal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
-  const cacheUserKey = user?.username || profile?.user || profile?.username || null
+  const cacheUserKey = user?.id ?? profile?.id ?? user?.username ?? profile?.username ?? null
   const MEAL_CACHE_KEY = cacheUserKey ? `meal_cache:${cacheUserKey}` : null
   const MEAL_CACHE_TTL = 60 * 1000
   const PAST_MEAL_TTL = 10 * 60 * 1000

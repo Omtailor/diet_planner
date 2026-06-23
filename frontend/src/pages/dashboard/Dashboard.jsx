@@ -755,7 +755,7 @@ function Dashboard() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [showOnboardingBlocker, setShowOnboardingBlocker] = useState(false)
-  const cacheUserKey = user?.username || profile?.user || profile?.username || null
+  const cacheUserKey = user?.id ?? profile?.id ?? user?.username ?? profile?.username ?? null
   const DASH_MEAL_KEY = cacheUserKey ? `dash_meal_today:${cacheUserKey}` : null
   const DASH_MEAL_TTL = 60 * 1000
   const REFETCH_COOLDOWN = 30 * 1000

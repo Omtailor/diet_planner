@@ -38,8 +38,14 @@ const API = axios.create({
   timeout: 60000,
 })
 
-// ✅ ETag cache for HTTP 304 Not Modified responses
-const etagCache = new Map()
+// ✅ Response cache for HTTP 304 Not Modified responses
+const responseCache = new Map()
+
+const getCacheKey = (config) => `${(config.method || 'get').toUpperCase()}:${config.url}`
+
+export const clearApiCache = () => {
+  responseCache.clear()
+}
 
 // ── JWT refresh queue (prevents race condition) ─────────────────────────
 let isRefreshing = false
@@ -57,9 +63,12 @@ API.interceptors.request.use((config) => {
   
   // ✅ Add If-None-Match header for conditional GET requests (ETag support)
   if (config.method === 'get' || config.method === 'GET') {
-    const etag = etagCache.get(config.url)
-    if (etag) {
-      config.headers['If-None-Match'] = etag
+    const cached = responseCache.get(getCacheKey(config))
+    if (cached?.etag) {
+      config.headers['If-None-Match'] = cached.etag
+    }
+    if (cached?.lastModified) {
+      config.headers['If-Modified-Since'] = cached.lastModified
     }
   }
   
@@ -72,7 +81,18 @@ API.interceptors.response.use(
     // ✅ Store ETag for future conditional requests
     const etag = response.headers['etag']
     if (etag && response.config.url) {
-      etagCache.set(response.config.url, etag)
+      responseCache.set(getCacheKey(response.config), {
+        etag,
+        lastModified: response.headers['last-modified'] || null,
+        response: {
+          data: response.data,
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          config: response.config,
+          request: response.request,
+        },
+      })
     }
     return response
   },
@@ -81,7 +101,17 @@ API.interceptors.response.use(
     
     // ✅ Handle 304 Not Modified (cache hit)
     if (error.response?.status === 304) {
-      // Return cached response with 200 status
+      const cached = responseCache.get(getCacheKey(original))
+      if (cached?.response) {
+        return Promise.resolve({
+          ...cached.response,
+          status: 200,
+          statusText: 'OK (Cached)',
+          config: original,
+        })
+      }
+
+      // Return a safe fallback if the body was not cached for some reason
       return Promise.resolve({
         ...error.response,
         status: 200,
@@ -115,8 +145,7 @@ API.interceptors.response.use(
       } catch (err) {
         processQueue(err, null)
         safeStorage.clear()
-        // ✅ Clear ETag cache on logout
-        etagCache.clear()
+        clearApiCache()
         window.location.href = '/login'
         return Promise.reject(err)
       } finally {

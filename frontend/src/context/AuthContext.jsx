@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { authService } from '../services/authService'
-import { safeStorage } from '../services/api'
+import { safeStorage, clearApiCache } from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -8,6 +8,21 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const activeProfileRequestRef = useRef(0)
+
+  const invalidateProfileRequests = () => {
+    activeProfileRequestRef.current += 1
+  }
+
+  const applyProfile = (profileData) => {
+    setProfile(profileData)
+    setUser({
+      id: profileData?.id ?? null,
+      username: profileData?.username || profileData?.user || 'user',
+      email: profileData?.email || '',
+    })
+    return profileData
+  }
 
   useEffect(() => {
     // Safety net — force-hide loader after 5s no matter what in case the network hangs
@@ -21,29 +36,40 @@ export function AuthProvider({ children }) {
   }, [])
 
   const fetchProfile = async () => {
+    const requestId = ++activeProfileRequestRef.current
     try {
       const res = await authService.getProfile()
-      setProfile(res.data)
-      setUser({ username: res.data.user || res.data.username || 'user' })
+      if (requestId !== activeProfileRequestRef.current) return null
+      applyProfile(res.data)
       return res.data
     } catch (err) {
+      if (requestId !== activeProfileRequestRef.current) return null
       const status = err.response?.status
       if (status === 401) {
+        clearApiCache()
         safeStorage.remove('access_token')
         safeStorage.remove('refresh_token')
         setUser(null)
         setProfile(null)
+      } else {
+        setProfile(null)
       }
       return null
     } finally {
-      setLoading(false)
+      if (requestId === activeProfileRequestRef.current) {
+        setLoading(false)
+      }
     }
   }
 
   const login = async (tokens, userData) => {
+    invalidateProfileRequests()
+    clearApiCache()
     try { sessionStorage.clear() } catch {}
+    setLoading(true)
     safeStorage.set('access_token', tokens.access)
     safeStorage.set('refresh_token', tokens.refresh)
+    setProfile(null)
     setUser(userData)
     try {
       const profileData = await fetchProfile()
@@ -54,11 +80,13 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
+    invalidateProfileRequests()
+    clearApiCache()
     try { sessionStorage.clear() } catch {}
-    safeStorage.remove('access_token')
-    safeStorage.remove('refresh_token')
+    safeStorage.clear()
     setUser(null)
     setProfile(null)
+    setLoading(false)
   }
 
   return (

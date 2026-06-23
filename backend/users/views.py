@@ -117,6 +117,7 @@ class ProfileView(APIView):
             serializer = UserProfileSerializer(profile)
             return Response(
                 {
+                    "id": request.user.id,
                     **serializer.data,
                     "bmi": profile.bmi,
                     "username": request.user.username,

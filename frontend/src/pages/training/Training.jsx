@@ -111,7 +111,7 @@ function NeedleBar({ value, max, color, glow }) {
 export default function Training() {
   const navigate = useNavigate()
   const { fetchProfile, user, profile } = useAuth()
-  const cacheUserKey = user?.username || profile?.user || profile?.username || null
+  const cacheUserKey = user?.id ?? profile?.id ?? user?.username ?? profile?.username ?? null
   const PLAN_CACHE_KEY = cacheUserKey ? `training_plan:${cacheUserKey}` : null;
   const CACHE_TTL = 60 * 1000;
   const [plan, setPlan] = useState(null);

@@ -4,7 +4,7 @@ Adds ETag, Cache-Control, and Last-Modified headers for optimal caching.
 """
 import hashlib
 import json
-from django.utils.cache import patch_cache_control, get_conditional_response
+from django.utils.cache import patch_cache_control, patch_vary_headers
 from django.utils.http import http_date
 from django.http import HttpResponseNotModified
 from datetime import datetime
@@ -45,27 +45,29 @@ class APICacheMiddleware:
             if if_none_match == etag:
                 return HttpResponseNotModified()
         
-        # Add Cache-Control headers based on endpoint
+        # Add Cache-Control headers based on endpoint.
+        # These responses are user-specific, so they must never be shared across users.
         path = request.path
+
+        patch_vary_headers(response, ["Authorization"])
         
-        if '/meals/day/' in path or '/training/day/' in path:
+        if '/auth/profile/' in path:
+            patch_cache_control(response, private=True, no_cache=True, no_store=True, must_revalidate=True)
+        elif '/meals/day/' in path or '/training/day/' in path:
             # Individual day data: cache for 1 minute
-            patch_cache_control(response, max_age=60, public=True, must_revalidate=True)
+            patch_cache_control(response, max_age=60, private=True, must_revalidate=True)
         elif '/meals/batch/' in path:
             # Batch requests: cache for 1 minute
-            patch_cache_control(response, max_age=60, public=True, must_revalidate=True)
+            patch_cache_control(response, max_age=60, private=True, must_revalidate=True)
         elif '/meals/weekly/' in path or '/training/weekly/' in path:
             # Weekly plans: cache for 2 minutes
-            patch_cache_control(response, max_age=120, public=True, must_revalidate=True)
+            patch_cache_control(response, max_age=120, private=True, must_revalidate=True)
         elif '/meals/all-days/' in path or '/training/all-days/' in path:
             # All days view: cache for 2 minutes
-            patch_cache_control(response, max_age=120, public=True, must_revalidate=True)
-        elif '/auth/profile/' in path:
-            # Profile: cache for 5 minutes
-            patch_cache_control(response, max_age=300, public=True, must_revalidate=True)
+            patch_cache_control(response, max_age=120, private=True, must_revalidate=True)
         else:
             # Default: cache for 30 seconds
-            patch_cache_control(response, max_age=30, public=True, must_revalidate=True)
+            patch_cache_control(response, max_age=30, private=True, must_revalidate=True)
         
         # Add Last-Modified header (current time as fallback)
         if not response.has_header('Last-Modified'):

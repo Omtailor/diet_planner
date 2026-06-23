@@ -38,7 +38,7 @@ function Signup() {
       })
       await login(
         { access: res.data.access, refresh: res.data.refresh },
-        { username: form.username }
+        res.data.user || { username: form.username }
       )
       toast.success("Account created! Let's set up your profile 🎉")
       navigate('/onboarding')

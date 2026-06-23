@@ -24,7 +24,7 @@ function Login() {
       const res = await authService.login(form)
       await login(
         { access: res.data.access, refresh: res.data.refresh },
-        { username: form.username }
+        res.data.user || { username: form.username }
       )
       if (res.data.onboarding_complete) {
         toast.success('Welcome back! 👋'); navigate('/')
