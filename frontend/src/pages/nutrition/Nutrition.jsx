@@ -1046,7 +1046,7 @@ function CookingLoader({ dietType = 'non-veg', onDone }) {
 }
 
 export default function Nutrition() {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const navigate = useNavigate()
   const weekStripRef = useRef(null)
   const [dateOffset, setDateOffset] = useState(0)
@@ -1054,7 +1054,8 @@ export default function Nutrition() {
   const [dayMeal, setDayMeal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
-  const MEAL_CACHE_KEY = 'meal_cache'
+  const cacheUserKey = user?.username || profile?.user || profile?.username || null
+  const MEAL_CACHE_KEY = cacheUserKey ? `meal_cache:${cacheUserKey}` : null
   const MEAL_CACHE_TTL = 60 * 1000
   const PAST_MEAL_TTL = 10 * 60 * 1000
   const EMPTY_CACHE_TTL = 30 * 1000
@@ -1067,14 +1068,24 @@ export default function Nutrition() {
   const abortControllerRef = useRef(null)
 
   useEffect(() => {
+    if (!MEAL_CACHE_KEY) {
+      cacheRef.current = {}
+      return
+    }
     try {
       cacheRef.current = JSON.parse(sessionStorage.getItem(MEAL_CACHE_KEY) || '{}')
     } catch {
       cacheRef.current = {}
     }
-  }, [])
+  }, [MEAL_CACHE_KEY])
+
+  useEffect(() => {
+    setDayMeal(null)
+    setLoading(true)
+  }, [MEAL_CACHE_KEY])
 
   const persistCache = () => {
+    if (!MEAL_CACHE_KEY) return
     try {
       sessionStorage.setItem(MEAL_CACHE_KEY, JSON.stringify(cacheRef.current))
     } catch { }
@@ -1207,7 +1218,7 @@ export default function Nutrition() {
         try { abortControllerRef.current.abort() } catch { }
       }
     }
-  }, [selectedDate])
+  }, [selectedDate, MEAL_CACHE_KEY])
 
   useEffect(() => {
     if (!weekStripRef.current) return
@@ -1364,8 +1375,10 @@ export default function Nutrition() {
   const clearAllCaches = () => {
     // Clear both in-memory and persisted caches to force fresh fetches
     cacheRef.current = {}
-    sessionStorage.removeItem(MEAL_CACHE_KEY)
+    if (MEAL_CACHE_KEY) sessionStorage.removeItem(MEAL_CACHE_KEY)
+    sessionStorage.removeItem('meal_cache')
     // Also clear Dashboard's cached meal data so it stays in sync
+    if (cacheUserKey) sessionStorage.removeItem(`dash_meal_today:${cacheUserKey}`)
     sessionStorage.removeItem('dash_meal_today')
   }
 

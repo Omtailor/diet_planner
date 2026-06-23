@@ -41,6 +41,7 @@ export function AuthProvider({ children }) {
   }
 
   const login = async (tokens, userData) => {
+    try { sessionStorage.clear() } catch {}
     safeStorage.set('access_token', tokens.access)
     safeStorage.set('refresh_token', tokens.refresh)
     setUser(userData)
@@ -53,6 +54,7 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
+    try { sessionStorage.clear() } catch {}
     safeStorage.remove('access_token')
     safeStorage.remove('refresh_token')
     setUser(null)

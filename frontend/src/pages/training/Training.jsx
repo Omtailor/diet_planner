@@ -110,8 +110,9 @@ function NeedleBar({ value, max, color, glow }) {
 // ─── Main Export ───────────────────────────────────────────────
 export default function Training() {
   const navigate = useNavigate()
-  const { fetchProfile } = useAuth()
-  const PLAN_CACHE_KEY = 'training_plan';
+  const { fetchProfile, user, profile } = useAuth()
+  const cacheUserKey = user?.username || profile?.user || profile?.username || null
+  const PLAN_CACHE_KEY = cacheUserKey ? `training_plan:${cacheUserKey}` : null;
   const CACHE_TTL = 60 * 1000;
   const [plan, setPlan] = useState(null);
   const weekStripRef = useRef(null);
@@ -153,7 +154,13 @@ export default function Training() {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const todayDow = today.getDay(); // 0=Sun, 1=Mon...
 
-  useEffect(() => { fetchPlan(); checkNextPlan(); }, []);
+  useEffect(() => {
+    setPlan(null);
+    setSelectedDay(null);
+    lastFetchTime.current = null;
+  }, [PLAN_CACHE_KEY]);
+
+  useEffect(() => { fetchPlan(); checkNextPlan(); }, [PLAN_CACHE_KEY]);
 
   useEffect(() => {
     if (!weekStripRef.current) return;
@@ -180,7 +187,7 @@ export default function Training() {
     const now = Date.now();
     let cachedPlan = null;
 
-    if (!jumpToFirstDay) {
+    if (!jumpToFirstDay && PLAN_CACHE_KEY) {
       const cached = sessionStorage.getItem(PLAN_CACHE_KEY);
       if (cached) {
         try {
@@ -222,7 +229,7 @@ export default function Training() {
       ]);
 
       setPlan(res.data);
-      sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(res.data));
+      if (PLAN_CACHE_KEY) sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(res.data));
 
       const todayDay = res.data.day_trainings?.find(d => d.date === todayStr);
       const firstDay = res.data.day_trainings?.[0] || null;
@@ -248,7 +255,7 @@ export default function Training() {
     } catch (e) {
       if (e?.response?.status === 404) {
         setPlan(null);
-        sessionStorage.removeItem(PLAN_CACHE_KEY);
+        if (PLAN_CACHE_KEY) sessionStorage.removeItem(PLAN_CACHE_KEY);
       }
       else toast.error('Failed to load training plan');
     } finally {
@@ -268,7 +275,8 @@ export default function Training() {
 
   const clearTrainingCache = () => {
     // Clear both sessionStorage and in-memory TTL to force a fresh backend fetch
-    sessionStorage.removeItem(PLAN_CACHE_KEY);
+    if (PLAN_CACHE_KEY) sessionStorage.removeItem(PLAN_CACHE_KEY);
+    sessionStorage.removeItem('training_plan');
     lastFetchTime.current = null;
   };
 

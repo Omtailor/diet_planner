@@ -755,7 +755,8 @@ function Dashboard() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [showOnboardingBlocker, setShowOnboardingBlocker] = useState(false)
-  const DASH_MEAL_KEY = 'dash_meal_today'
+  const cacheUserKey = user?.username || profile?.user || profile?.username || null
+  const DASH_MEAL_KEY = cacheUserKey ? `dash_meal_today:${cacheUserKey}` : null
   const DASH_MEAL_TTL = 60 * 1000
   const REFETCH_COOLDOWN = 30 * 1000
   const lastFetchRef = useRef(null)
@@ -770,7 +771,11 @@ function Dashboard() {
 
   const today = getTodayStr()
 
-  useEffect(() => { fetchTodayMeal() }, [])
+  useEffect(() => {
+    setDayMeal(null)
+    lastFetchRef.current = null
+    fetchTodayMeal()
+  }, [DASH_MEAL_KEY])
 
   const fetchTodayMeal = async (forceRefresh = false) => {
     const now = Date.now()
@@ -779,24 +784,28 @@ function Dashboard() {
     }
 
     if (!forceRefresh) {
-      try {
-        const raw = sessionStorage.getItem(DASH_MEAL_KEY)
-        if (raw) {
-          const { data, ts } = JSON.parse(raw)
-          const isFresh = Date.now() - ts < DASH_MEAL_TTL
-          setDayMeal(data)
-          setLoadingMeal(false)
-          lastFetchRef.current = Date.now()
-          if (isFresh) return
-        }
-      } catch { }
+      if (DASH_MEAL_KEY) {
+        try {
+          const raw = sessionStorage.getItem(DASH_MEAL_KEY)
+          if (raw) {
+            const { data, ts } = JSON.parse(raw)
+            const isFresh = Date.now() - ts < DASH_MEAL_TTL
+            setDayMeal(data)
+            setLoadingMeal(false)
+            lastFetchRef.current = Date.now()
+            if (isFresh) return
+          }
+        } catch { }
+      }
     }
 
     if (!dayMeal) setLoadingMeal(true)
     try {
       const res = await mealService.getDayMeal(today)
       setDayMeal(res.data)
-      sessionStorage.setItem(DASH_MEAL_KEY, JSON.stringify({ data: res.data, ts: Date.now() }))
+      if (DASH_MEAL_KEY) {
+        sessionStorage.setItem(DASH_MEAL_KEY, JSON.stringify({ data: res.data, ts: Date.now() }))
+      }
     } catch {
       setDayMeal(null)
     } finally {
@@ -816,7 +825,9 @@ function Dashboard() {
     setRegenerating(true);
     try {
       await mealService.regenerateDay(today);
-      sessionStorage.removeItem(DASH_MEAL_KEY);
+      if (DASH_MEAL_KEY) sessionStorage.removeItem(DASH_MEAL_KEY);
+      sessionStorage.removeItem('dash_meal_today');
+      if (cacheUserKey) sessionStorage.removeItem(`meal_cache:${cacheUserKey}`);
       sessionStorage.removeItem('meal_cache');
       // Reset cooldown so fetchTodayMeal doesn't skip the re-fetch
       lastFetchRef.current = null;
@@ -1104,7 +1115,8 @@ function Dashboard() {
                   setShowOnboardingBlocker(true)
                   return
                 }
-                sessionStorage.removeItem(DASH_MEAL_KEY)
+                if (DASH_MEAL_KEY) sessionStorage.removeItem(DASH_MEAL_KEY)
+                sessionStorage.removeItem('dash_meal_today')
                 mealService.generatePlan().then(() => fetchTodayMeal(true))
               }}
               style={{ ...accentBtn, marginTop: '4px' }}>
