@@ -1,21 +1,20 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 
-// Auth Pages
+// ✅ Eagerly load auth pages (needed on initial load)
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import Onboarding from './pages/auth/Onboarding'
 
-// App Pages
-import Dashboard from './pages/dashboard/Dashboard'
-import Nutrition from './pages/nutrition/Nutrition'
-import NutritionDetail from './pages/nutrition/NutritionDetail'
-import Training from './pages/training/Training'
-import Account from './pages/account/Account'
-import CheatMeal from './pages/nutrition/CheatMeal'
-
-// Layout
-import AppLayout from './components/layout/AppLayout'
+// ✅ Lazy load app pages (code splitting for better initial load)
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
+const Nutrition = lazy(() => import('./pages/nutrition/Nutrition'))
+const NutritionDetail = lazy(() => import('./pages/nutrition/NutritionDetail'))
+const Training = lazy(() => import('./pages/training/Training'))
+const Account = lazy(() => import('./pages/account/Account'))
+const CheatMeal = lazy(() => import('./pages/nutrition/CheatMeal'))
+const AppLayout = lazy(() => import('./components/layout/AppLayout'))
 
 // Route Guards
 function PrivateRoute({ children }) {
@@ -28,6 +27,29 @@ function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <SplashScreen />
   return !user ? children : <Navigate to="/" replace />
+}
+
+// ✅ Loading fallback for lazy-loaded routes
+function RouteLoadingFallback() {
+  return (
+    <div style={{
+      minHeight: '100dvh',
+      background: '#f0f7f2',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      <div style={{
+        width: '32px',
+        height: '32px',
+        border: '3px solid rgba(52, 199, 89, 0.2)',
+        borderTop: '3px solid #34C759',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite'
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
 }
 
 function SplashScreen() {
@@ -83,25 +105,27 @@ function SplashScreen() {
 
 function App() {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-      <Route path="/onboarding" element={<PrivateRoute><Onboarding /></PrivateRoute>} />
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+        <Route path="/onboarding" element={<PrivateRoute><Onboarding /></PrivateRoute>} />
 
-      {/* Protected App Routes */}
-      <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
-        <Route index element={<Dashboard />} />
-        <Route path="nutrition" element={<Nutrition />} />
-        <Route path="nutrition/:date" element={<NutritionDetail />} />
-        <Route path="cheat-meal" element={<PrivateRoute><CheatMeal /></PrivateRoute>} />
-        <Route path="training" element={<Training />} />
-        <Route path="account" element={<Account />} />
-      </Route>
+        {/* Protected App Routes */}
+        <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
+          <Route index element={<Dashboard />} />
+          <Route path="nutrition" element={<Nutrition />} />
+          <Route path="nutrition/:date" element={<NutritionDetail />} />
+          <Route path="cheat-meal" element={<PrivateRoute><CheatMeal /></PrivateRoute>} />
+          <Route path="training" element={<Training />} />
+          <Route path="account" element={<Account />} />
+        </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   )
 }
 

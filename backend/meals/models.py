@@ -66,6 +66,11 @@ class WeeklyPlan(models.Model):
     class Meta:
         ordering = ["-week_start_date"]
         unique_together = ["user", "week_start_date"]
+        indexes = [
+            models.Index(fields=["user", "week_start_date"]),
+            models.Index(fields=["user", "week_end_date"]),
+            models.Index(fields=["week_start_date", "week_end_date"]),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - Week of {self.week_start_date}"
@@ -107,6 +112,11 @@ class DayMeal(models.Model):
     class Meta:
         ordering = ["date"]
         unique_together = ["weekly_plan", "date"]
+        indexes = [
+            models.Index(fields=["date"]),
+            models.Index(fields=["weekly_plan", "date"]),
+            models.Index(fields=["status"]),
+        ]
 
     def __str__(self):
         return f"{self.weekly_plan.user.username} - {self.get_day_of_week_display()} ({self.date})"

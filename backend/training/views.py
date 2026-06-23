@@ -29,7 +29,11 @@ class DayRangeView(APIView):
             training_plan__user=request.user,
             date__gte=start,
             date__lte=end,
-        ).order_by("date")
+        ).select_related("training_plan").prefetch_related("exercises").order_by("date")
+
+        # Store prefetched exercises to avoid N+1 in serializer
+        for day in days:
+            day._prefetched_exercises = list(day.exercises.all())
 
         return Response(DayTrainingSerializer(days, many=True).data)
 
@@ -71,10 +75,15 @@ class AllDayTrainingsView(APIView):
             DayTraining.objects.filter(training_plan__user=request.user)
             .order_by("date")
             .select_related("training_plan")
+            .prefetch_related("exercises")
         )
 
         if not days.exists():
             return Response({"error": "No training plans found."}, status=404)
+        
+        # Store prefetched exercises to avoid N+1 in serializer
+        for day in days:
+            day._prefetched_exercises = list(day.exercises.all())
 
         latest_plan = (
             TrainingPlan.objects.filter(user=request.user)

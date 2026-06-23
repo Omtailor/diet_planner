@@ -38,6 +38,9 @@ const API = axios.create({
   timeout: 60000,
 })
 
+// ✅ ETag cache for HTTP 304 Not Modified responses
+const etagCache = new Map()
+
 // ── JWT refresh queue (prevents race condition) ─────────────────────────
 let isRefreshing = false
 let failedQueue = []
@@ -47,18 +50,46 @@ const processQueue = (error, token = null) => {
   failedQueue = []
 }
 
-// ── Request interceptor — attach JWT ──────────────────────────────────────
+// ── Request interceptor — attach JWT + ETag ──────────────────────────────────────
 API.interceptors.request.use((config) => {
   const token = safeStorage.get('access_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  
+  // ✅ Add If-None-Match header for conditional GET requests (ETag support)
+  if (config.method === 'get' || config.method === 'GET') {
+    const etag = etagCache.get(config.url)
+    if (etag) {
+      config.headers['If-None-Match'] = etag
+    }
+  }
+  
   return config
 })
 
-// ── Response interceptor — auto-refresh on 401 ───────────────────────────
+// ── Response interceptor — auto-refresh + ETag caching ───────────────────────────────
 API.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // ✅ Store ETag for future conditional requests
+    const etag = response.headers['etag']
+    if (etag && response.config.url) {
+      etagCache.set(response.config.url, etag)
+    }
+    return response
+  },
   async (error) => {
     const original = error.config
+    
+    // ✅ Handle 304 Not Modified (cache hit)
+    if (error.response?.status === 304) {
+      // Return cached response with 200 status
+      return Promise.resolve({
+        ...error.response,
+        status: 200,
+        statusText: 'OK (Cached)',
+        config: original,
+      })
+    }
+    
     if (error.response?.status === 401 && !original._retry) {
       if (isRefreshing) {
         // Queue this request until refresh completes
@@ -84,6 +115,8 @@ API.interceptors.response.use(
       } catch (err) {
         processQueue(err, null)
         safeStorage.clear()
+        // ✅ Clear ETag cache on logout
+        etagCache.clear()
         window.location.href = '/login'
         return Promise.reject(err)
       } finally {

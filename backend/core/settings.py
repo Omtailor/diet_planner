@@ -55,6 +55,13 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    # ✅ Enable pagination for large querysets
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 100,
+    # ✅ Enable response compression
+    "DEFAULT_RENDERER_CLASSES": (
+        "rest_framework.renderers.JSONRenderer",
+    ),
 }
 
 # ── JWT — Step 3 ──────────────────────────────────────────────────────────────
@@ -97,7 +104,11 @@ if IS_PROD:
 # ── Middleware ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.security.SecurityMiddleware",    "whitenoise.middleware.WhiteNoiseMiddleware",    "core.middleware.SecurityHeadersMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.middleware.gzip.GZipMiddleware",  # ✅ Enable gzip compression
+    "core.middleware.SecurityHeadersMiddleware",
+    "core.cache_middleware.APICacheMiddleware",  # ✅ HTTP caching with ETags
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -134,10 +145,14 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST"),
         "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 60,
+        "CONN_MAX_AGE": 600,  # ✅ Increased from 60 to 600 seconds (10 minutes)
+        "CONN_HEALTH_CHECKS": True,  # ✅ Enable connection health checks
         # ✅ Required for Neon.tech — enforces SSL in production
         "OPTIONS": {
             "sslmode": "require",
+            # ✅ Connection pooling settings
+            "connect_timeout": 10,
+            "options": "-c statement_timeout=30000",  # 30 second query timeout
         },
     }
 }

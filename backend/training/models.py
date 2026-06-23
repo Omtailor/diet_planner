@@ -46,6 +46,11 @@ class TrainingPlan(models.Model):
     class Meta:
         ordering = ["-week_start_date"]
         unique_together = ["user", "week_start_date"]
+        indexes = [
+            models.Index(fields=["user", "week_start_date"]),
+            models.Index(fields=["user", "week_end_date"]),
+            models.Index(fields=["week_start_date", "week_end_date"]),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - Training Week of {self.week_start_date}"
@@ -76,6 +81,11 @@ class DayTraining(models.Model):
     class Meta:
         ordering = ["date"]
         unique_together = ["training_plan", "day_of_week"]
+        indexes = [
+            models.Index(fields=["date"]),
+            models.Index(fields=["training_plan", "date"]),
+            models.Index(fields=["is_rest_day"]),
+        ]
 
     def __str__(self):
         return f"{self.training_plan.user.username} - {self.get_day_of_week_display()}"

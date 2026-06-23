@@ -41,15 +41,23 @@ class DayTrainingSerializer(serializers.ModelSerializer):
     def get_total_duration(self, obj):
         if obj.is_rest_day:
             return 0
-        return sum(e.duration_minutes for e in obj.exercises.all())
+        # Use prefetched exercises to avoid N+1 query
+        exercises = getattr(obj, '_prefetched_exercises', None)
+        if exercises is None:
+            exercises = obj.exercises.all()
+        return sum(e.duration_minutes for e in exercises)
 
     def get_total_calories_burned(self, obj):
         if obj.is_rest_day:
             return 0
+        # Use prefetched exercises to avoid N+1 query
+        exercises = getattr(obj, '_prefetched_exercises', None)
+        if exercises is None:
+            exercises = obj.exercises.all()
         return round(
             sum(
                 e.calories_burned_per_min * e.duration_minutes
-                for e in obj.exercises.all()
+                for e in exercises
             )
         )
 
