@@ -4,6 +4,47 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def create_indexes_if_not_exist(apps, schema_editor):
+    """Create indexes only if they don't already exist"""
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    
+    with schema_editor.connection.cursor() as cursor:
+        # List of indexes to create
+        indexes = [
+            ('meals_daymeal', 'meals_dayme_date_9a626f_idx', '("date")'),
+            ('meals_daymeal', 'meals_dayme_weekly__c019cb_idx', '("weekly_plan_id", "date")'),
+            ('meals_daymeal', 'meals_dayme_status_805ac9_idx', '("status")'),
+            ('meals_weeklyplan', 'meals_weekl_user_id_411fbf_idx', '("user_id", "week_start_date")'),
+            ('meals_weeklyplan', 'meals_weekl_user_id_eaf75b_idx', '("user_id", "week_end_date")'),
+            ('meals_weeklyplan', 'meals_weekl_week_st_ba244a_idx', '("week_start_date", "week_end_date")'),
+        ]
+        
+        for table, index_name, columns in indexes:
+            cursor.execute(
+                f"CREATE INDEX IF NOT EXISTS {index_name} ON {table} {columns}"
+            )
+
+
+def drop_indexes(apps, schema_editor):
+    """Drop indexes on migration rollback"""
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    
+    with schema_editor.connection.cursor() as cursor:
+        indexes = [
+            'meals_dayme_date_9a626f_idx',
+            'meals_dayme_weekly__c019cb_idx',
+            'meals_dayme_status_805ac9_idx',
+            'meals_weekl_user_id_411fbf_idx',
+            'meals_weekl_user_id_eaf75b_idx',
+            'meals_weekl_week_st_ba244a_idx',
+        ]
+        
+        for index_name in indexes:
+            cursor.execute(f"DROP INDEX IF EXISTS {index_name}")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -12,28 +53,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddIndex(
-            model_name='daymeal',
-            index=models.Index(fields=['date'], name='meals_dayme_date_9a626f_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='daymeal',
-            index=models.Index(fields=['weekly_plan', 'date'], name='meals_dayme_weekly__c019cb_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='daymeal',
-            index=models.Index(fields=['status'], name='meals_dayme_status_805ac9_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='weeklyplan',
-            index=models.Index(fields=['user', 'week_start_date'], name='meals_weekl_user_id_411fbf_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='weeklyplan',
-            index=models.Index(fields=['user', 'week_end_date'], name='meals_weekl_user_id_eaf75b_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='weeklyplan',
-            index=models.Index(fields=['week_start_date', 'week_end_date'], name='meals_weekl_week_st_ba244a_idx'),
-        ),
+        migrations.RunPython(create_indexes_if_not_exist, drop_indexes),
     ]

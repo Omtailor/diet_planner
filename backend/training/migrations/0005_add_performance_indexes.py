@@ -4,6 +4,47 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def create_indexes_if_not_exist(apps, schema_editor):
+    """Create indexes only if they don't already exist"""
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    
+    with schema_editor.connection.cursor() as cursor:
+        # List of indexes to create
+        indexes = [
+            ('training_daytraining', 'training_da_date_54da2a_idx', '("date")'),
+            ('training_daytraining', 'training_da_trainin_50bd95_idx', '("training_plan_id", "date")'),
+            ('training_daytraining', 'training_da_is_rest_9d6675_idx', '("is_rest_day")'),
+            ('training_trainingplan', 'training_tr_user_id_259e44_idx', '("user_id", "week_start_date")'),
+            ('training_trainingplan', 'training_tr_user_id_f42b56_idx', '("user_id", "week_end_date")'),
+            ('training_trainingplan', 'training_tr_week_st_b31d28_idx', '("week_start_date", "week_end_date")'),
+        ]
+        
+        for table, index_name, columns in indexes:
+            cursor.execute(
+                f"CREATE INDEX IF NOT EXISTS {index_name} ON {table} {columns}"
+            )
+
+
+def drop_indexes(apps, schema_editor):
+    """Drop indexes on migration rollback"""
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    
+    with schema_editor.connection.cursor() as cursor:
+        indexes = [
+            'training_da_date_54da2a_idx',
+            'training_da_trainin_50bd95_idx',
+            'training_da_is_rest_9d6675_idx',
+            'training_tr_user_id_259e44_idx',
+            'training_tr_user_id_f42b56_idx',
+            'training_tr_week_st_b31d28_idx',
+        ]
+        
+        for index_name in indexes:
+            cursor.execute(f"DROP INDEX IF EXISTS {index_name}")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -12,28 +53,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddIndex(
-            model_name='daytraining',
-            index=models.Index(fields=['date'], name='training_da_date_54da2a_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='daytraining',
-            index=models.Index(fields=['training_plan', 'date'], name='training_da_trainin_50bd95_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='daytraining',
-            index=models.Index(fields=['is_rest_day'], name='training_da_is_rest_9d6675_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='trainingplan',
-            index=models.Index(fields=['user', 'week_start_date'], name='training_tr_user_id_259e44_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='trainingplan',
-            index=models.Index(fields=['user', 'week_end_date'], name='training_tr_user_id_f42b56_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='trainingplan',
-            index=models.Index(fields=['week_start_date', 'week_end_date'], name='training_tr_week_st_b31d28_idx'),
-        ),
+        migrations.RunPython(create_indexes_if_not_exist, drop_indexes),
     ]

@@ -18,24 +18,26 @@ export default defineConfig({
     // Enable code splitting for better caching
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks - cached separately from app code
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['framer-motion', 'lucide-react', 'react-hot-toast'],
-          // API layer - changes less frequently
-          'api-layer': ['axios'],
+        manualChunks: (id) => {
+          // Vendor chunk splitting for better caching
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor';
+            }
+            if (id.includes('framer-motion') || id.includes('lucide-react') || id.includes('react-hot-toast')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('axios')) {
+              return 'api-layer';
+            }
+            // Other vendor code
+            return 'vendor';
+          }
         },
       },
     },
     // Minification settings
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.debug'], // Remove specific console calls
-      },
-    },
+    minify: 'esbuild', // Use esbuild instead of terser for faster builds
     // Source maps for debugging (but hidden from users)
     sourcemap: false, // Set to 'hidden' if you need sourcemaps for error tracking
     // Asset inlining threshold
