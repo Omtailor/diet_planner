@@ -173,7 +173,7 @@ function CalorieRing({ consumed = 0, target = null }) {
           <text x="74" y="102" textAnchor="middle"
             fill="var(--color-text-muted)" fontSize="12"
             fontFamily="'General Sans', sans-serif">
-            No meal plan generated
+            0 kcal
           </text>
         </svg>
       </div>
@@ -902,7 +902,7 @@ function Dashboard() {
   const sc = hasMealPlan
     ? (statusConfig[status] || statusConfig.on_track)
     : { label: 'No plan yet', color: 'var(--color-text-faint)' }
-  const plannedTargetCals = hasMealPlan ? (profile?.target_calories ?? 2000) : null
+  const plannedTargetCals = hasMealPlan ? (profile?.target_calories ?? 2000) : 0
 
   const quickActions = [
     {
@@ -962,7 +962,7 @@ function Dashboard() {
             fontSize: '1.9rem', fontWeight: 800,
             color: 'var(--color-text)', lineHeight: 1, marginTop: '4px',
           }}>
-            {plannedTargetCals ?? '—'}
+            {plannedTargetCals}
             <span style={{
               fontSize: '0.875rem', fontWeight: 500,
               color: 'var(--color-text-muted)', marginLeft: '4px',
