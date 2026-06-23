@@ -1,3 +1,6 @@
+/* Font import - must be before @import "tailwindcss" */
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=clash-display@500,600,700&display=swap');
+
 @import "tailwindcss";
 
 :root {
@@ -83,6 +86,3 @@ a:active,
   outline-offset: 3px;
   border-radius: var(--radius-sm);
 }
-
-/* Font import */
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=clash-display@500,600,700&display=swap');
