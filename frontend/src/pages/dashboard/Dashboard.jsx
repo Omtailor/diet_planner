@@ -170,11 +170,6 @@ function CalorieRing({ consumed = 0, target = null }) {
             fontFamily="'General Sans', sans-serif">
             kcal consumed
           </text>
-          <text x="74" y="102" textAnchor="middle"
-            fill="var(--color-text-muted)" fontSize="12"
-            fontFamily="'General Sans', sans-serif">
-            0 kcal
-          </text>
         </svg>
       </div>
     )
