@@ -138,13 +138,47 @@ function SkeletonBlock({ width = '100%', height = '16px', radius = '8px' }) {
 
 // ─── Calorie Ring ──────────────────────────────────────────────
 
-function CalorieRing({ consumed = 0, target = 2000 }) {
+function CalorieRing({ consumed = 0, target = null }) {
   const animated = useCountUp(consumed)
-  const isOver = consumed >= target
-  const pct = Math.min(consumed / target, 1)
+  const hasTarget = typeof target === 'number' && target > 0
+  const isOver = hasTarget && consumed >= target
+  const pct = hasTarget ? Math.min(consumed / target, 1) : 0
   const r = 54
   const circ = 2 * Math.PI * r
   const dash = pct * circ
+
+  if (!hasTarget) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <svg width="148" height="148" viewBox="0 0 148 148"
+          style={{
+            filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.04))',
+            transition: 'filter 600ms ease',
+          }}>
+          <circle cx="74" cy="74" r={r}
+            fill="none"
+            stroke="rgba(0,0,0,0.06)"
+            strokeWidth="10" />
+          <text x="74" y="68" textAnchor="middle"
+            fill="var(--color-text)"
+            fontSize="26" fontWeight="700"
+            fontFamily="'General Sans', sans-serif">
+            {animated}
+          </text>
+          <text x="74" y="84" textAnchor="middle"
+            fill="var(--color-text-faint)" fontSize="13"
+            fontFamily="'General Sans', sans-serif">
+            kcal consumed
+          </text>
+          <text x="74" y="102" textAnchor="middle"
+            fill="var(--color-text-muted)" fontSize="12"
+            fontFamily="'General Sans', sans-serif">
+            No meal plan generated
+          </text>
+        </svg>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -809,6 +843,7 @@ function Dashboard() {
     dayMeal?.meal_slots?.reduce((s, m) => s + (m.calories || 0), 0) ?? 0,
     [dayMeal]
   )
+  const hasMealPlan = !!dayMeal
   const consumedCals = useMemo(() => {
     if (!dayMeal?.meal_slots) return 0
     const hour = new Date().getHours()
@@ -858,13 +893,16 @@ function Dashboard() {
   const targetCarbs = Math.round((targetCals * 0.45) / 4)
   const targetFats = Math.round((targetCals * 0.25) / 9)
 
-  const status = dayMeal?.status || 'on_track'
+  const status = hasMealPlan ? (dayMeal?.status || 'on_track') : null
   const statusConfig = {
     on_track: { label: 'On Track ✅', color: 'var(--color-accent)' },
     adjusted: { label: 'Adjusted ⚠️', color: '#e09a2e' },
     regenerated: { label: 'Updated 🔄', color: 'var(--color-accent)' },
   }
-  const sc = statusConfig[status] || statusConfig.on_track
+  const sc = hasMealPlan
+    ? (statusConfig[status] || statusConfig.on_track)
+    : { label: 'No plan yet', color: 'var(--color-text-faint)' }
+  const plannedTargetCals = hasMealPlan ? (profile?.target_calories ?? 2000) : null
 
   const quickActions = [
     {
@@ -924,7 +962,7 @@ function Dashboard() {
             fontSize: '1.9rem', fontWeight: 800,
             color: 'var(--color-text)', lineHeight: 1, marginTop: '4px',
           }}>
-            {targetCals}
+            {plannedTargetCals ?? '—'}
             <span style={{
               fontSize: '0.875rem', fontWeight: 500,
               color: 'var(--color-text-muted)', marginLeft: '4px',
@@ -967,7 +1005,7 @@ function Dashboard() {
             </div>
           ) : (
             <>
-              <CalorieRing consumed={consumedCals} target={targetCals} />
+              <CalorieRing consumed={consumedCals} target={plannedTargetCals} />
             </>
           )}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -978,17 +1016,37 @@ function Dashboard() {
                 <SkeletonBlock height="14px" radius="8px" />
               </>
             ) : (
-              <>
-                <MacroBar label="Protein" value={macros.protein}
-                  max={targetProtein}
-                  trackColor="#60B8FF" glowColor="rgba(96,184,255,0.45)" />
-                <MacroBar label="Carbs" value={macros.carbs}
-                  max={targetCarbs}
-                  trackColor="#e09a2e" glowColor="rgba(224,154,46,0.45)" />
-                <MacroBar label="Fats" value={macros.fats}
-                  max={targetFats}
-                  trackColor="#e05252" glowColor="rgba(224,82,82,0.45)" />
-              </>
+              hasMealPlan ? (
+                <>
+                  <MacroBar label="Protein" value={macros.protein}
+                    max={targetProtein}
+                    trackColor="#60B8FF" glowColor="rgba(96,184,255,0.45)" />
+                  <MacroBar label="Carbs" value={macros.carbs}
+                    max={targetCarbs}
+                    trackColor="#e09a2e" glowColor="rgba(224,154,46,0.45)" />
+                  <MacroBar label="Fats" value={macros.fats}
+                    max={targetFats}
+                    trackColor="#e05252" glowColor="rgba(224,82,82,0.45)" />
+                </>
+              ) : (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  minHeight: '148px', padding: '12px 6px', gap: '8px',
+                }}>
+                  <p style={{
+                    fontFamily: FONT, fontWeight: 700, color: 'var(--color-text)',
+                    fontSize: '0.95rem',
+                  }}>
+                    No meal plan generated for today
+                  </p>
+                  <p style={{
+                    fontFamily: FONT, fontSize: '0.82rem', color: 'var(--color-text-muted)',
+                    lineHeight: 1.5,
+                  }}>
+                    Generate a plan to see today's calorie target and macro progress.
+                  </p>
+                </div>
+              )
             )}
           </div>
         </div>
