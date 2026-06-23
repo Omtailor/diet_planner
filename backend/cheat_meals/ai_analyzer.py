@@ -38,7 +38,7 @@ def _gemini_post(contents: list, temperature: float = 0.3) -> str:
             if resp.status_code != 200:
                 raise RuntimeError(f"{resp.status_code}: {resp.text[:500]}")
             data = resp.json()
-            text = data["candidates"][0]["content"][0]["parts"][0]["text"].strip()
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
             logger.info(f"[AIAnalyzer] ✓ Got response from {model}")
             return text
         except Exception as e:
