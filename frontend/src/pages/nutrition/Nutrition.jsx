@@ -1394,11 +1394,18 @@ export default function Nutrition() {
     setRegenerating(true);
     try {
       await mealService.regenerateDay(selectedDate);
+      
       // Clear all caches so fresh data is fetched immediately
       clearAllCaches();
+      
+      // Await fresh fetch BEFORE showing success
       const data = await fetchMealForDate(selectedDate, { forceRefresh: true });
       setDayMeal(data);
+      
+      // Only show success AFTER data is loaded
       toast.success("Day meals regenerated!");
+      
+      if (navigator.vibrate) navigator.vibrate([30, 10, 30]);
     } catch {
       toast.error("Failed to regenerate");
     } finally {
@@ -1424,23 +1431,23 @@ export default function Nutrition() {
     }
     setGeneratingNextWeek(true)
 
-    let generatedStartStr = null
-
     try {
       const res = await mealService.generateNextWeek()
+      
+      // Clear ALL caches (in-memory + sessionStorage) BEFORE refetch
+      clearAllCaches()
+      
+      // Refetch all historical data to populate cache with new plan
+      await prefetchAllHistory()
+      
+      // Update metadata
       setNextWeekExists(true)
       if (res?.data?.week_end_date) {
         setLatestPlanEndDate(res.data.week_end_date)
       }
-      toast.success('Next 3 days plan ready! 🎉', {
-        duration: 8000,
-        style: { fontFamily: FONT, fontWeight: 700 },
-      })
-
-      // Clear ALL caches (in-memory + sessionStorage) so fresh data is fetched
-      clearAllCaches()
-
-      generatedStartStr =
+      
+      // Jump to the first day of the newly generated plan
+      const generatedStartStr =
         res?.data?.week_start_date ||
         (latestPlanEndDate
           ? (() => {
@@ -1454,18 +1461,19 @@ export default function Nutrition() {
           : null)
 
       if (generatedStartStr) {
-        try {
-          const data = await fetchMealForDate(generatedStartStr, { forceRefresh: true })
-          setDayMeal(data)
-          setSelectedDate(generatedStartStr)
-          setDateOffset(0)
-          switchSlot(0)
-        } catch {
-          setSelectedDate(generatedStartStr)
-          setDateOffset(0)
-          switchSlot(0)
-        }
+        setSelectedDate(generatedStartStr)
+        setDateOffset(0)
+        switchSlot(0)
+        // Fetch the first day to display it immediately
+        await fetchDayMeal(generatedStartStr)
       }
+      
+      // Only show success AFTER data is loaded
+      toast.success('Next 3 days plan ready! 🎉', {
+        duration: 3500,
+        style: { fontFamily: FONT, fontWeight: 700 },
+      })
+      
     } catch (err) {
       const detail = err?.response?.data?.detail
       if (detail === 'PROFILE_INCOMPLETE') {
@@ -1477,11 +1485,9 @@ export default function Nutrition() {
         const msg = err?.response?.data?.message || 'Failed to generate next plan'
         toast.error(msg)
       }
+    } finally {
       setGeneratingNextWeek(false)
-      return
     }
-
-    setGeneratingNextWeek(false)
   }
 
   const getMealSlot = (slot) =>
