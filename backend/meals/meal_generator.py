@@ -848,7 +848,7 @@ RETURN VALID JSON ONLY:
         from meals.schemas import DayMealSchema
         import requests
 
-        models_to_try = [("gemini-2.5-flash", 1), ("gemini-2.5-flash-lite", 2)]
+        models_to_try = [("gemini-2.5-flash-lite", 2), ("gemini-2.5-flash", 1)]
         raw = None
         api_key = settings.GEMINI_API_KEY
 
@@ -901,8 +901,8 @@ RETURN VALID JSON ONLY:
         import time
 
         models_to_try = [
-            ("gemini-2.5-flash", 1),
             ("gemini-2.5-flash-lite", 2),
+            ("gemini-2.5-flash", 1),
         ]
 
         raw = None
