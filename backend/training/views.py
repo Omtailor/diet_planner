@@ -1,4 +1,6 @@
 from datetime import date, timedelta
+import logging
+import time
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -9,12 +11,16 @@ from .serializers import TrainingPlanSerializer, DayTrainingSerializer
 from .training_generator import generate_training_plan
 
 
+logger = logging.getLogger(__name__)
+
+
 class DayRangeView(APIView):
     """GET /api/training/days-range/?start=YYYY-MM-DD&end=YYYY-MM-DD"""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        start_time = time.perf_counter()
         start_str = request.query_params.get("start")
         end_str = request.query_params.get("end")
         try:
@@ -35,6 +41,15 @@ class DayRangeView(APIView):
         for day in days:
             day._prefetched_exercises = list(day.exercises.all())
 
+        logger.info(
+            "[TrainingAPI] days-range user=%s start=%s end=%s count=%s took=%.3fs",
+            request.user.id,
+            start,
+            end,
+            days.count(),
+            time.perf_counter() - start_time,
+        )
+
         return Response(DayTrainingSerializer(days, many=True).data)
 
 
@@ -44,6 +59,7 @@ class WeeklyTrainingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        start_time = time.perf_counter()
         today = date.today()
         plan = (
             TrainingPlan.objects.filter(
@@ -62,6 +78,14 @@ class WeeklyTrainingView(APIView):
             )
         if not plan:
             return Response({"error": "No training plan found."}, status=404)
+
+        logger.info(
+            "[TrainingAPI] weekly user=%s plan_id=%s took=%.3fs",
+            request.user.id,
+            plan.id,
+            time.perf_counter() - start_time,
+        )
+
         return Response(TrainingPlanSerializer(plan).data)
 
 
@@ -71,6 +95,7 @@ class AllDayTrainingsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        start_time = time.perf_counter()
         days = (
             DayTraining.objects.filter(training_plan__user=request.user)
             .order_by("date")
@@ -91,6 +116,13 @@ class AllDayTrainingsView(APIView):
             .first()
         )
 
+        logger.info(
+            "[TrainingAPI] all-days user=%s count=%s took=%.3fs",
+            request.user.id,
+            days.count(),
+            time.perf_counter() - start_time,
+        )
+
         return Response(
             {
                 "week_end_date": latest_plan.week_end_date if latest_plan else None,
@@ -105,6 +137,7 @@ class DayTrainingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, training_date):
+        start_time = time.perf_counter()
         try:
             target_date = date.fromisoformat(training_date)
         except ValueError:
@@ -120,6 +153,14 @@ class DayTrainingView(APIView):
         except DayTraining.DoesNotExist:
             return Response({"error": "No training found for this date."}, status=404)
 
+        logger.info(
+            "[TrainingAPI] day user=%s date=%s day_id=%s took=%.3fs",
+            request.user.id,
+            target_date,
+            day.id,
+            time.perf_counter() - start_time,
+        )
+
         return Response(DayTrainingSerializer(day).data)
 
 
@@ -129,6 +170,7 @@ class GenerateTrainingPlanView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        start_time = time.perf_counter()
         user = request.user
         profile = getattr(user, "profile", None)
 
@@ -186,14 +228,34 @@ class GenerateTrainingPlanView(APIView):
             user=request.user, week_start_date=week_start
         ).first()
         if existing:
+            logger.info(
+                "[TrainingAPI] generate existing user=%s week_start=%s plan_id=%s took=%.3fs",
+                user.id,
+                week_start,
+                existing.id,
+                time.perf_counter() - start_time,
+            )
             return Response(TrainingPlanSerializer(existing).data, status=200)
 
         # Generate plan - wrapped in try-except to catch ALL exceptions
         try:
+            logger.info(
+                "[TrainingAPI] generate start user=%s week_start=%s",
+                user.id,
+                week_start,
+            )
             plan = generate_training_plan(request.user, profile, week_start=week_start)
             if not plan:
                 logger.error(f"[GenerateTrainingPlanView] Generation returned None for user {request.user.id}")
                 return Response({"error": "Training plan generation failed."}, status=500)
+
+            logger.info(
+                "[TrainingAPI] generate success user=%s plan_id=%s days=%s took=%.3fs",
+                user.id,
+                plan.id,
+                plan.day_trainings.count(),
+                time.perf_counter() - start_time,
+            )
 
             return Response(TrainingPlanSerializer(plan).data, status=201)
             
@@ -214,6 +276,7 @@ class LatestTrainingPlanView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        start_time = time.perf_counter()
         plan = (
             TrainingPlan.objects.filter(user=request.user)
             .order_by("-week_start_date")
@@ -221,6 +284,14 @@ class LatestTrainingPlanView(APIView):
         )
         if not plan:
             return Response({"detail": "No training plan found."}, status=404)
+
+        logger.info(
+            "[TrainingAPI] latest user=%s plan_id=%s took=%.3fs",
+            request.user.id,
+            plan.id,
+            time.perf_counter() - start_time,
+        )
+
         return Response(
             {
                 "week_start_date": plan.week_start_date,

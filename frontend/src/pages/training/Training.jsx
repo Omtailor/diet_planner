@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import API from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+const TRAINING_LOG_PREFIX = '[TrainingPage]';
+
 // ── Date helpers (same as Nutrition.jsx) ──
 function getDateStr(offset = 0) {
   const d = new Date();
@@ -146,6 +148,35 @@ export default function Training() {
   const [newHealthTime, setNewHealthTime] = useState('');
   const [savingHealthTime, setSavingHealthTime] = useState(false);
 
+  const logTraining = (...args) => {
+    console.info(TRAINING_LOG_PREFIX, ...args);
+  };
+
+  const applyPlanResponse = (planData, source = 'unknown') => {
+    if (!planData) return;
+
+    logTraining('Applying plan from', source, {
+      dayCount: planData.day_trainings?.length || 0,
+      weekStartDate: planData.week_start_date || null,
+      weekEndDate: planData.week_end_date || null,
+    });
+
+    setPlan(planData);
+    if (PLAN_CACHE_KEY) sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(planData));
+    if (planData.week_end_date) setLatestPlanEndDate(planData.week_end_date);
+
+    const todayDay = planData.day_trainings?.find(d => d.date === todayStr);
+    const firstDay = planData.day_trainings?.[0] || null;
+    const initialDay = todayDay || firstDay || null;
+
+    if (initialDay) {
+      setSelectedDay(initialDay);
+      setSelectedDate(initialDay.date);
+    }
+
+    setLoading(false);
+  };
+
   // ── Date strip state ──
   const [selectedDate, setSelectedDate] = useState(getDateStr(0));
   const [dateOffset, setDateOffset] = useState(0);
@@ -155,12 +186,30 @@ export default function Training() {
   const todayDow = today.getDay(); // 0=Sun, 1=Mon...
 
   useEffect(() => {
+    logTraining('Cache scope changed', {
+      cacheKey: PLAN_CACHE_KEY,
+      hasPlan: !!plan,
+      selectedDate,
+    });
+
     setPlan(null);
     setSelectedDay(null);
     lastFetchTime.current = null;
   }, [PLAN_CACHE_KEY]);
 
   useEffect(() => { fetchPlan(); checkNextPlan(); }, [PLAN_CACHE_KEY]);
+
+  useEffect(() => {
+    logTraining('Render state', {
+      hasPlan: !!plan,
+      loading,
+      generating,
+      generatingNextPlan,
+      selectedDate,
+      selectedDayDate: selectedDay?.date || null,
+      planDays: plan?.day_trainings?.length || 0,
+    });
+  }, [plan, loading, generating, generatingNextPlan, selectedDate, selectedDay]);
 
   useEffect(() => {
     if (!weekStripRef.current) return;
@@ -187,22 +236,15 @@ export default function Training() {
     const now = Date.now();
     let cachedPlan = null;
 
+    logTraining('fetchPlan start', { jumpToFirstDay, cacheKey: PLAN_CACHE_KEY });
+
     if (!jumpToFirstDay && PLAN_CACHE_KEY) {
       const cached = sessionStorage.getItem(PLAN_CACHE_KEY);
       if (cached) {
         try {
           cachedPlan = JSON.parse(cached);
           if (cachedPlan) {
-            setPlan(cachedPlan);
-
-            const todayDay = cachedPlan.day_trainings?.find(d => d.date === todayStr);
-            const firstDay = cachedPlan.day_trainings?.[0] || null;
-            const initialDay = todayDay || firstDay || null;
-            setSelectedDay(initialDay);
-            setSelectedDate(todayStr);
-
-            if (cachedPlan?.week_end_date) setLatestPlanEndDate(cachedPlan.week_end_date);
-            setLoading(false);
+            applyPlanResponse(cachedPlan, 'sessionStorage');
           }
         } catch (_) {
           sessionStorage.removeItem(PLAN_CACHE_KEY);
@@ -228,24 +270,12 @@ export default function Training() {
         API.get('/auth/profile/').catch(() => null),
       ]);
 
-      setPlan(res.data);
-      if (PLAN_CACHE_KEY) sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(res.data));
+      applyPlanResponse(res.data, 'GET /training/all-days/');
 
-      const todayDay = res.data.day_trainings?.find(d => d.date === todayStr);
-      const firstDay = res.data.day_trainings?.[0] || null;
-      const initialDay = todayDay || firstDay || null;
-
-      if (jumpToFirstDay && firstDay) {
-        // After generation, go to the first day of the newly generated plan.
-        setSelectedDay(firstDay);
-        setSelectedDate(firstDay.date);
-      } else {
-        // On refresh/load, always land on today's date (even if no plan for today).
-        setSelectedDay(initialDay);
-        setSelectedDate(todayStr);
+      if (jumpToFirstDay && res.data?.day_trainings?.[0]) {
+        setSelectedDay(res.data.day_trainings[0]);
+        setSelectedDate(res.data.day_trainings[0].date);
       }
-
-      if (res.data?.week_end_date) setLatestPlanEndDate(res.data.week_end_date);
 
       if (profileRes?.data) {
         setHealthTimeZero(parseInt(profileRes.data.health_time_minutes, 10) === 0);
@@ -282,12 +312,20 @@ export default function Training() {
 
   const generatePlan = async () => {
     setGenerating(true);
+    logTraining('Generate training plan requested');
     try {
-      await API.post('/training/generate/');
-      // Clear all caches so fetchPlan hits the backend for fresh data
+      const res = await API.post('/training/generate/');
+      logTraining('Generate training plan response received', {
+        status: res.status,
+        dayCount: res.data?.day_trainings?.length || 0,
+      });
+
+      applyPlanResponse(res.data, 'POST /training/generate/');
+
+      // Clear all caches so future refreshes still fetch fresh data
       clearTrainingCache();
-      // After generation, jump to the first day of the new plan.
-      await fetchPlan(true);
+      void checkNextPlan();
+      void fetchProfile();
       setTimeout(() => {
         const selected = weekStripRef.current?.querySelector('[data-selected="true"]');
         if (selected) {
@@ -297,6 +335,7 @@ export default function Training() {
       toast.success('Training plan generated! 🏋️‍♂️');
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     } catch (err) {
+      console.error(TRAINING_LOG_PREFIX, 'Generate training plan failed', err);
       const detail = err?.response?.data?.detail
       if (detail === 'PROFILE_INCOMPLETE') {
         setShowOnboardingBlocker(true)
@@ -334,15 +373,23 @@ export default function Training() {
 
   const handleGenerateNextPlan = async () => {
     setGeneratingNextPlan(true);
+    logTraining('Generate next plan requested');
     try {
       const res = await API.post('/training/generate/');
       const firstDateOfNewPlan = res.data?.day_trainings?.[0]?.date;
 
+      logTraining('Generate next plan response received', {
+        status: res.status,
+        dayCount: res.data?.day_trainings?.length || 0,
+        firstDateOfNewPlan,
+      });
+
+      applyPlanResponse(res.data, 'POST /training/generate/ next plan');
+
       // Clear all caches so fetchPlan hits the backend for fresh data
       clearTrainingCache();
-      await fetchPlan(!!firstDateOfNewPlan);
-      await checkNextPlan();
-      await fetchProfile();
+      void checkNextPlan();
+      void fetchProfile();
 
       if (firstDateOfNewPlan) {
         setSelectedDate(firstDateOfNewPlan);
@@ -355,6 +402,7 @@ export default function Training() {
         style: { fontFamily: FONT, fontWeight: 700 },
       });
     } catch (e) {
+      console.error(TRAINING_LOG_PREFIX, 'Generate next plan failed', e);
       if (e?.response?.status === 400) {
         toast.error(e.response.data?.message || 'Cannot generate plan.')
       } else {

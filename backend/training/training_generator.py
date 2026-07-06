@@ -5,11 +5,16 @@ Extreme personalization based on full user profile.
 
 import json
 import re
+import logging
+import time
 from datetime import timedelta, date
 from django.conf import settings
 from .models import Exercise, TrainingPlan, DayTraining
 
 VALID_CATEGORIES = {"strength", "cardio", "flexibility", "bodyweight"}
+
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_int(value, default=None):
@@ -242,6 +247,13 @@ def generate_training_plan(user, profile, week_start=None):
     if week_start is None:
         week_start = date.today()
 
+    start_time = time.perf_counter()
+    logger.info(
+        "[TrainingGenerator] start user=%s week_start=%s",
+        user.id,
+        week_start,
+    )
+
     # Deactivate old plans
     TrainingPlan.objects.filter(user=user, is_active=True).update(is_active=False)
 
@@ -365,6 +377,7 @@ Equipment must be one of: gym, none
         models_to_try = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
         raw = None
         for model_name in models_to_try:
+            request_start = time.perf_counter()
             url = (
                 f"https://generativelanguage.googleapis.com/v1beta/models/"
                 f"{model_name}:generateContent?key={settings.GEMINI_API_KEY}"
@@ -385,9 +398,20 @@ Equipment must be one of: gym, none
                 ].strip()
                 raw = re.sub(r"^```(?:json)?\s*", "", raw)
                 raw = re.sub(r"\s*```$", "", raw)
+                logger.info(
+                    "[TrainingGenerator] model=%s success user=%s took=%.3fs",
+                    model_name,
+                    user.id,
+                    time.perf_counter() - request_start,
+                )
                 break
             except Exception as e:
-                print(f"[TrainingGenerator] {model_name} failed: {e}")
+                logger.warning(
+                    "[TrainingGenerator] model=%s failed user=%s error=%s",
+                    model_name,
+                    user.id,
+                    e,
+                )
                 continue
 
         if not raw:
@@ -395,7 +419,7 @@ Equipment must be one of: gym, none
 
         data = json.loads(raw)
     except Exception as e:
-        print(f"[TrainingGenerator] Gemini error: {e}")
+        logger.exception("[TrainingGenerator] Gemini error user=%s: %s", user.id, e)
         plan.delete()
         return None
 
@@ -432,5 +456,13 @@ Equipment must be one of: gym, none
                 )
             created = Exercise.objects.bulk_create(exercise_objs)
             day_training.exercises.set(created)
+
+    logger.info(
+        "[TrainingGenerator] complete user=%s plan_id=%s days=%s took=%.3fs",
+        user.id,
+        plan.id,
+        plan.day_trainings.count(),
+        time.perf_counter() - start_time,
+    )
 
     return plan
