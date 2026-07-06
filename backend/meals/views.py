@@ -143,25 +143,37 @@ class GeneratePlanView(APIView):
             week_end_date__gte=today,
         ).delete()
 
-        # Generate fresh plan
-        generator = MealPlanGenerator(profile)
-        plan = generator.generate()
+        # Generate fresh plan - wrapped in try-except to catch ALL exceptions
+        try:
+            generator = MealPlanGenerator(profile)
+            plan = generator.generate()
 
-        if not plan:
+            if not plan:
+                logger.error(f"[GeneratePlanView] Generation returned None for user {request.user.id}")
+                return Response(
+                    {"detail": "Meal plan generation failed. Please try again."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            thread = threading.Thread(
+                target=run_background_tasks,
+                args=(request.user, profile),
+            )
+            thread.daemon = True
+            thread.start()
+
+            serializer = WeeklyPlanSerializer(plan)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(
+                f"[GeneratePlanView] Generation failed for user {request.user.id}: {e}",
+                exc_info=True
+            )
             return Response(
-                {"detail": "Meal plan generation failed. Please try again."},
+                {"detail": f"Meal plan generation failed: {str(e)}. Please try again."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        thread = threading.Thread(
-            target=run_background_tasks,
-            args=(request.user, profile),
-        )
-        thread.daemon = True
-        thread.start()
-
-        serializer = WeeklyPlanSerializer(plan)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class RegenerateDayView(APIView):
@@ -295,13 +307,17 @@ class GenerateNextWeekView(APIView):
             generator = MealPlanGenerator(profile)
             plan = generator.generate(week_start=week_start)
             if not plan:
+                logger.error(f"[generate_next_week] Generation returned None for user {request.user.id}")
                 return Response(
                     {"detail": "Generation failed. Please try again."}, status=500
                 )
         except Exception as e:
-            logger.error(f"[generate_next_week] Failed: {e}")
+            logger.error(
+                f"[generate_next_week] Failed for user {request.user.id}: {e}",
+                exc_info=True
+            )
             return Response(
-                {"detail": "Generation failed. Please try again."}, status=500
+                {"detail": f"Generation failed: {str(e)}. Please try again."}, status=500
             )
 
         thread = threading.Thread(
@@ -394,3 +410,38 @@ class BatchDayMealView(APIView):
             results[str(dm.date)] = DayMealSerializer(dm).data
 
         return Response({"results": results}, status=status.HTTP_200_OK)
+
+
+class AllDayMealsView(APIView):
+    """
+    GET /api/meals/all-days/
+    Returns ALL day meals across ALL plans for the logged-in user, sorted by date.
+    This mirrors the training all-days endpoint for consistency.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        day_meals = (
+            DayMeal.objects.filter(weekly_plan__user=request.user)
+            .order_by("date")
+            .select_related("weekly_plan")
+            .prefetch_related("meal_slots__food_item")
+        )
+
+        if not day_meals.exists():
+            return Response({"error": "No meal plans found."}, status=status.HTTP_404_NOT_FOUND)
+
+        latest_plan = (
+            WeeklyPlan.objects.filter(user=request.user)
+            .order_by("-week_start_date")
+            .first()
+        )
+
+        return Response(
+            {
+                "week_end_date": latest_plan.week_end_date if latest_plan else None,
+                "day_meals": DayMealSerializer(day_meals, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )

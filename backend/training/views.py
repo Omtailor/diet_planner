@@ -188,11 +188,24 @@ class GenerateTrainingPlanView(APIView):
         if existing:
             return Response(TrainingPlanSerializer(existing).data, status=200)
 
-        plan = generate_training_plan(request.user, profile, week_start=week_start)
-        if not plan:
-            return Response({"error": "Training plan generation failed."}, status=500)
+        # Generate plan - wrapped in try-except to catch ALL exceptions
+        try:
+            plan = generate_training_plan(request.user, profile, week_start=week_start)
+            if not plan:
+                logger.error(f"[GenerateTrainingPlanView] Generation returned None for user {request.user.id}")
+                return Response({"error": "Training plan generation failed."}, status=500)
 
-        return Response(TrainingPlanSerializer(plan).data, status=201)
+            return Response(TrainingPlanSerializer(plan).data, status=201)
+            
+        except Exception as e:
+            logger.error(
+                f"[GenerateTrainingPlanView] Generation failed for user {request.user.id}: {e}",
+                exc_info=True
+            )
+            return Response(
+                {"error": f"Training plan generation failed: {str(e)}. Please try again."},
+                status=500
+            )
 
 
 class LatestTrainingPlanView(APIView):

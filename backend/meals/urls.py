@@ -7,6 +7,7 @@ from meals.views import (
     GenerateNextWeekView,
     LatestPlanView,
     BatchDayMealView,
+    AllDayMealsView,
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     ),
     path("latest/", LatestPlanView.as_view(), name="latest-plan"),
     path("batch/", BatchDayMealView.as_view(), name="batch-day-meal"),
+    path("all-days/", AllDayMealsView.as_view(), name="all-day-meals"),
 ]

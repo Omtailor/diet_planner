@@ -1208,7 +1208,41 @@ export default function Nutrition() {
 
   useEffect(() => {
     checkNextWeekPlan()
+    // Prefetch all historical meal data in the background to populate cache
+    prefetchAllHistory()
   }, [])
+
+  const prefetchAllHistory = async () => {
+    // Skip if no user key or if we recently prefetched
+    if (!MEAL_CACHE_KEY) return
+    
+    // Check if we already have recent history cached
+    const cacheKeys = Object.keys(cacheRef.current)
+    if (cacheKeys.length > 10) return // Already have substantial cache
+    
+    try {
+      const res = await mealService.getAllDays()
+      const dayMeals = res.data?.day_meals || []
+      
+      // Populate cache with all historical data
+      const now = Date.now()
+      dayMeals.forEach(dm => {
+        if (dm.date) {
+          setCacheEntry(dm.date, { data: dm, ts: now })
+        }
+      })
+      
+      // Also store the latest plan end date for next week button
+      if (res.data?.week_end_date) {
+        setLatestPlanEndDate(res.data.week_end_date)
+      }
+    } catch (err) {
+      // Silently fail - user can still fetch meals on-demand
+      if (err?.response?.status !== 404) {
+        console.warn('[Nutrition] Failed to prefetch history:', err)
+      }
+    }
+  }
 
   useEffect(() => {
     fetchDayMeal(selectedDate)
