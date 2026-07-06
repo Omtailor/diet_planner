@@ -19,6 +19,96 @@ class MealPlanGenerator:
         self.user = profile.user
         # Use direct HTTP requests to the Generative Language API instead of the SDK client.
 
+    def _build_generation_payload(
+        self, prompt: str, temperature: float = 0.1, max_output_tokens: int = 24576
+    ) -> dict:
+        return {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_output_tokens,
+                "responseMimeType": "application/json",
+            },
+        }
+
+    def _clean_json_text(self, raw: str) -> str:
+        text = (raw or "").strip()
+        if not text:
+            return ""
+
+        if text.startswith("```json"):
+            text = text[7:].strip()
+        elif text.startswith("```"):
+            text = text[3:].strip()
+
+        if text.endswith("```"):
+            text = text[:-3].strip()
+
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            text = text[start : end + 1]
+        return text
+
+    def _extract_json(self, raw: str):
+        cleaned = self._clean_json_text(raw)
+        if not cleaned:
+            return None
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            return None
+
+    def _call_gemini(
+        self,
+        prompt: str,
+        models_to_try,
+        timeout: int = 90,
+        max_output_tokens: int = 24576,
+    ):
+        import requests
+
+        api_key = settings.GEMINI_API_KEY
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY is not configured.")
+
+        last_error = None
+        for model_name, max_attempts in models_to_try:
+            url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{model_name}:generateContent?key={api_key}"
+            )
+            payload = self._build_generation_payload(
+                prompt=prompt,
+                temperature=0.1,
+                max_output_tokens=max_output_tokens,
+            )
+
+            for attempt in range(max_attempts):
+                try:
+                    resp = requests.post(url, json=payload, timeout=timeout)
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"{resp.status_code}: {resp.text[:500]}")
+
+                    data = resp.json()
+                    parts = data["candidates"][0]["content"]["parts"]
+                    if not parts:
+                        raise RuntimeError("Gemini response missing content parts")
+
+                    return parts[0]["text"].strip()
+                except Exception as e:
+                    last_error = e
+                    logger.warning(
+                        "[MealGenerator] model=%s attempt=%s failed: %s",
+                        model_name,
+                        attempt + 1,
+                        e,
+                    )
+                    if attempt < max_attempts - 1:
+                        time.sleep(min(5 * (attempt + 1), 10))
+
+        raise RuntimeError(f"All Gemini attempts failed: {last_error}")
+
     # ──────────────────────────────────────────────────────
     # 1. CALORIE CALCULATION
     # ──────────────────────────────────────────────────────
@@ -144,6 +234,132 @@ class MealPlanGenerator:
     # ──────────────────────────────────────────────────────
     # 4. BUILD PERSONALIZED GEMINI PROMPT
     # ──────────────────────────────────────────────────────
+
+    def build_compact_prompt(
+        self,
+        tdee: int,
+        beverage_cal: int,
+        week_start: date,
+        fasting_indices: set,
+        prev_week_names: list | None = None,
+    ) -> str:
+        p = self.profile
+        net_meal_calories = tdee - beverage_cal
+
+        if p.goal in ["weight_loss", "fat_loss"]:
+            b_cal, l_cal, d_cal = (
+                round(net_meal_calories * 0.30),
+                round(net_meal_calories * 0.40),
+                round(net_meal_calories * 0.30),
+            )
+        else:
+            b_cal, l_cal, d_cal = (
+                round(net_meal_calories * 0.28),
+                round(net_meal_calories * 0.38),
+                round(net_meal_calories * 0.34),
+            )
+
+        weight = float(p.weight_kg)
+        protein_multiplier = (
+            1.4
+            if p.goal in ["weight_loss", "fat_loss"]
+            else 1.8 if p.goal == "muscle_building" else 1.2
+        )
+        if p.age > 40:
+            protein_multiplier += 0.1
+
+        min_protein = round(weight * protein_multiplier)
+        min_protein_per_meal = round(min_protein / 3)
+        fat_ceiling = 55 if p.goal in ["weight_loss", "fat_loss"] else 85
+        fat_per_meal_max = round(fat_ceiling / 3)
+        daily_floor = 1200 if p.gender == "female" else 1400
+
+        high_cal_instruction = ""
+        if net_meal_calories > 2800 and p.goal in ["muscle_building", "maintenance"]:
+            high_cal_instruction = f"High calorie target: {net_meal_calories} kcal. Use larger portions, not extra fat."
+
+        schedule_lines = []
+        for i in range(3):
+            day_date = week_start + timedelta(days=i)
+            if i in fasting_indices:
+                note = f"Fasting day ({p.fasting_type}): only sabudana, makhana, kuttu atta, rajgira, singhara, sendha namak, fruits, curd, milk, nuts, ghee."
+            else:
+                note = (
+                    "Gym day: prioritize protein and complex carbs."
+                    if p.has_gym
+                    else "Regular day: balanced macros."
+                )
+            schedule_lines.append(
+                f"Day {i + 1} ({day_date.strftime('%A, %d %b')}): {note}"
+            )
+
+        avoid_block = ""
+        if prev_week_names:
+            avoid_block = "Avoid these previously used meal names: " + ", ".join(
+                prev_week_names
+            )
+
+        return f"""
+Generate a 3-day Indian meal plan as compact JSON only.
+
+User:
+- Age: {p.age}
+- Gender: {p.gender}
+- City: {p.city}
+- Height: {p.height_cm} cm
+- Weight: {p.weight_kg} kg
+- BMI: {p.bmi}
+- Goal: {p.goal}
+- Diet: {p.diet_preference}
+- Gym: {'yes' if p.has_gym else 'no'}
+
+Targets:
+- Daily TDEE: {tdee} kcal
+- Beverage calories: {beverage_cal} kcal
+- Meal budget: {net_meal_calories} kcal/day
+- Breakfast target: {b_cal} kcal
+- Lunch target: {l_cal} kcal
+- Dinner target: {d_cal} kcal
+- Protein target: {min_protein} g/day, minimum {min_protein_per_meal} g/meal
+- Fat cap: {fat_ceiling} g/day, maximum {fat_per_meal_max} g/meal
+- Daily calorie floor: {daily_floor} kcal
+- Daily carb cap: 380 g
+
+Rules:
+- Return exactly 3 days and 3 meals per day.
+- Use 9 unique meal names total. No repeats.
+- Every meal must use 5 to 10 ingredients.
+- Each ingredient must include name, quantity, and unit.
+- Use only g, ml, pcs, tsp, tbsp, cup.
+- Keep dinner lighter than lunch.
+- Keep fats under the per-meal cap.
+- Use realistic Indian portions and meal names.
+- Include vegetables in every meal.
+- If the day is fasting, use only fasting-safe ingredients for all 3 meals.
+- {high_cal_instruction}
+- {avoid_block}
+
+Schedule:
+{chr(10).join(schedule_lines)}
+
+Return this JSON shape only:
+{{
+  "days": [
+    {{
+      "day_number": 1,
+      "date_label": "{week_start.strftime('%A, %d %b')}",
+      "is_fasting_day": false,
+      "breakfast": {{"meal_type": "breakfast", "name": "...", "calories": 0, "protein": 0.0, "carbs": 0.0, "fats": 0.0, "ingredients": [{{"name": "...", "quantity": 100, "unit": "g"}}]}},
+      "lunch": {{"meal_type": "lunch", "name": "...", "calories": 0, "protein": 0.0, "carbs": 0.0, "fats": 0.0, "ingredients": [{{"name": "...", "quantity": 100, "unit": "g"}}]}},
+      "dinner": {{"meal_type": "dinner", "name": "...", "calories": 0, "protein": 0.0, "carbs": 0.0, "fats": 0.0, "ingredients": [{{"name": "...", "quantity": 100, "unit": "g"}}]}},
+      "day_notes": "Explain why the meals fit this user and mention one specific nutrient benefit."
+    }}
+  ],
+  "total_weekly_calories": {net_meal_calories * 3},
+  "plan_notes": "Brief summary of the plan."
+}}
+Return JSON only.
+""".strip()
 
     def build_prompt(
         self,
@@ -668,8 +884,10 @@ RETURN VALID JSON ONLY:
             return None
 
         try:
-            data = json.loads(raw)
-            return DayMealSchema(data)
+            data = self._extract_json(raw)
+            if data is None:
+                raise json.JSONDecodeError("Unable to extract JSON", raw, 0)
+            return DayMealSchema(**data)
         except Exception as e:
             logger.error(f"Day parse failed: {e}")
             return None
@@ -728,7 +946,9 @@ RETURN VALID JSON ONLY:
             return None
 
         try:
-            data = json.loads(raw)
+            data = self._extract_json(raw)
+            if data is None:
+                raise json.JSONDecodeError("Unable to extract JSON", raw, 0)
         except json.JSONDecodeError as e:
             logger.error(f"[MealGenerator] JSON parse failed: {e}")
             logger.error(f"[MealGenerator] Raw response: {raw[:500]}")
@@ -1183,8 +1403,8 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
         import requests
 
         models_to_try = [
-            ("gemini-2.5-flash", 1),
             ("gemini-2.5-flash-lite", 2),
+            ("gemini-2.5-flash", 1),
         ]
 
         raw = None
@@ -1224,7 +1444,9 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
             return False
 
         try:
-            data = json.loads(raw)
+            data = self._extract_json(raw)
+            if data is None:
+                raise json.JSONDecodeError("Unable to extract JSON", raw, 0)
             validated = DayMealSchema(**data)
         except (json.JSONDecodeError, ValidationError) as e:
             logger.error(f"[RegenerateDay] Parse/validation failed: {e}")
@@ -1318,7 +1540,7 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
         )
         logger.info(f"MealGenerator: {len(prev_names)} previous meals to avoid")
 
-        prompt = self.build_prompt(
+        prompt = self.build_compact_prompt(
             tdee, beverage_cal, week_start, fasting_indices, prev_week_names=prev_names
         )
         validated = self.fetch_from_gemini(prompt)
