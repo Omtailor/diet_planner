@@ -29,7 +29,13 @@ class APICacheMiddleware:
         # Only cache GET requests to /api/ endpoints
         if request.method != 'GET' or not request.path.startswith('/api/'):
             return response
-        
+
+        path = request.path
+
+        if '/auth/profile/' in path:
+            patch_vary_headers(response, ["Authorization"])
+            patch_cache_control(response, private=True, no_cache=True, no_store=True, must_revalidate=True)
+
         # Don't cache error responses
         if response.status_code >= 400:
             return response
@@ -47,8 +53,6 @@ class APICacheMiddleware:
         
         # Add Cache-Control headers based on endpoint.
         # These responses are user-specific, so they must never be shared across users.
-        path = request.path
-
         patch_vary_headers(response, ["Authorization"])
         
         if '/auth/profile/' in path:

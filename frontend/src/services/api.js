@@ -41,7 +41,12 @@ const API = axios.create({
 // ✅ Response cache for HTTP 304 Not Modified responses
 const responseCache = new Map()
 
-const getCacheKey = (config) => `${(config.method || 'get').toUpperCase()}:${config.url}`
+const getAuthScope = (config) => {
+  const headers = config?.headers || {}
+  return headers.Authorization || headers.authorization || safeStorage.get('access_token') || 'anonymous'
+}
+
+const getCacheKey = (config) => `${(config.method || 'get').toUpperCase()}:${config.url}:${getAuthScope(config)}`
 
 export const clearApiCache = () => {
   responseCache.clear()

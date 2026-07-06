@@ -74,6 +74,71 @@ function profileAvatarInitial(profile) {
   return token[0].toUpperCase()
 }
 
+function OnboardingGate({ onCompleteOnboarding }) {
+  return (
+    <div style={{
+      minHeight: '100dvh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px',
+      background: 'linear-gradient(160deg, rgba(242,242,247,0.98) 0%, rgba(232,244,236,0.96) 100%)',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '420px',
+        borderRadius: '28px',
+        padding: '32px 28px',
+        background: 'rgba(255,255,255,0.86)',
+        border: '1px solid rgba(255,255,255,0.78)',
+        boxShadow: '0 24px 80px rgba(17, 24, 39, 0.10)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>📋</div>
+        <h1 style={{
+          fontFamily: FONT,
+          fontSize: '1.65rem',
+          fontWeight: 800,
+          color: 'var(--color-text)',
+          marginBottom: '10px',
+          letterSpacing: '-0.3px',
+        }}>
+          Please complete onboarding
+        </h1>
+        <p style={{
+          fontFamily: FONT,
+          fontSize: '0.95rem',
+          lineHeight: 1.6,
+          color: 'var(--color-text-muted)',
+          marginBottom: '28px',
+        }}>
+          We need your profile details before we can unlock the dashboard and generate personalized meal and training plans.
+        </p>
+        <button
+          onClick={onCompleteOnboarding}
+          style={{
+            width: '100%',
+            padding: '15px 18px',
+            borderRadius: '16px',
+            border: 'none',
+            background: 'var(--color-accent)',
+            color: '#fff',
+            fontFamily: FONT,
+            fontSize: '1rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 10px 24px rgba(52, 199, 89, 0.24)',
+          }}
+        >
+          Complete Onboarding →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function formatDate() {
   return new Date().toLocaleDateString('en-IN', {
     weekday: 'long', day: 'numeric', month: 'long'
@@ -749,7 +814,7 @@ const modalHandle = {
 
 function Dashboard() {
   const navigate = useNavigate()
-  const { profile, fetchProfile, user } = useAuth()
+  const { profile, fetchProfile, user, loading: authLoading, onboardingComplete } = useAuth()
   const [dayMeal, setDayMeal] = useState(null)
   const [loadingMeal, setLoadingMeal] = useState(true)
   const [showWeightModal, setShowWeightModal] = useState(false)
@@ -761,21 +826,14 @@ function Dashboard() {
   const REFETCH_COOLDOWN = 30 * 1000
   const lastFetchRef = useRef(null)
 
-  const isOnboardingComplete = !!(
-    profile?.age &&
-    profile?.weight_kg &&
-    profile?.height_cm &&
-    profile?.goal &&
-    profile?.diet_preference
-  )
-
   const today = getTodayStr()
 
   useEffect(() => {
+    if (!onboardingComplete) return
     setDayMeal(null)
     lastFetchRef.current = null
     fetchTodayMeal()
-  }, [DASH_MEAL_KEY])
+  }, [DASH_MEAL_KEY, onboardingComplete])
 
   const fetchTodayMeal = async (forceRefresh = false) => {
     const now = Date.now()
@@ -928,7 +986,7 @@ function Dashboard() {
       glow: 'rgba(224,154,46,0.15)',
       label: 'Update Weight',
       action: () => {
-        if (!isOnboardingComplete) {
+        if (!onboardingComplete) {
           setShowOnboardingBlocker(true)
           return
         }
@@ -936,6 +994,33 @@ function Dashboard() {
       },
     },
   ]
+
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#F2F2F7',
+      }}>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          border: '3px solid rgba(52, 199, 89, 0.2)',
+          borderTop: '3px solid #34C759',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+      </div>
+    )
+  }
+
+  if (!onboardingComplete) {
+    return (
+      <OnboardingGate onCompleteOnboarding={() => navigate('/onboarding')} />
+    )
+  }
 
   return (
     <div style={pageWrapper}>
@@ -1111,7 +1196,7 @@ function Dashboard() {
             }}>No meal plan yet</p>
             <button
               onClick={() => {
-                if (!isOnboardingComplete) {
+                if (!onboardingComplete) {
                   setShowOnboardingBlocker(true)
                   return
                 }
@@ -1130,7 +1215,7 @@ function Dashboard() {
       <WeightCard
         profile={profile}
         onUpdate={() => {
-          if (!isOnboardingComplete) {
+          if (!onboardingComplete) {
             setShowOnboardingBlocker(true)
             return
           }

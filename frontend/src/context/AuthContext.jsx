@@ -4,11 +4,22 @@ import { safeStorage, clearApiCache } from '../services/api'
 
 const AuthContext = createContext(null)
 
+const ONBOARDING_FIELDS = ['age', 'weight_kg', 'height_cm', 'goal', 'diet_preference']
+
+const hasCompletedOnboarding = (profileData) => {
+  if (!profileData) return false
+  return ONBOARDING_FIELDS.every((field) => {
+    const value = profileData[field]
+    return value !== null && value !== undefined && `${value}`.trim() !== ''
+  })
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const activeProfileRequestRef = useRef(0)
+  const onboardingComplete = hasCompletedOnboarding(profile)
 
   const invalidateProfileRequests = () => {
     activeProfileRequestRef.current += 1
@@ -91,7 +102,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, profile, loading,
+      user, profile, loading, onboardingComplete,
       login, logout, fetchProfile
     }}>
       {children}

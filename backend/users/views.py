@@ -34,6 +34,7 @@ class RegisterView(APIView):
                         "username": user.username,
                         "email": user.email,
                     },
+                    "onboarding_complete": False,
                     **tokens,
                 },
                 status=status.HTTP_201_CREATED,
@@ -122,6 +123,7 @@ class ProfileView(APIView):
                     "bmi": profile.bmi,
                     "username": request.user.username,
                     "email": request.user.email,
+                    "onboarding_complete": True,
                 }
             )
         except UserProfile.DoesNotExist:
