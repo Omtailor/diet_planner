@@ -147,6 +147,14 @@ export default function Training() {
   const [newHealthTime, setNewHealthTime] = useState('');
   const [savingHealthTime, setSavingHealthTime] = useState(false);
 
+  // ── Date strip state ──
+  const [selectedDate, setSelectedDate] = useState(getDateStr(0));
+  const [dateOffset, setDateOffset] = useState(0);
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayDow = today.getDay(); // 0=Sun, 1=Mon...
+
   const selectedDay = plan?.day_trainings?.find(d => d.date === selectedDate) ?? null;
 
   const scrollToSelectedDay = (behavior = 'instant', delay = 200) => {
@@ -184,14 +192,6 @@ export default function Training() {
       setSelectedDate(initialDay.date);
     }
   };
-
-  // ── Date strip state ──
-  const [selectedDate, setSelectedDate] = useState(getDateStr(0));
-  const [dateOffset, setDateOffset] = useState(0);
-
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const todayDow = today.getDay(); // 0=Sun, 1=Mon...
 
   useEffect(() => {
     logTraining('Cache scope changed', {
