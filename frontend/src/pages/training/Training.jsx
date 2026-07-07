@@ -138,7 +138,6 @@ export default function Training() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [regenPulse, setRegenPulse] = useState(false);
-  const [selectedDay, setSelectedDay] = useState(null);
   const [expandedEx, setExpandedEx] = useState(null);
   const [generatingNextPlan, setGeneratingNextPlan] = useState(false);
   const [nextPlanExists, setNextPlanExists] = useState(false);
@@ -147,6 +146,18 @@ export default function Training() {
   const [showTimeEditor, setShowTimeEditor] = useState(false);
   const [newHealthTime, setNewHealthTime] = useState('');
   const [savingHealthTime, setSavingHealthTime] = useState(false);
+
+  const selectedDay = plan?.day_trainings?.find(d => d.date === selectedDate) ?? null;
+
+  const scrollToSelectedDay = (behavior = 'instant', delay = 200) => {
+    if (!weekStripRef.current) return;
+    setTimeout(() => {
+      const selected = weekStripRef.current?.querySelector('[data-selected="true"]');
+      if (selected) {
+        selected.scrollIntoView({ behavior, inline: 'center', block: 'nearest' });
+      }
+    }, delay);
+  };
 
   const logTraining = (...args) => {
     console.info(TRAINING_LOG_PREFIX, ...args);
@@ -163,7 +174,6 @@ export default function Training() {
     });
 
     setPlan(planData);
-    if (PLAN_CACHE_KEY) sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(planData));
     if (planData.week_end_date) setLatestPlanEndDate(planData.week_end_date);
 
     const todayDay = planData.day_trainings?.find(d => d.date === todayStr);
@@ -171,11 +181,8 @@ export default function Training() {
     const initialDay = jumpToFirstDay ? firstDay : (todayDay || firstDay || null);
 
     if (initialDay) {
-      setSelectedDay(initialDay);
       setSelectedDate(initialDay.date);
     }
-
-    setLoading(false);
   };
 
   // ── Date strip state ──
@@ -194,7 +201,6 @@ export default function Training() {
     });
 
     setPlan(null);
-    setSelectedDay(null);
     lastFetchTime.current = null;
   }, [PLAN_CACHE_KEY]);
 
@@ -207,31 +213,17 @@ export default function Training() {
       generating,
       generatingNextPlan,
       selectedDate,
-      selectedDayDate: selectedDay?.date || null,
       planDays: plan?.day_trainings?.length || 0,
     });
-  }, [plan, loading, generating, generatingNextPlan, selectedDate, selectedDay]);
+  }, [plan, loading, generating, generatingNextPlan, selectedDate]);
 
   useEffect(() => {
-    if (!weekStripRef.current) return;
-    const t = setTimeout(() => {
-      const selected = weekStripRef.current?.querySelector('[data-selected="true"]');
-      if (selected) {
-        selected.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
-      }
-    }, 200);
-    return () => clearTimeout(t);
+    scrollToSelectedDay('instant', 200);
+    setExpandedEx(null);
   }, [selectedDate, plan, loading]);
 
 
 
-  // Sync selectedDay with selectedDate
-  useEffect(() => {
-    if (!plan?.day_trainings) return;
-    const match = plan.day_trainings.find(d => d.date === selectedDate) || null;
-    setSelectedDay(match);  // always set — null shows "No Plan for This Day"
-    setExpandedEx(null);
-  }, [selectedDate, plan]);
 
   const fetchPlan = async (jumpToFirstDay = false) => {
     const now = Date.now();
@@ -273,6 +265,9 @@ export default function Training() {
 
       applyPlanResponse(res.data, 'GET /training/all-days/', jumpToFirstDay);
 
+      // Cache the fetched plan
+      if (PLAN_CACHE_KEY) sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(res.data));
+
       if (profileRes?.data) {
         setHealthTimeZero(parseInt(profileRes.data.health_time_minutes, 10) === 0);
       }
@@ -299,13 +294,6 @@ export default function Training() {
     }
   };
 
-  const clearTrainingCache = () => {
-    // Clear both sessionStorage and in-memory TTL to force a fresh backend fetch
-    if (PLAN_CACHE_KEY) sessionStorage.removeItem(PLAN_CACHE_KEY);
-    sessionStorage.removeItem('training_plan');
-    lastFetchTime.current = null;
-  };
-
   const generatePlan = async () => {
     setGenerating(true);
     logTraining('Generate training plan requested');
@@ -318,16 +306,12 @@ export default function Training() {
 
       applyPlanResponse(res.data, 'POST /training/generate/', true);
 
-      // Clear all caches so future refreshes still fetch fresh data
-      clearTrainingCache();
+      // Cache the generated plan
+      if (PLAN_CACHE_KEY) sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(res.data));
+
       void checkNextPlan();
       void fetchProfile();
-      setTimeout(() => {
-        const selected = weekStripRef.current?.querySelector('[data-selected="true"]');
-        if (selected) {
-          selected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }
-      }, 300);
+      scrollToSelectedDay('smooth', 300);
       toast.success('Training plan generated! 🏋️‍♂️');
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     } catch (err) {
@@ -351,7 +335,6 @@ export default function Training() {
     const idx = allPlanDays.findIndex(d => d.date === selectedDate);
     if (idx > 0) {
       const prev = allPlanDays[idx - 1];
-      setSelectedDay(prev);
       setSelectedDate(prev.date);
       setExpandedEx(null);
     }
@@ -361,7 +344,6 @@ export default function Training() {
     const idx = allPlanDays.findIndex(d => d.date === selectedDate);
     if (idx < allPlanDays.length - 1) {
       const next = allPlanDays[idx + 1];
-      setSelectedDay(next);
       setSelectedDate(next.date);
       setExpandedEx(null);
     }
@@ -382,8 +364,9 @@ export default function Training() {
 
       applyPlanResponse(res.data, 'POST /training/generate/ next plan', true);
 
-      // Clear all caches so fetchPlan hits the backend for fresh data
-      clearTrainingCache();
+      // Cache the generated plan
+      if (PLAN_CACHE_KEY) sessionStorage.setItem(PLAN_CACHE_KEY, JSON.stringify(res.data));
+
       void checkNextPlan();
       void fetchProfile();
 
