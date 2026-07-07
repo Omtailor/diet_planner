@@ -21,17 +21,17 @@ import {
 
 // ── Components ───────────────────────────────────────────────────
 import DashboardGlobalStyles from '../../components/dashboard/DashboardGlobalStyles'
-import SkeletonBlock         from '../../components/dashboard/SkeletonBlock'
-import CalorieRing           from '../../components/dashboard/CalorieRing'
-import MacroBar              from '../../components/dashboard/MacroBar'
-import MealPreviewCard       from '../../components/dashboard/MealPreviewCard'
-import WeightCard            from '../../components/dashboard/WeightCard'
-import BMICard               from '../../components/dashboard/BMICard'
-import QuoteCard             from '../../components/dashboard/QuoteCard'
-import WeightModal           from '../../components/dashboard/WeightModal'
-import OnboardingGate        from '../../components/dashboard/OnboardingGate'
-import OnboardingBlocker     from '../../components/dashboard/OnboardingBlocker'
-import QuickActions          from '../../components/dashboard/QuickActions'
+import SkeletonBlock from '../../components/dashboard/SkeletonBlock'
+import CalorieRing from '../../components/dashboard/CalorieRing'
+import MacroBar from '../../components/dashboard/MacroBar'
+import MealPreviewCard from '../../components/dashboard/MealPreviewCard'
+import WeightCard from '../../components/dashboard/WeightCard'
+import BMICard from '../../components/dashboard/BMICard'
+import QuoteCard from '../../components/dashboard/QuoteCard'
+import WeightModal from '../../components/dashboard/WeightModal'
+import OnboardingGate from '../../components/dashboard/OnboardingGate'
+import OnboardingBlocker from '../../components/dashboard/OnboardingBlocker'
+import QuickActions from '../../components/dashboard/QuickActions'
 
 // ─── Dashboard ──────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { profile, fetchProfile, user, loading: authLoading, onboardingComplete } = useAuth()
 
-  const [showWeightModal,       setShowWeightModal]       = useState(false)
+  const [showWeightModal, setShowWeightModal] = useState(false)
   const [showOnboardingBlocker, setShowOnboardingBlocker] = useState(false)
 
   // ── User-scoped cache key ────────────────────────────────────
@@ -81,16 +81,16 @@ export default function Dashboard() {
       if (mealTime === undefined || timeInMins < mealTime) return acc
       return {
         protein: acc.protein + (m.protein_g || 0),
-        carbs:   acc.carbs   + (m.carbs_g   || 0),
-        fats:    acc.fats    + (m.fats_g    || 0),
+        carbs: acc.carbs + (m.carbs_g || 0),
+        fats: acc.fats + (m.fats_g || 0),
       }
     }, { protein: 0, carbs: 0, fats: 0 })
   }, [dayMeal])
 
-  const targetCals    = profile?.target_calories ?? 2000
+  const targetCals = profile?.target_calories ?? 2000
   const targetProtein = Math.round((targetCals * MACRO_RATIOS.protein.ratio) / MACRO_RATIOS.protein.kcalPerGram)
-  const targetCarbs   = Math.round((targetCals * MACRO_RATIOS.carbs.ratio)   / MACRO_RATIOS.carbs.kcalPerGram)
-  const targetFats    = Math.round((targetCals * MACRO_RATIOS.fats.ratio)    / MACRO_RATIOS.fats.kcalPerGram)
+  const targetCarbs = Math.round((targetCals * MACRO_RATIOS.carbs.ratio) / MACRO_RATIOS.carbs.kcalPerGram)
+  const targetFats = Math.round((targetCals * MACRO_RATIOS.fats.ratio) / MACRO_RATIOS.fats.kcalPerGram)
 
   const macroTargets = { protein: targetProtein, carbs: targetCarbs, fats: targetFats }
 
@@ -110,7 +110,7 @@ export default function Dashboard() {
     await regenerateMeal({
       cacheUserKey,
       onSuccess: () => toast.success("Today's meals refreshed!"),
-      onError:   () => toast.error('Failed to regenerate meals'),
+      onError: () => toast.error('Failed to regenerate meals'),
     })
   }
 
