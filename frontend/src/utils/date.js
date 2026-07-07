@@ -40,3 +40,21 @@ export function getWeekDays(centerDate) {
   }
   return days
 }
+
+/**
+ * Returns a wide date range for the training page date strip.
+ * Covers 15 days in the past and 28 days in the future from centerDate.
+ */
+export function getTrainingWeekDays(centerDate) {
+  const center = new Date(centerDate)
+  const days = []
+  for (let i = -15; i < 29; i++) {
+    const d = new Date(center)
+    d.setDate(center.getDate() + i)
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    days.push(`${yyyy}-${mm}-${dd}`)
+  }
+  return days
+}
