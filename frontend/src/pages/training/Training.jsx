@@ -152,13 +152,14 @@ export default function Training() {
     console.info(TRAINING_LOG_PREFIX, ...args);
   };
 
-  const applyPlanResponse = (planData, source = 'unknown') => {
+  const applyPlanResponse = (planData, source = 'unknown', jumpToFirstDay = false) => {
     if (!planData) return;
 
     logTraining('Applying plan from', source, {
       dayCount: planData.day_trainings?.length || 0,
       weekStartDate: planData.week_start_date || null,
       weekEndDate: planData.week_end_date || null,
+      jumpToFirstDay,
     });
 
     setPlan(planData);
@@ -167,7 +168,7 @@ export default function Training() {
 
     const todayDay = planData.day_trainings?.find(d => d.date === todayStr);
     const firstDay = planData.day_trainings?.[0] || null;
-    const initialDay = todayDay || firstDay || null;
+    const initialDay = jumpToFirstDay ? firstDay : (todayDay || firstDay || null);
 
     if (initialDay) {
       setSelectedDay(initialDay);
@@ -244,7 +245,7 @@ export default function Training() {
         try {
           cachedPlan = JSON.parse(cached);
           if (cachedPlan) {
-            applyPlanResponse(cachedPlan, 'sessionStorage');
+            applyPlanResponse(cachedPlan, 'sessionStorage', false);
           }
         } catch (_) {
           sessionStorage.removeItem(PLAN_CACHE_KEY);
@@ -270,12 +271,7 @@ export default function Training() {
         API.get('/auth/profile/').catch(() => null),
       ]);
 
-      applyPlanResponse(res.data, 'GET /training/all-days/');
-
-      if (jumpToFirstDay && res.data?.day_trainings?.[0]) {
-        setSelectedDay(res.data.day_trainings[0]);
-        setSelectedDate(res.data.day_trainings[0].date);
-      }
+      applyPlanResponse(res.data, 'GET /training/all-days/', jumpToFirstDay);
 
       if (profileRes?.data) {
         setHealthTimeZero(parseInt(profileRes.data.health_time_minutes, 10) === 0);
@@ -320,7 +316,7 @@ export default function Training() {
         dayCount: res.data?.day_trainings?.length || 0,
       });
 
-      applyPlanResponse(res.data, 'POST /training/generate/');
+      applyPlanResponse(res.data, 'POST /training/generate/', true);
 
       // Clear all caches so future refreshes still fetch fresh data
       clearTrainingCache();
@@ -384,17 +380,12 @@ export default function Training() {
         firstDateOfNewPlan,
       });
 
-      applyPlanResponse(res.data, 'POST /training/generate/ next plan');
+      applyPlanResponse(res.data, 'POST /training/generate/ next plan', true);
 
       // Clear all caches so fetchPlan hits the backend for fresh data
       clearTrainingCache();
       void checkNextPlan();
       void fetchProfile();
-
-      if (firstDateOfNewPlan) {
-        setSelectedDate(firstDateOfNewPlan);
-        setExpandedEx(null);
-      }
 
       setNextPlanExists(false);
       toast.success('Next 3 days plan ready! 💪', {
