@@ -13,24 +13,35 @@ import { FONT, GLASS_WHITE } from '../../utils/cheatMeal/constants'
  */
 export default function ImageUploader({ images, notes, onChange, onNotesChange }) {
   const fileRef = useRef()
+  const imagesRef = useRef(images)
+  useEffect(() => {
+    imagesRef.current = images
+  }, [images])
 
   // Revoke object URLs when previews are replaced or component unmounts
   useEffect(() => {
     return () => {
-      images.forEach(img => URL.revokeObjectURL(img.preview))
+      imagesRef.current.forEach(img => URL.revokeObjectURL(img.preview))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || [])
-    // Revoke any existing previews before replacing
-    images.forEach(img => URL.revokeObjectURL(img.preview))
-    const picked = files.slice(0, 2).map(f => ({
+    if (files.length === 0) return
+
+    const limit = 2 - images.length
+    if (limit <= 0) {
+      e.target.value = ''
+      return
+    }
+
+    const newFiles = files.slice(0, limit)
+    const newImages = newFiles.map(f => ({
       file: f,
       preview: URL.createObjectURL(f),
     }))
-    onChange(picked)
+
+    onChange([...images, ...newImages])
     // Reset input so same file can be re-selected
     e.target.value = ''
   }
