@@ -69,7 +69,6 @@ export default function Training() {
   const weekStripRef = useRef(null);
   const lastFetchTime = useRef(null);
 
-  const todayStr = getDateStr(0);
   const selectedDay = plan?.day_trainings?.find(d => d.date === selectedDate) ?? null;
 
   // ── Helpers ───────────────────────────────────────────────────
@@ -99,11 +98,10 @@ export default function Training() {
     setPlan(planData);
     if (planData.week_end_date) setLatestPlanEndDate(planData.week_end_date);
 
-    const todayDay = planData.day_trainings?.find(d => d.date === todayStr);
-    const firstDay = planData.day_trainings?.[0] || null;
-    const initialDay = jumpToFirstDay ? firstDay : (todayDay || firstDay || null);
-
-    if (initialDay) setSelectedDate(initialDay.date);
+    if (jumpToFirstDay) {
+      const firstDay = planData.day_trainings?.[0] || null;
+      if (firstDay) setSelectedDate(firstDay.date);
+    }
   };
 
   // ── Effects ───────────────────────────────────────────────────
@@ -112,6 +110,7 @@ export default function Training() {
   useEffect(() => {
     logTraining('Cache scope changed', { cacheKey: PLAN_CACHE_KEY, hasPlan: !!plan, selectedDate });
     setPlan(null);
+    setSelectedDate(getDateStr(0));
     lastFetchTime.current = null;
   }, [PLAN_CACHE_KEY]); // eslint-disable-line react-hooks/exhaustive-deps
 
