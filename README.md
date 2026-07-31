@@ -14,7 +14,7 @@ A full-stack AI health platform that turns your body profile into a personalized
 
 NutriAI is a production-grade, full-stack health application that generates scientifically-grounded Indian diet and fitness plans from a 19-field user profile. A six-step onboarding flow captures age, body metrics, goals, diet preferences, beverage habits, fasting schedules, and gym routines; the backend then computes a Mifflin-St Jeor TDEE and uses Gemini 2.5 Flash to produce 3-day meal plans, a derived grocery list, and a weekly training plan.
 
-Beyond generation, NutriAI closes the loop on real-world eating: log a cheat meal by photo or text, get AI-estimated macros with a confidence score, and watch upcoming meals automatically re-balance to compensate. The frontend visualizes every meal as an interactive 5-macro "flower," caches aggressively for snappy navigation, and runs entirely on free-tier infrastructure (Render + Vercel + Neon) with a live demo.
+Beyond generation, NutriAI closes the loop on real-world eating: log a cheat meal by photo or text, get AI-estimated macros with a confidence score, and watch upcoming meals automatically re-balance to compensate. The frontend visualizes every meal as an interactive 5-macro "flower," and the whole platform runs on free-tier infrastructure (Render + Vercel + Neon) with a live demo.
 
 ---
 
@@ -150,8 +150,6 @@ Weekly training plan with a day strip, exercise lists with sets/reps/rest, day n
 
 - **Bulk inserts** — `MealSlot.objects.bulk_create()` replaces one-by-one writes per plan (~78% fewer DB ops).
 - **Batch endpoints** — `/api/meals/batch/?dates=...` and `/api/training/days-range/` return multiple days in a single request, killing N+1 HTTP calls.
-- **HTTP caching** — a custom `APICacheMiddleware` adds ETags, `Cache-Control` (30s–2m by endpoint), `Last-Modified`, and serves 304s for GETs.
-- **Frontend caching** — meal and dashboard responses cached in `sessionStorage` with TTLs (1 min today, 10 min past days) and cleared on generation.
 - **Background work** — grocery list generation runs on a daemon thread after plan creation so the API responds instantly.
 - **Query + DB tuning** — `select_related`/`prefetch_related`, dedicated performance-index migrations, persistent DB connections (`CONN_MAX_AGE=600`, health checks), gzip compression, pagination, and skeleton loaders across pages.
 
@@ -250,7 +248,7 @@ DietPlanner/
 │   ├── core/                        # Project settings, URLs, middleware
 │   │   ├── settings.py              # Env-driven config, Neon/SSL, security headers
 │   │   ├── urls.py                  # /api/ routing + health check
-│   │   ├── cache_middleware.py      # ETag / Cache-Control middleware
+│   │   ├── cache_middleware.py      # Custom HTTP middleware
 │   │   └── media_serve.py           # Auth-protected media serving
 │   ├── users/                       # Auth + onboarding (JWT register/login, profile)
 │   ├── meals/                       # Weekly plans, day meals, Gemini generation
