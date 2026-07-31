@@ -71,7 +71,6 @@ export default function Training() {
 
   const todayStr = getDateStr(0);
   const selectedDay = plan?.day_trainings?.find(d => d.date === selectedDate) ?? null;
-  const allPlanDays = plan?.day_trainings || [];
 
   // ── Helpers ───────────────────────────────────────────────────
 
@@ -304,21 +303,19 @@ export default function Training() {
     });
   };
 
-  const handlePrevDay = () => {
-    const idx = allPlanDays.findIndex(d => d.date === selectedDate);
-    if (idx > 0) {
-      setSelectedDate(allPlanDays[idx - 1].date);
-      setExpandedEx(null);
-    }
+  const shiftSelectedDate = (offset) => {
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + offset);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    setSelectedDate(`${yyyy}-${mm}-${dd}`);
   };
 
-  const handleNextDay = () => {
-    const idx = allPlanDays.findIndex(d => d.date === selectedDate);
-    if (idx < allPlanDays.length - 1) {
-      setSelectedDate(allPlanDays[idx + 1].date);
-      setExpandedEx(null);
-    }
-  };
+  const handlePrevDay = () => shiftSelectedDate(-1);
+
+  const handleNextDay = () => shiftSelectedDate(1);
 
   const handleDateSelect = (d) => {
     setSelectedDate(d);
