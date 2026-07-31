@@ -2,6 +2,10 @@
 
 A full-stack AI health platform that turns your body profile into a personalized Indian meal plan, grocery list, and workout schedule — powered by Gemini 2.5 Flash.
 
+<p align="center">
+  <a href="https://diet-planner-three-sable.vercel.app/login"><b>🚀 Live Demo — diet-planner-three-sable.vercel.app/login</b></a>
+</p>
+
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://diet-planner-three-sable.vercel.app/login)
 [![Django](https://img.shields.io/badge/Django-6.0-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
@@ -37,77 +41,59 @@ Beyond generation, NutriAI closes the loop on real-world eating: log a cheat mea
 
 A walkthrough of the app flow, from sign-in to training plan. Screenshots live in [`./assets/`](./assets).
 
-<details>
-<summary><b>1 · Auth — Login</b></summary>
+### 1 · Auth — Login
 
 Glassmorphic sign-in screen with the animated food background. Authentication uses JWT (access + refresh tokens with rotation and blacklisting).
 
 ![Auth page](./assets/auth_page.jpeg)
-</details>
 
-<details>
-<summary><b>2 · Onboarding — Personal Details</b></summary>
+### 2 · Onboarding — Personal Details
 
 Step of the 6-step onboarding wizard capturing body metrics (gender, age, height, weight, target weight) against a changing background per step. All 19 profile fields feed the TDEE engine.
 
 ![Personal details onboarding](./assets/personal_details_page.jpeg)
-</details>
 
-<details>
-<summary><b>3 · Dashboard</b></summary>
+### 3 · Dashboard
 
 Today's summary at a glance — calorie ring against the daily target, macro bars, BMI card, weight trend, and quick actions to generate meals, log a cheat meal, or open the training plan.
 
 ![Dashboard](./assets/dashboard_page.jpeg)
-</details>
 
-<details>
-<summary><b>4 · Nutrition — Weekly Plan</b></summary>
+### 4 · Nutrition — Weekly Plan
 
 The nutrition hub with a swipeable date strip, per-day meal cards (breakfast / lunch / dinner), and entry points to the grocery list, PDF export, and cheat-meal logging.
 
 ![Nutrition page](./assets/nutrition_page.jpeg)
-</details>
 
-<details>
-<summary><b>5 · Nutrition — Features & Grocery</b></summary>
+### 5 · Nutrition — Features & Grocery
 
 Plan-level features: the aggregated grocery sheet with per-ingredient quantities and check-off tracking, plus date-range filtering and generation status.
 
 ![Nutrition features and grocery](./assets/nutrition_page_features.jpeg)
-</details>
 
-<details>
-<summary><b>6 · Meal Details — Macro Flower</b></summary>
+### 6 · Meal Details — Macro Flower
 
 Individual meal detail rendered as the 5-macro flower UI (protein, carbs, fats, fiber, calories) with an ingredient-by-ingredient breakdown, serving size, and diet tags.
 
 ![Meal details](./assets/meal_details.jpeg)
-</details>
 
-<details>
-<summary><b>7 · Cheat Meal Logging</b></summary>
+### 7 · Cheat Meal Logging
 
 Cheat meal flow — upload a photo or describe the meal, review the AI's macro estimate with confidence scoring, answer a follow-up question when needed, and let the app re-balance upcoming days.
 
 ![Cheat meal page](./assets/cheat_meal_page.jpeg)
-</details>
 
-<details>
-<summary><b>8 · Cooking Loader</b></summary>
+### 8 · Cooking Loader
 
 The animated "cooking" loader shown while Gemini generates a plan — playful progress steps that keep users informed during the multi-second generation request.
 
 ![Cooking loader](./assets/cooking_loader.jpeg)
-</details>
 
-<details>
-<summary><b>9 · Training Plan</b></summary>
+### 9 · Training Plan
 
 Weekly training plan with a day strip, exercise lists with sets/reps/rest, day notes, and PDF export — generated from the same profile used for meals.
 
 ![Training details](./assets/training_details.jpeg)
-</details>
 
 ---
 
