@@ -35,7 +35,6 @@ export default function Nutrition() {
   const { profile, user } = useAuth()
   const navigate = useNavigate()
   const weekStripRef = useRef(null)
-  const [dateOffset, setDateOffset] = useState(0)
   const [selectedDate, setSelectedDate] = useState(getDateStr(0))
   
   // Additional refs needed for prefetch logic
@@ -225,9 +224,13 @@ export default function Nutrition() {
   }
 
   const handleDateChange = (dir) => {
-    const newOffset = dateOffset + dir
-    setDateOffset(newOffset)
-    setSelectedDate(getDateStr(newOffset))
+    const [y, m, d] = selectedDate.split('-').map(Number)
+    const date = new Date(y, m - 1, d)
+    date.setDate(date.getDate() + dir)
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    setSelectedDate(`${yyyy}-${mm}-${dd}`)
     handleSlotChange(0)
   }
 
@@ -311,7 +314,6 @@ export default function Nutrition() {
 
       if (generatedStartStr) {
         setSelectedDate(generatedStartStr)
-        setDateOffset(0)
         handleSlotChange(0)
         // Fetch the first day to display it immediately
         await fetchDayMeal(generatedStartStr)
@@ -514,7 +516,6 @@ export default function Nutrition() {
         weekDays={weekDays}
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
-        setDateOffset={setDateOffset}
         switchSlot={switchSlot}
         prefetchDate={prefetchDate}
       />

@@ -6,7 +6,6 @@ export default function DateStrip({
   weekDays,
   selectedDate,
   setSelectedDate,
-  setDateOffset,
   switchSlot,
   prefetchDate,
 }) {
@@ -20,7 +19,7 @@ export default function DateStrip({
         return (
           <button key={d}
             data-selected={isSelected}
-            onClick={() => { setSelectedDate(d); setDateOffset(0); switchSlot(0); }}
+            onClick={() => { setSelectedDate(d); switchSlot(0); }}
             onMouseEnter={() => {
               prefetchDate(d)
             }}
