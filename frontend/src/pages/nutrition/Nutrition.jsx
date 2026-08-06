@@ -72,7 +72,7 @@ export default function Nutrition() {
   const [groceryLoading, setGroceryLoading] = useState(false)
   const [groceryError, setGroceryError] = useState(null)
   const [generatingNextWeek, setGeneratingNextWeek] = useState(false)
-  const [nextWeekExists, setNextWeekExists] = useState(false)
+  const [, setNextWeekExists] = useState(false)
   const [latestPlanEndDate, setLatestPlanEndDate] = useState(null)  // always latest plan's end
   const [exportPdfLoading, setExportPdfLoading] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
@@ -214,7 +214,7 @@ export default function Nutrition() {
       if (requestId !== selectedFetchIdRef.current) return
       setDayMeal(data)
       scheduleAdjacentPrefetch(date)
-    } catch (err) {
+    } catch {
       if (abortControllerRef.current?.signal?.aborted) return
       if (requestId !== selectedFetchIdRef.current) return
       if (!cached) setDayMeal(null)
@@ -588,8 +588,6 @@ export default function Nutrition() {
             slot={slots[displaySlot]}
             meal={getMealSlot(slots[displaySlot])}
             onViewDetail={() => navigate(`/nutrition/${selectedDate}`, { state: { slot: slots[displaySlot] } })}
-            onRegenerate={handleRegenerate}
-            regenerating={regenerating}
           />
         </div>
       ) : (

@@ -1,4 +1,3 @@
-import { FONT } from '../../utils/dashboard/constants'
 import {
   glassCard, sectionLabel, accentBtn,
   weightRow, weightIcon, weightLabel, weightVal, noteText,

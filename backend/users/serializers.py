@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import UserProfile, WeightLog
+from .models import UserProfile
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -71,9 +71,3 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         return data
 
-
-class WeightLogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WeightLog
-        fields = ["id", "weight_kg", "logged_at"]
-        read_only_fields = ["logged_at"]

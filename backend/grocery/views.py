@@ -1,4 +1,4 @@
-from datetime import date, timedelta, datetime
+from datetime import datetime
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -6,7 +6,7 @@ from rest_framework.parsers import JSONParser
 from .models import GroceryList, GroceryItem
 from .serializers import GroceryListSerializer
 from .grocery_generator import generate_grocery_list
-from meals.models import DayMeal, MealSlot
+from meals.models import MealSlot
 
 
 class GroceryListView(APIView):

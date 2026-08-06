@@ -1,7 +1,6 @@
 import API from './api'
 
 export const mealService = {
-  getWeeklyPlan: () => API.get('/meals/weekly/'),
   getDayMeal: (date, opts) => API.get(`/meals/day/${date}/`, opts),
   generatePlan: () => API.post('/meals/generate/', null, { timeout: 180000 }),
   regenerateDay: (date) => API.post('/meals/regenerate-day/', { date }),

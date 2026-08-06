@@ -1,5 +1,4 @@
 import { S } from '../../utils/account/styles'
-import { FONT } from '../../utils/account/constants'
 
 const blockerItems = [
   { emoji: '👤', text: 'Basic info — age, gender, city' },

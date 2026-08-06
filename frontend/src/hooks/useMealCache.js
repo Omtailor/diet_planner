@@ -8,7 +8,7 @@ export default function useMealCache(user, profile, mealService) {
   const cacheRef = useRef({})
   const inflightRef = useRef(new Map())
 
-  const [cacheKey, setCacheKey] = useState(MEAL_CACHE_KEY)
+  const [cacheKey] = useState(MEAL_CACHE_KEY)
 
   useEffect(() => {
     if (!MEAL_CACHE_KEY) {
@@ -34,7 +34,7 @@ export default function useMealCache(user, profile, mealService) {
     cacheRef.current = removeCacheEntry(cacheRef.current, date, persistCache)
   }
 
-  const fetchMealForDate = async (date, { background = false, signal, forceRefresh = false } = {}) => {
+  const fetchMealForDate = async (date, { signal, forceRefresh = false } = {}) => {
     if (!forceRefresh) {
       const cached = getCacheEntry(cacheRef.current, date)
 

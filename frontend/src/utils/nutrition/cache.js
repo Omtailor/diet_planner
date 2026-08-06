@@ -1,14 +1,14 @@
 import { getDateStr } from '../date'
 
-export const MEAL_CACHE_TTL = 60 * 1000
-export const PAST_MEAL_TTL = 10 * 60 * 1000
-export const EMPTY_CACHE_TTL = 30 * 1000
+const MEAL_CACHE_TTL = 60 * 1000
+const PAST_MEAL_TTL = 10 * 60 * 1000
+const EMPTY_CACHE_TTL = 30 * 1000
 
 export function getCacheKey(user, profile) {
   return user?.id ?? profile?.id ?? user?.username ?? profile?.username ?? null
 }
 
-export function getTTL(date, entry) {
+function getTTL(date, entry) {
   const today = getDateStr(0)
   if (entry?.empty) return EMPTY_CACHE_TTL
   return date < today ? PAST_MEAL_TTL : MEAL_CACHE_TTL

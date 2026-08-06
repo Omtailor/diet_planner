@@ -4,7 +4,6 @@ import time
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q
 
 from .models import TrainingPlan, DayTraining
 from .serializers import TrainingPlanSerializer, DayTrainingSerializer

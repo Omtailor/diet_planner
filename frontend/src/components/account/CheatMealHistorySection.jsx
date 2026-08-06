@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import API from '../../services/api'
 import { S } from '../../utils/account/styles'
-import { FONT } from '../../utils/account/constants'
 
 function formatDate(iso) {
   const date = new Date(iso)

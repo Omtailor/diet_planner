@@ -12,7 +12,6 @@ export default function CookingLoader({ dietType = 'non-veg', onDone }) {
   const diet = normalizedDietType === 'vegetarian' ? 'veg' : (DIET_POOLS[normalizedDietType] ? normalizedDietType : 'non-veg')
   const pool = DIET_POOLS[diet]
 
-  const PILE_COUNT = 150
   const [pileEmojis] = useState(() => {
     const arr = []
     while (arr.length < 150) arr.push(...pool)
@@ -306,8 +305,6 @@ export default function CookingLoader({ dietType = 'non-veg', onDone }) {
             steps={COOKING_STEPS} 
             activeStep={activeStep} 
             done={done} 
-            plateItems={plateItems}
-            ACCENT={ACCENT}
             FONT={FONT}
           />
 

@@ -48,18 +48,6 @@ class CheatMealSerializer(serializers.ModelSerializer):
         return labels.get(obj.size, obj.size)
 
 
-class CheatMealCreateSerializer(serializers.Serializer):
-    """Used for image-based cheat meal creation (multipart/form-data)."""
-
-    images = serializers.ListField(
-        child=serializers.ImageField(),
-        max_length=2,
-        required=False,
-    )
-    user_edited_calories = serializers.IntegerField(required=False, min_value=0)
-    notes = serializers.CharField(required=False, allow_blank=True)
-
-
 class ManualCheatMealSerializer(serializers.Serializer):
     """Used for text-based cheat meal creation."""
 

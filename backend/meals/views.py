@@ -1,9 +1,6 @@
-import json
 import logging
 import threading
 from datetime import date, timedelta
-
-from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -12,19 +9,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
-from django.conf import settings
-
-from meals.models import WeeklyPlan, DayMeal, MealSlot, FoodItem
+from meals.models import WeeklyPlan, DayMeal
 from meals.serializers import (
-    MealSlotSerializer,
     DayMealSerializer,
     WeeklyPlanSerializer,
 )
-from meals.schemas import DayMealSchema
 from meals.meal_generator import MealPlanGenerator
 
 
-def run_background_tasks(user, profile, week_start=None):
+def run_background_tasks(user):
     from django.db import close_old_connections
 
     close_old_connections()
@@ -157,7 +150,7 @@ class GeneratePlanView(APIView):
 
             thread = threading.Thread(
                 target=run_background_tasks,
-                args=(request.user, profile),
+                args=(request.user,),
             )
             thread.daemon = True
             thread.start()
@@ -322,8 +315,7 @@ class GenerateNextWeekView(APIView):
 
         thread = threading.Thread(
             target=run_background_tasks,
-            args=(request.user, profile),
-            kwargs={"week_start": week_start},
+            args=(request.user,),
         )
         thread.daemon = True
         thread.start()

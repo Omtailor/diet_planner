@@ -10,8 +10,6 @@ export const GLASS_WHITE = {
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
 };
 
-export const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 export const CATEGORY_META = {
   strength:    { icon: '🏋️‍♂️', color: '#34C759', glow: 'rgba(52,199,89,0.4)',   bg: 'rgba(52,199,89,0.1)' },
   cardio:      { icon: '🏃',     color: '#FF9500', glow: 'rgba(255,149,0,0.4)',  bg: 'rgba(255,149,0,0.1)' },

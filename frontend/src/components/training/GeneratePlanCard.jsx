@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import { S, FONT } from '../../utils/training/constants';
+import { S } from '../../utils/training/constants';
 
 /**
  * Card shown on the "no plan" screen that lets the user generate

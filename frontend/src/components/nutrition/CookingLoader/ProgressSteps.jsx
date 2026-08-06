@@ -1,4 +1,4 @@
-export default function ProgressSteps({ steps, activeStep, done, plateItems, ACCENT, FONT }) {
+export default function ProgressSteps({ steps, activeStep, done, FONT }) {
   return (
     <div style={{
       width: '100%',

@@ -32,7 +32,7 @@ export default function Training() {
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [regenPulse, setRegenPulse] = useState(false);
+  const [regenPulse] = useState(false);
   const [generatingNextPlan, setGeneratingNextPlan] = useState(false);
   const [nextPlanExists, setNextPlanExists] = useState(false);
   const [latestPlanEndDate, setLatestPlanEndDate] = useState(null);
@@ -148,7 +148,7 @@ export default function Training() {
         try {
           cachedPlan = JSON.parse(cached);
           if (cachedPlan) applyPlanResponse(cachedPlan, 'sessionStorage', false);
-        } catch (_) {
+        } catch {
           sessionStorage.removeItem(PLAN_CACHE_KEY);
         }
       }

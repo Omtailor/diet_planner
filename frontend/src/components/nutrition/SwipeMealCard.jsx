@@ -17,8 +17,7 @@ const ingTag = {
   fontFamily: FONT,
 }
 
-export default function SwipeMealCard({ meal, slot, onViewDetail, onRegenerate, regenerating }) {
-  const dragRef = useRef(null)
+export default function SwipeMealCard({ meal, slot, onViewDetail }) {
   const startX = useRef(0)
   const currentX = useRef(0)
   const isDragging = useRef(false)

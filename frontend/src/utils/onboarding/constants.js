@@ -47,7 +47,3 @@ export const COFFEE_TYPES = [
   { key: 'milk',  label: 'Milk Coffee' },
   { key: 'black', label: 'Black Coffee' },
 ]
-
-export const FASTING_OPTIONS = ['yes', 'no']
-
-export const GYM_OPTIONS = ['yes', 'no']

@@ -1,5 +1,4 @@
 import { S } from '../../utils/account/styles'
-import { GLASS_WHITE, FONT } from '../../utils/account/constants'
 
 export default function GroceryRangeModal({
   startDate,

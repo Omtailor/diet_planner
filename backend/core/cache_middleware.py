@@ -3,7 +3,6 @@ HTTP caching middleware for API responses.
 Adds ETag, Cache-Control, and Last-Modified headers for optimal caching.
 """
 import hashlib
-import json
 from django.utils.cache import patch_cache_control, patch_vary_headers
 from django.utils.http import http_date
 from django.http import HttpResponseNotModified
