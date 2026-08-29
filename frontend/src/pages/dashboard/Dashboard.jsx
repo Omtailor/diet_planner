@@ -125,7 +125,8 @@ export default function Dashboard() {
     const dashKey = cacheUserKey ? `dash_meal_today:${cacheUserKey}` : null
     if (dashKey) sessionStorage.removeItem(dashKey)
     sessionStorage.removeItem('dash_meal_today')
-    mealService.generatePlan().then(() => fetchTodayMeal(true))
+    // Generate only 1 day from Home page
+    mealService.generatePlan(1).then(() => fetchTodayMeal(true))
   }
 
   // ── Auth loading spinner ──────────────────────────────────────

@@ -106,13 +106,15 @@ class DayMealView(APIView):
 class GeneratePlanView(APIView):
     """
     POST /api/meals/generate/
-    Manually trigger 3-day meal plan generation.
+    Manually trigger meal plan generation.
+    Accepts optional 'days' parameter (default: 3).
     Deletes existing plan for this week and generates fresh.
     """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        days = int(request.data.get('days', 3))
         try:
             profile = request.user.profile
         except Exception:
@@ -139,7 +141,7 @@ class GeneratePlanView(APIView):
         # Generate fresh plan - wrapped in try-except to catch ALL exceptions
         try:
             generator = MealPlanGenerator(profile)
-            plan = generator.generate()
+            plan = generator.generate(days=days)
 
             if not plan:
                 logger.error(f"[GeneratePlanView] Generation returned None for user {request.user.id}")

@@ -315,8 +315,22 @@ export default function Nutrition() {
       if (generatedStartStr) {
         setSelectedDate(generatedStartStr)
         handleSlotChange(0)
-        // Fetch the first day to display it immediately
-        await fetchDayMeal(generatedStartStr)
+        // Fetch all 3 days immediately to display them without refresh
+        const day1 = generatedStartStr
+        const d1 = new Date(day1)
+        const day2 = new Date(d1)
+        day2.setDate(d1.getDate() + 1)
+        const day2Str = `${day2.getFullYear()}-${String(day2.getMonth() + 1).padStart(2, '0')}-${String(day2.getDate()).padStart(2, '0')}`
+        const day3 = new Date(d1)
+        day3.setDate(d1.getDate() + 2)
+        const day3Str = `${day3.getFullYear()}-${String(day3.getMonth() + 1).padStart(2, '0')}-${String(day3.getDate()).padStart(2, '0')}`
+        
+        // Fetch all 3 days in parallel
+        await Promise.all([
+          fetchDayMeal(day1),
+          fetchMealForDate(day2Str, { background: true }),
+          fetchMealForDate(day3Str, { background: true })
+        ])
       }
       
       // Only show success AFTER data is loaded

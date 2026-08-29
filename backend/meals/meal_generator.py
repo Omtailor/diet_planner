@@ -135,10 +135,9 @@ class MealPlanGenerator:
     # 3. RESOLVE FASTING DAYS
     # ──────────────────────────────────────────────────────
 
-    def get_fasting_day_indices(self, week_start: date) -> set:
+    def get_fasting_day_indices(self, week_start: date, days: int = 3) -> set:
         """
-        Returns a set of day indices (0, 1, 2) within the 3-day plan
-        that fall on the user's fasting day.
+        Returns a set of day indices within the plan that fall on the user's fasting day.
         """
         if not self.profile.is_fasting:
             return set()
@@ -163,7 +162,7 @@ class MealPlanGenerator:
         }
 
         fasting_indices = set()
-        for i in range(3):
+        for i in range(days):
             if (week_start + timedelta(days=i)).weekday() in fasting_weekdays:
                 fasting_indices.add(i)
 
@@ -180,6 +179,7 @@ class MealPlanGenerator:
         week_start: date,
         fasting_indices: set,
         prev_week_names: list | None = None,
+        days: int = 3,
     ) -> str:
         p = self.profile
         net_meal_calories = tdee - beverage_cal
@@ -217,7 +217,7 @@ class MealPlanGenerator:
             high_cal_instruction = f"High calorie target: {net_meal_calories} kcal. Use larger portions, not extra fat."
 
         schedule_lines = []
-        for i in range(3):
+        for i in range(days):
             day_date = week_start + timedelta(days=i)
             if i in fasting_indices:
                 note = f"Fasting day ({p.fasting_type}): only sabudana, makhana, kuttu atta, rajgira, singhara, sendha namak, fruits, curd, milk, nuts, ghee."
@@ -238,7 +238,7 @@ class MealPlanGenerator:
             )
 
         return f"""
-Generate a 3-day Indian meal plan as compact JSON only.
+Generate a {days}-day Indian meal plan as compact JSON only.
 
 User:
 - Age: {p.age}
@@ -264,8 +264,8 @@ Targets:
 - Daily carb cap: 380 g
 
 Rules:
-- Return exactly 3 days and 3 meals per day.
-- Use 9 unique meal names total. No repeats.
+- Return exactly {days} days and 3 meals per day.
+- Use {days * 3} unique meal names total. No repeats.
 - Every meal must use 5 to 10 ingredients.
 - Each ingredient must include name, quantity, and unit.
 - Use only g, ml, pcs, tsp, tbsp, cup.
@@ -293,7 +293,7 @@ Return this JSON shape only:
       "day_notes": "Explain why the meals fit this user and mention one specific nutrient benefit."
     }}
   ],
-  "total_weekly_calories": {net_meal_calories * 3},
+  "total_weekly_calories": {net_meal_calories * days},
   "plan_notes": "Brief summary of the plan."
 }}
 Return JSON only.
@@ -372,15 +372,15 @@ Return JSON only.
     # 6. SAVE TO DATABASE
     # ──────────────────────────────────────────────────────
 
-    def save_to_db(self, validated, week_start, tdee):
+    def save_to_db(self, validated, week_start, tdee, days=3):
         from .models import WeeklyPlan, DayMeal, FoodItem, MealSlot
         import datetime
 
         # ✅ Get context for computed fields
-        fasting_indices = self.get_fasting_day_indices(week_start)
+        fasting_indices = self.get_fasting_day_indices(week_start, days)
         is_jain = self.profile.diet_preference == "jain"
 
-        week_end = week_start + datetime.timedelta(days=2)
+        week_end = week_start + datetime.timedelta(days=days - 1)
 
         plan, _ = WeeklyPlan.objects.get_or_create(
             user=self.user,
@@ -804,13 +804,13 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
     # 7. PUBLIC ENTRY POINT
     # ──────────────────────────────────────────────────────
 
-    def generate(self, week_start: date = None) -> "WeeklyPlan | None":
+    def generate(self, week_start: date = None, days: int = 3) -> "WeeklyPlan | None":
         if week_start is None:
             week_start = date.today()
 
         tdee = self.calculate_tdee()
         beverage_cal = self.calculate_beverage_calories()
-        fasting_indices = self.get_fasting_day_indices(week_start)
+        fasting_indices = self.get_fasting_day_indices(week_start, days)
 
         prev_period_start = week_start - timedelta(days=3)
         prev_names = list(
@@ -828,7 +828,7 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
         logger.info(f"MealGenerator: {len(prev_names)} previous meals to avoid")
 
         prompt = self.build_compact_prompt(
-            tdee, beverage_cal, week_start, fasting_indices, prev_week_names=prev_names
+            tdee, beverage_cal, week_start, fasting_indices, prev_week_names=prev_names, days=days
         )
         validated = self.fetch_from_gemini(prompt)
 
@@ -836,7 +836,7 @@ RESPONSE - COMPACT VALID JSON ONLY. OMIT: fiber, serving_size, serving_unit, is_
             logger.error("MealGenerator: Generation failed — no plan saved.")
             return None
 
-        plan = self.save_to_db(validated, week_start, tdee)
+        plan = self.save_to_db(validated, week_start, tdee, days)
         logger.info(f"MealGenerator: Plan ID={plan.id} saved successfully.")
         return plan
 
