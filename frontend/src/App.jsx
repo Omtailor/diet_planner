@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import Onboarding from './pages/auth/Onboarding'
+import NotFound from './pages/NotFound'
 
 // ✅ Lazy load app pages (code splitting for better initial load)
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
@@ -122,8 +123,8 @@ function App() {
           <Route path="account" element={<Account />} />
         </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Fallback must remain outside all route guards and onboarding gates. */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   )

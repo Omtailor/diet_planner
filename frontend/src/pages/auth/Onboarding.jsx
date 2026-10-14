@@ -20,6 +20,7 @@ import OnboardingHeader from '../../components/onboarding/OnboardingHeader'
 import OnboardingFooter from '../../components/onboarding/OnboardingFooter'
 import ProgressBar from '../../components/onboarding/ProgressBar'
 import LoadingOverlay from '../../components/onboarding/LoadingOverlay'
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 // ─── Step Components ───────────────────────────────────────────
 import Step1 from '../../components/onboarding/Step1'
@@ -34,6 +35,10 @@ const STEPS = [Step1, Step2, Step3, Step4, Step5, Step6]
 // ─── Main Onboarding Component ─────────────────────────────────
 
 function Onboarding() {
+  useDocumentMeta({
+    title: 'Onboarding',
+    description: 'Set up your NutriAI profile to receive personalized nutrition and training guidance.',
+  })
   const navigate = useNavigate()
   const { fetchProfile } = useAuth()
   const [step, setStep] = useState(1)
@@ -90,7 +95,7 @@ function Onboarding() {
   const currentBg = STEP_IMAGES[step - 1]
 
   return (
-    <div style={s.wrapper}>
+    <main id="main-content" style={s.wrapper}>
 
       {/* ── Ken Burns Background Image ── */}
       <BackgroundImage step={step} currentBg={currentBg} />
@@ -129,7 +134,7 @@ function Onboarding() {
       {/* ── Scoped global styles (animations, hover effects, responsive) ── */}
       <OnboardingGlobalStyles />
 
-    </div>
+    </main>
   )
 }
 

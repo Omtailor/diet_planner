@@ -5,6 +5,8 @@ function OptionChip({ label, selected, onSelect }) {
     <button
       type="button"
       onClick={onSelect}
+      role="radio"
+      aria-checked={selected}
       style={{
         ...s.chip,
         background: selected ? 'var(--color-accent)' : 'rgba(255,255,255,0.35)',

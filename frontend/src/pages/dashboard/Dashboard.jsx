@@ -32,10 +32,15 @@ import WeightModal from '../../components/dashboard/WeightModal'
 import OnboardingGate from '../../components/dashboard/OnboardingGate'
 import OnboardingBlocker from '../../components/dashboard/OnboardingBlocker'
 import QuickActions from '../../components/dashboard/QuickActions'
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 // ─── Dashboard ──────────────────────────────────────────────────
 
 export default function Dashboard() {
+  useDocumentMeta({
+    title: 'Dashboard',
+    description: 'View your personalized NutriAI meal plan, calorie target, macros, and daily progress.',
+  })
   const navigate = useNavigate()
   const { profile, fetchProfile, user, loading: authLoading, onboardingComplete } = useAuth()
 

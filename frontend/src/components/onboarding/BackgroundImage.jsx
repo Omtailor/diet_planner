@@ -6,6 +6,7 @@ function BackgroundImage({ step, currentBg }) {
       key={`bg-step-${step}`}
       src={currentBg}
       alt=""
+      aria-hidden="true"
       style={s.bgImage}
       className={`ken-burns-step-${step}`}
     />

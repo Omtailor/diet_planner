@@ -4,10 +4,16 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import { authService } from '../../services/authService'
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 import bgVideo from '../../assets/videos/bg-video.mp4'
 
 function Signup() {
+  useDocumentMeta({
+    title: 'Create Account',
+    description: 'Create your NutriAI account for personalized meal plans, training guidance, and nutrition tracking.',
+    robots: 'index, follow',
+  })
   const navigate = useNavigate()
   const { login } = useAuth()
   const [form, setForm] = useState({
@@ -67,11 +73,12 @@ function Signup() {
   const strength = getStrength()
 
   return (
-    <div style={s.wrapper}>
+    <main id="main-content" style={s.wrapper}>
 
       {/* ── Background Video (loops) ── */}
       <video
         autoPlay playsInline loop muted
+        aria-hidden="true"
         style={s.bgVideo}
         preload="auto"
       >
@@ -115,8 +122,9 @@ function Signup() {
 
             {/* Username */}
             <div style={s.fieldGroup}>
-              <label style={s.label}>Username</label>
+              <label htmlFor="signup-username" style={s.label}>Username</label>
               <input
+                id="signup-username"
                 name="username" type="text"
                 placeholder="Choose a username"
                 value={form.username} onChange={handleChange}
@@ -127,8 +135,9 @@ function Signup() {
 
             {/* Email */}
             <div style={s.fieldGroup}>
-              <label style={s.label}>Email</label>
+              <label htmlFor="signup-email" style={s.label}>Email</label>
               <input
+                id="signup-email"
                 name="email" type="email"
                 placeholder="Enter your email"
                 value={form.email} onChange={handleChange}
@@ -139,9 +148,10 @@ function Signup() {
 
             {/* Password */}
             <div style={s.fieldGroup}>
-              <label style={s.label}>Password</label>
+              <label htmlFor="signup-password" style={s.label}>Password</label>
               <div style={s.inputWrapper}>
                 <input
+                  id="signup-password"
                   name="password"
                   type={showPass ? 'text' : 'password'}
                   placeholder="Min. 8 characters"
@@ -152,6 +162,8 @@ function Signup() {
                 />
                 <button
                   type="button"
+                  aria-label={showPass ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPass}
                   onClick={() => setShowPass(!showPass)}
                   style={s.eyeBtn}
                 >
@@ -180,8 +192,9 @@ function Signup() {
 
             {/* Confirm Password */}
             <div style={s.fieldGroup}>
-              <label style={s.label}>Confirm Password</label>
+              <label htmlFor="signup-confirm-password" style={s.label}>Confirm Password</label>
               <input
+                id="signup-confirm-password"
                 name="confirmPassword"
                 type="password"
                 placeholder="Re-enter your password"
@@ -252,7 +265,7 @@ function Signup() {
           .signup-card      { padding: 22px 18px !important; }
         }
       `}</style>
-    </div>
+    </main>
   )
 }
 

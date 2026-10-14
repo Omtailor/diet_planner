@@ -12,7 +12,7 @@ function OnboardingHeader({ step, onBack }) {
       ) : (
         <div style={{ width: '40px' }} />
       )}
-      <span style={s.stepCounter}>Step {step} of {TOTAL_STEPS}</span>
+      <span style={s.stepCounter} aria-current="step">Step {step} of {TOTAL_STEPS}</span>
       <div style={{ width: '40px' }} />
     </div>
   )

@@ -55,7 +55,9 @@ export default function ImageUploader({ images, notes, onChange, onNotesChange }
     <div style={{ ...GLASS_WHITE, borderRadius: 24, padding: '20px' }}>
       <input
         ref={fileRef}
+        id="cheat-meal-images"
         type="file"
+        aria-label="Upload cheat meal photos"
         accept="image/*"
         multiple
         style={{ display: 'none' }}
@@ -64,7 +66,7 @@ export default function ImageUploader({ images, notes, onChange, onNotesChange }
 
       {/* Upload zone or preview grid */}
       {images.length === 0 ? (
-        <button onClick={() => fileRef.current?.click()} style={s.uploadZone}>
+        <button type="button" aria-label="Take photo or upload food images" onClick={() => fileRef.current?.click()} style={s.uploadZone}>
           <div style={s.cameraCircle}>
             <Camera size={30} color="#FF3B30" />
           </div>
@@ -85,13 +87,13 @@ export default function ImageUploader({ images, notes, onChange, onNotesChange }
                   boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                 }}
               />
-              <button onClick={() => removeImage(i)} style={s.removeBtn}>
+              <button type="button" aria-label={`Remove food image ${i + 1}`} onClick={() => removeImage(i)} style={s.removeBtn}>
                 <X size={14} color="#fff" />
               </button>
             </div>
           ))}
           {images.length < 2 && (
-            <button onClick={() => fileRef.current?.click()} style={s.addMoreBtn}>
+            <button type="button" aria-label="Add another food image" onClick={() => fileRef.current?.click()} style={s.addMoreBtn}>
               <Camera size={24} color="var(--color-text-faint)" />
               <span style={{
                 fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500,
@@ -105,8 +107,9 @@ export default function ImageUploader({ images, notes, onChange, onNotesChange }
       {/* Notes – only shown after at least one image is selected */}
       {images.length > 0 && (
         <div style={{ marginTop: 16 }}>
-          <label style={s.label}>Notes (optional)</label>
+          <label htmlFor="cheat-meal-image-notes" style={s.label}>Notes (optional)</label>
           <input
+            id="cheat-meal-image-notes"
             style={s.input}
             placeholder="e.g. Birthday party slice..."
             value={notes}

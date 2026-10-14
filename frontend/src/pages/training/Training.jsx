@@ -17,12 +17,17 @@ import HealthTimeEditor from '../../components/training/HealthTimeEditor';
 import GeneratePlanCard from '../../components/training/GeneratePlanCard';
 import GenerateNextPlanCard from '../../components/training/GenerateNextPlanCard';
 import ExportPdfModal from '../../components/training/ExportPdfModal';
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 const TRAINING_LOG_PREFIX = '[TrainingPage]';
 const CACHE_TTL = 60 * 1000;
 
 // ─── Main Export ───────────────────────────────────────────────
 export default function Training() {
+  useDocumentMeta({
+    title: 'Training',
+    description: 'Follow your personalized NutriAI training plan and track your workouts week by week.',
+  })
   const { fetchProfile, user, profile } = useAuth();
 
   const cacheUserKey = user?.id ?? profile?.id ?? user?.username ?? profile?.username ?? null;

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { mealService } from '../../services/mealService'
 import API from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 // Extracted utilities
 import { getDateStr, getWeekDays } from '../../utils/date'
@@ -32,6 +33,10 @@ import useMealAutoplay from '../../hooks/useMealAutoplay'
 // ─── Main Nutrition Component ─────────────────────────────────────
 
 export default function Nutrition() {
+  useDocumentMeta({
+    title: 'Nutrition',
+    description: 'Plan meals, review nutrition details, manage groceries, and export your NutriAI meal plan.',
+  })
   const { profile, user } = useAuth()
   const navigate = useNavigate()
   const weekStripRef = useRef(null)

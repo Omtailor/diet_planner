@@ -16,7 +16,7 @@ export default function CalorieRing({ consumed = 0, target = null }) {
 
   if (!hasTarget) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div role="img" aria-label={`${animated} calories consumed`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <svg width="148" height="148" viewBox="0 0 148 148"
           style={{
             filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.04))',
@@ -43,7 +43,7 @@ export default function CalorieRing({ consumed = 0, target = null }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div role="img" aria-label={`${animated} of ${target} calories consumed${isOver ? ', goal reached' : ''}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <svg width="148" height="148" viewBox="0 0 148 148"
         style={{
           filter: `drop-shadow(0 0 ${isOver ? '14px' : '8px'} rgba(76,175,80,${isOver ? '0.65' : '0.4'}))`,

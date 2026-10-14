@@ -6,6 +6,8 @@ function GoalCard({ label, desc, selected, onSelect }) {
     <button
       type="button"
       onClick={onSelect}
+      role="radio"
+      aria-checked={selected}
       style={{
         ...s.goalCard,
         background: selected

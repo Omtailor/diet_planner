@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /login
+Allow: /signup
+Disallow: /
+Disallow: /dashboard
+Disallow: /nutrition
+Disallow: /cheat-meal
+Disallow: /training
+Disallow: /account
+Disallow: /onboarding
+Disallow: /api/
+
+Sitemap: https://diet-planner-three-sable.vercel.app/sitemap.xml

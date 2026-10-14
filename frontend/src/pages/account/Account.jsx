@@ -23,8 +23,13 @@ import OnboardingBlocker from '../../components/account/OnboardingBlocker'
 import PersonalInfoModal from '../../components/account/PersonalInfoModal'
 import ProfileHeader from '../../components/account/ProfileHeader'
 import StatsRow from '../../components/account/StatsRow'
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 export default function Account() {
+  useDocumentMeta({
+    title: 'Account',
+    description: 'Manage your NutriAI profile, goals, preferences, groceries, and account settings.',
+  })
   const navigate = useNavigate()
   const { profile, logout, fetchProfile, user } = useAuth()
   const [activeSection, setActiveSection] = useState(null)

@@ -20,7 +20,7 @@ export default function GroceryModal({
       WebkitBackdropFilter: 'blur(8px)',
       animation: 'fadeUp 0.3s ease-out'
     }}
-      onClick={onClose}>
+      onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="grocery-title">
 
       <div style={{
         width: '100%', maxHeight: '85dvh',
@@ -49,7 +49,7 @@ export default function GroceryModal({
               fontFamily: FONT,
               fontSize: '1.4rem', fontWeight: 800,
               color: 'var(--color-text)',
-            }}>🛒 Grocery List</p>
+            }} id="grocery-title">🛒 Grocery List</p>
             {grocery && (
               <p style={{
                 fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500,
@@ -59,7 +59,7 @@ export default function GroceryModal({
               </p>
             )}
           </div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close grocery list" style={{
             background: 'rgba(0,0,0,0.05)', border: 'none',
             borderRadius: '50%', width: '36px', height: '36px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -124,7 +124,8 @@ export default function GroceryModal({
                 paddingRight: '4px',
               }}>
                 {grocery?.items?.map(item => (
-                  <button key={item.id}
+                  <label key={item.id}
+                    htmlFor={`grocery-item-${item.id}`}
                     onClick={() => toggleItem(item.id, item.is_checked)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '14px',
@@ -138,6 +139,14 @@ export default function GroceryModal({
                       borderRadius: '16px', cursor: 'pointer',
                       transition: 'all 180ms ease', textAlign: 'left',
                     }}>
+                    <input
+                      id={`grocery-item-${item.id}`}
+                      type="checkbox"
+                      checked={item.is_checked}
+                      onChange={() => toggleItem(item.id, item.is_checked)}
+                      onClick={event => event.stopPropagation()}
+                      style={{ width: 20, height: 20, accentColor: 'var(--color-accent)', flexShrink: 0 }}
+                    />
                     {item.is_checked
                       ? <CheckSquare size={22} color="var(--color-accent)" />
                       : <Square size={22} color="var(--color-text-faint)" />}
@@ -157,7 +166,7 @@ export default function GroceryModal({
                     }}>
                       {item.quantity} {item.unit}
                     </span>
-                  </button>
+                  </label>
                 ))}
               </div>
             )}

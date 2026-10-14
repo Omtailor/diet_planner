@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { mealService } from '../../services/mealService'
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 // ─── Style Tokens ──────────────────────────────────────────────
 const FONT = "'General Sans', sans-serif";
@@ -255,6 +256,10 @@ function IngredientsSection({ ingredients }) {
 // ─── Main NutritionDetail ──────────────────────────────────────
 
 export default function NutritionDetail() {
+  useDocumentMeta({
+    title: 'Meal Details',
+    description: 'Review detailed ingredients, calories, macros, and preparation guidance for your NutriAI meal.',
+  })
   const { date } = useParams()
   const location = useLocation()
   const navigate = useNavigate()

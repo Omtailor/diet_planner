@@ -13,12 +13,14 @@ export default function FollowUpCard({ question, answer, onAnswerChange }) {
     <>
       <div style={s.followUpCard}>
         <div style={s.aiAvatar}>🤖</div>
-        <p style={s.followUpQ}>{question}</p>
+        <p style={s.followUpQ} role="status" aria-live="polite">{question}</p>
       </div>
 
       <div style={{ ...GLASS_WHITE, borderRadius: 24, padding: '20px' }}>
         <label style={s.label}>Your answer</label>
         <input
+          id="cheat-meal-follow-up"
+          aria-label="Your answer"
           style={s.input}
           placeholder="Type your answer..."
           value={answer}

@@ -20,6 +20,21 @@ export default function DateStrip({
           <button key={d}
             data-selected={isSelected}
             onClick={() => { setSelectedDate(d); switchSlot(0); }}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+              event.preventDefault()
+              const index = weekDays.indexOf(d)
+              const nextIndex = event.key === 'ArrowLeft' ? index - 1 : index + 1
+              const nextDate = weekDays[nextIndex]
+              if (nextDate) {
+                setSelectedDate(nextDate)
+                switchSlot(0)
+                weekStripRef.current?.querySelector(`[data-date="${nextDate}"]`)?.focus()
+              }
+            }}
+            data-date={d}
+            aria-label={`${dayLabel} ${dayNum}${isToday ? ', today' : ''}`}
+            aria-current={isSelected ? 'date' : undefined}
             onMouseEnter={() => {
               prefetchDate(d)
             }}

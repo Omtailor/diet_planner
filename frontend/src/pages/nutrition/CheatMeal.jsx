@@ -8,8 +8,13 @@ import { submitImageMeal, submitManualMeal, submitFollowUpAnswer } from '../../s
 import ImageUploader from '../../components/cheatmeal/ImageUploader'
 import FollowUpCard from '../../components/cheatmeal/FollowUpCard'
 import ResultCard from '../../components/cheatmeal/ResultCard'
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 export default function CheatMeal() {
+  useDocumentMeta({
+    title: 'Cheat Meal',
+    description: 'Log a cheat meal with NutriAI and keep your personalized nutrition plan up to date.',
+  })
   const navigate = useNavigate()
 
   // ── Page-level state ───────────────────────────────────────────
@@ -106,12 +111,13 @@ export default function CheatMeal() {
 
   // ── Render ─────────────────────────────────────────────────────
   return (
-    <div style={s.page}>
+    <main id="main-content" style={s.page}>
 
       {/* Header */}
       <div style={s.header}>
         <button
           onClick={() => stage !== STAGES.PICK ? setStage(STAGES.PICK) : navigate(-1)}
+          aria-label={stage !== STAGES.PICK ? 'Back to meal options' : 'Go back'}
           style={s.backBtn}
         >
           <ChevronLeft size={20} color="var(--color-text)" />
@@ -163,6 +169,8 @@ export default function CheatMeal() {
             <div style={s.card}>
               <label style={s.label}>What did you eat? *</label>
               <textarea
+                id="cheat-meal-description"
+                aria-label="What did you eat?"
                 style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
                 placeholder="e.g. 2 slices of pizza, a can of Coke and some garlic bread..."
                 value={desc}
@@ -171,6 +179,8 @@ export default function CheatMeal() {
               />
               <label style={{ ...s.label, marginTop: 16 }}>Notes (optional)</label>
               <input
+                id="cheat-meal-notes"
+                aria-label="Notes (optional)"
                 style={s.input}
                 placeholder="e.g. Late night craving, college canteen..."
                 value={notes}
@@ -240,7 +250,7 @@ export default function CheatMeal() {
         }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
-    </div>
+    </main>
   )
 }
 

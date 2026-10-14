@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from django.views.defaults import page_not_found, server_error
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -8,6 +9,18 @@ from core.media_serve import protected_media
 
 def health(request):
     return JsonResponse({"status": "ok"})
+
+
+def api_handler404(request, exception=None):
+    if request.path.startswith("/api/"):
+        return JsonResponse({"detail": "Not found"}, status=404)
+    return page_not_found(request, exception)
+
+
+def api_handler500(request):
+    if request.path.startswith("/api/"):
+        return JsonResponse({"detail": "Not found"}, status=500)
+    return server_error(request)
 
 urlpatterns = [
     path('health/', health),
@@ -26,3 +39,6 @@ urlpatterns = [
     # Authenticated media
     path("media/<path:file_path>", protected_media, name="protected_media"),
 ]
+
+handler404 = "core.urls.api_handler404"
+handler500 = "core.urls.api_handler500"

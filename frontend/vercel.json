@@ -1,6 +1,6 @@
 {
   "regions": ["iad1"],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!robots\\.txt$|sitemap\\.xml$|favicon\\.svg$|og-image\\.webp$|assets/).*)", "destination": "/index.html" }
   ]
 }

@@ -4,10 +4,16 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import { authService } from '../../services/authService'
+import useDocumentMeta from '../../hooks/useDocumentMeta'
 
 import bgVideo from '../../assets/videos/bg-video.mp4'
 
 function Login() {
+  useDocumentMeta({
+    title: 'Sign In',
+    description: 'Sign in to NutriAI to access your personalized meal and training plans.',
+    robots: 'index, follow',
+  })
   const navigate = useNavigate()
   const { login } = useAuth()
   const [form, setForm] = useState({ username: '', password: '' })
@@ -43,11 +49,12 @@ function Login() {
   }
 
   return (
-    <div style={s.wrapper}>
+    <main id="main-content" style={s.wrapper}>
 
       {/* ── Video (loops continuously) ── */}
       <video
         autoPlay playsInline loop muted
+        aria-hidden="true"
         style={s.bgVideo}
         preload="auto"
       >
@@ -89,8 +96,9 @@ function Login() {
 
             {/* Username */}
             <div style={s.fieldGroup}>
-              <label style={s.label}>Username</label>
+              <label htmlFor="login-username" style={s.label}>Username</label>
               <input
+                id="login-username"
                 name="username" type="text"
                 placeholder="Enter your username"
                 value={form.username} onChange={handleChange}
@@ -101,9 +109,10 @@ function Login() {
 
             {/* Password */}
             <div style={s.fieldGroup}>
-              <label style={s.label}>Password</label>
+              <label htmlFor="login-password" style={s.label}>Password</label>
               <div style={s.inputWrapper}>
                 <input
+                  id="login-password"
                   name="password"
                   type={showPass ? 'text' : 'password'}
                   placeholder="Enter your password"
@@ -112,7 +121,7 @@ function Login() {
                   autoComplete="current-password"
                   className="glass-input"
                 />
-                <button type="button" onClick={() => setShowPass(!showPass)} style={s.eyeBtn}>
+                <button type="button" aria-label={showPass ? 'Hide password' : 'Show password'} aria-pressed={showPass} onClick={() => setShowPass(!showPass)} style={s.eyeBtn}>
                   {showPass
                     ? <EyeOff size={18} color="var(--color-text-faint)" />
                     : <Eye size={18} color="var(--color-text-faint)" />}
@@ -174,7 +183,7 @@ function Login() {
           .login-container { max-width: 420px !important; }
         }
       `}</style>
-    </div>
+    </main>
   )
 }
 

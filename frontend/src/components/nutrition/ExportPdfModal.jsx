@@ -20,7 +20,7 @@ export default function ExportPdfModal({
       backdropFilter: 'blur(8px)',
       WebkitBackdropFilter: 'blur(8px)',
       animation: 'fadeUp 0.3s ease-out',
-    }} onClick={onClose}>
+    }} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="nutrition-export-title">
       <div style={{
         width: '100%',
         maxHeight: '90dvh',
@@ -38,14 +38,14 @@ export default function ExportPdfModal({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <p style={{ fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>
+            <p id="nutrition-export-title" style={{ fontFamily: FONT, fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>
               Export as PDF
             </p>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500, fontFamily: FONT, marginTop: 4 }}>
               Choose the date range to include
             </p>
           </div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close export dialog" style={{
             background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%',
             width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
           }}>

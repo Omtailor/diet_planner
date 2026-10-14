@@ -14,7 +14,7 @@ export default function AppLayout() {
       position: 'relative',
     }}>
       <TopBar />
-      <main style={{
+      <main id="main-content" style={{
         flex: 1,
         overflowY: 'auto',
         overflowX: 'hidden',
